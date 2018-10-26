@@ -1,0 +1,94 @@
+{
+"app-id": "com.holypangolin.Animatch",
+"runtime": "org.freedesktop.Platform",
+"runtime-version": "18.08",
+"sdk": "org.freedesktop.Sdk",
+"command": "animatch",
+"rename-icon": "animatch",
+"rename-desktop-file": "animatch.desktop",
+"finish-args": [
+   "--socket=fallback-x11",
+   "--socket=wayland",
+   "--socket=pulseaudio",
+   "--device=dri",
+   "--share=ipc"
+],
+"cleanup": ["/include", "/lib/pkgconfig", "/lib/*.a", "/lib/*.la", "/share/aclocal", "/share/doc", "/bin/test_physfs"],
+"modules": [
+  {
+    "name": "libdumb",
+    "buildsystem": "cmake-ninja",
+    "build-options": {
+       "config-opts": ["-DBUILD_SHARED_LIBS=ON", "-DBUILD_ALLEGRO4=OFF", "-DBUILD_EXAMPLES=OFF", "-DCMAKE_BUILD_TYPE=RelWithDebInfo"]
+    },
+    "sources": [
+      {
+        "type": "archive",
+        "url": "https://github.com/kode54/dumb/archive/2.0.3.tar.gz",
+        "sha512": "18b10a507d69a754cdf97fbeae41c17f211a6ba1f166a822276bdb6769d3edc326919067a3f4d1247d6715d7a5a8276669d83b9427e7336c6d111593fb7e36cf"
+      }
+    ]
+  },
+  {
+    "name": "opusfile",
+    "sources": [
+      {
+        "type": "archive",
+        "url": "https://downloads.xiph.org/releases/opus/opusfile-0.11.tar.gz",
+        "sha512": "ec3e282310cc4f25475c27b7bc8d1652dcb25d3ac6badf87bd1b4e5397fbe106a0dab81c60d88d198003a23d8a2c9bae8b661edc9b31433effeca438ce56a349"
+      }
+    ]
+  },
+  {
+    "name": "opus",
+    "sources": [
+      {
+        "type": "archive",
+        "url": "https://downloads.xiph.org/releases/opus/opus-1.3.tar.gz",
+        "sha512": "438635667e72c326d6d06a30e0b3a5564ba6cf5d484066456e1118e1c2fe3a61b959d0afa77a1084b177b72f9230618b6b55c78bc4e24e9127a09fd345b42518"
+      }
+    ]
+  },
+  {
+    "name": "physfs",
+    "buildsystem": "cmake-ninja",
+    "build-options": {
+       "config-opts": ["-DCMAKE_BUILD_TYPE=RelWithDebInfo"]
+    },
+    "sources": [
+      {
+        "type": "archive",
+        "url": "https://icculus.org/physfs/downloads/physfs-3.0.1.tar.bz2",
+        "sha512": "ddf3b075ccb506da5e9a1ce96001be402752b9b777c2e816a85d48aff3626ff0886ea43eb07bd300fe3a9f59b9a002f54d822c51d483a4ee94b38378534c1879"
+      }
+    ]
+  },
+  {
+    "name": "allegro5",
+    "buildsystem": "cmake-ninja",
+    "build-options": {
+       "config-opts": ["-DALLEGRO_SDL=ON", "-DGL_BUILD_TYPE=gles2+", "-DWANT_DEMO=OFF", "-DWANT_EXAMPLES=OFF", "-DCMAKE_BUILD_TYPE=RelWithDebInfo"]
+    },
+    "sources": [
+      {
+        "type": "git",
+        "branch": "purism",
+        "url": "git://github.com/dos1/allegro5"
+      }
+    ]
+  },
+  {
+    "name": "animatch",
+    "buildsystem": "cmake-ninja",
+    "build-options": {
+       "config-opts": ["-DCMAKE_BUILD_TYPE=RelWithDebInfo"]
+    },
+    "sources": [
+      {
+        "type": "dir",
+        "path": "."
+      }
+    ]
+  }
+]
+}
