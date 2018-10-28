@@ -81,7 +81,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			data->animal[i][j] = CreateCharacter(game, ANIMALS[random() % 6]);
+			data->animal[i][j] = CreateCharacter(game, ANIMALS[rand() % 6]);
 			RegisterSpritesheet(game, data->animal[i][j], "stand");
 			LoadSpritesheets(game, data->animal[i][j], progress);
 			data->animal[i][j]->scaleX = 0.085;
