@@ -24,10 +24,10 @@
 
 void DrawBuildInfo(struct Game* game) {
 	if (!game->_priv.showtimeline) {
-		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.995, game->viewport.height * 0.955, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
 		char revs[255];
 		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
-		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.995, game->viewport.height * 0.975, ALLEGRO_ALIGN_RIGHT, revs);
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
 	}
 }
 
