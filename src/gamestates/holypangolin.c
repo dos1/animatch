@@ -23,7 +23,7 @@
 #include <libsuperderpy.h>
 
 #define NEXT_GAMESTATE "dosowisko"
-#define SKIP_GAMESTATE "example"
+#define SKIP_GAMESTATE "game"
 
 struct GamestateResources {
 	ALLEGRO_BITMAP* bmp;

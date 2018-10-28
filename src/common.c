@@ -46,6 +46,14 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 		SetupViewport(game, game->viewport_config);
 		PrintConsole(game, "Fullscreen toggled");
 	}
+	if (ev->type == ALLEGRO_EVENT_MOUSE_AXES) {
+		game->data->mouseX = Clamp(0, 1, (ev->mouse.x - game->_priv.clip_rect.x) / (double)game->_priv.clip_rect.w);
+		game->data->mouseY = Clamp(0, 1, (ev->mouse.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
+	}
+	if (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) {
+		game->data->mouseX = Clamp(0, 1, (ev->touch.x - game->_priv.clip_rect.x) / (double)game->_priv.clip_rect.w);
+		game->data->mouseY = Clamp(0, 1, (ev->touch.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
+	}
 
 	return false;
 }

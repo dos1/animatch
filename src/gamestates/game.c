@@ -33,12 +33,20 @@ struct GamestateResources {
 	ALLEGRO_FONT* font;
 	ALLEGRO_BITMAP* bg;
 	struct Character* animal[COLS][ROWS];
+	struct {
+		int i;
+		int j;
+	} current;
 };
 
 int Gamestate_ProgressCount = COLS * ROWS + 2; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
+	//al_draw_filled_rectangle(i * 90 + 2, j * 90 + 180 + 2, (i + 1) * 90 - 2, (j + 1) * 90 + 180 - 2, al_map_rgba(64, 64, 64, 64));
+
+	data->current.i = (int)(game->data->mouseX * game->viewport.width / 90);
+	data->current.j = (int)((game->data->mouseY * game->viewport.height - 180) / 90);
 }
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
@@ -49,7 +57,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 12; j++) {
-			al_draw_filled_rectangle(i * 90 + 2, j * 90 + 180 + 2, (i + 1) * 90 - 2, (j + 1) * 90 + 180 - 2, al_map_rgba(64, 64, 64, 64));
+			bool current = i == data->current.i && j == data->current.j;
+			al_draw_filled_rectangle(i * 90 + 2, j * 90 + 180 + 2, (i + 1) * 90 - 2, (j + 1) * 90 + 180 - 2, current ? al_map_rgba(92, 92, 92, 92) : al_map_rgba(64, 64, 64, 64));
 			DrawCharacter(game, data->animal[i][j]);
 		}
 	}
