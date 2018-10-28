@@ -49,12 +49,12 @@ build:linux-steamrt-i686:
     - NO_STEAM_RUNTIME=1 ./package_linux_i686.sh
 
 build:linux-flatpak-amd64:
-  image: flatpak/flatpak-builder:base
+  image: dosowisko/libsuperderpy-flatpak
   stage: build
   retry: 1
   artifacts: *artifacts
   script:
-    - flatpak-builder build-flatpak com.holypangolin.Animatch.json --install --user
+    - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=x86_64 --install --user
     - flatpak build-bundle ~/.local/share/flatpak/repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch
 
 build:macos:
