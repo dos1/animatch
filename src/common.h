@@ -16,6 +16,7 @@
  */
 
 #define LIBSUPERDERPY_DATA_TYPE struct CommonResources
+#include <defines.h>
 #include <libsuperderpy.h>
 
 struct CommonResources {
@@ -26,3 +27,4 @@ struct CommonResources {
 struct CommonResources* CreateGameData(struct Game* game);
 void DestroyGameData(struct Game* game);
 bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev);
+void DrawBuildInfo(struct Game* game);

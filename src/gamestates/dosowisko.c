@@ -30,7 +30,8 @@ struct GamestateResources {
 	ALLEGRO_SAMPLE *sample, *kbd_sample, *key_sample;
 	ALLEGRO_SAMPLE_INSTANCE *sound, *kbd, *key;
 	ALLEGRO_BITMAP *bitmap, *checkerboard, *pixelator;
-	int pos, fade, tick, tan;
+	int pos;
+	double fade, tan;
 	char text[255];
 	bool underscore, fadeout;
 	struct Timeline* timeline;
@@ -47,8 +48,8 @@ static TM_ACTION(FadeIn) {
 			data->fade = 0;
 			return false;
 		case TM_ACTIONSTATE_RUNNING:
-			data->fade += 2;
-			data->tan++;
+			data->fade += 2 * action->delta / (1 / 60.0);
+			data->tan += action->delta / (1 / 60.0);
 			return data->fade >= 255;
 		case TM_ACTIONSTATE_DESTROY:
 			data->fade = 255;
@@ -91,11 +92,7 @@ static TM_ACTION(Type) {
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	TM_Process(data->timeline, delta);
-	data->tick++;
-	if (data->tick == 30) {
-		data->underscore = !data->underscore;
-		data->tick = 0;
-	}
+	data->underscore = Fract(game->time) >= 0.5;
 }
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
@@ -116,7 +113,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 		double tg = tan(-data->tan / 384.0 * ALLEGRO_PI - ALLEGRO_PI / 2);
 
-		int fade = data->fadeout ? 255 : data->fade;
+		int fade = data->fadeout ? 255 : (int)data->fade;
 
 		al_set_target_bitmap(data->pixelator);
 		al_clear_to_color(al_map_rgb(35, 31, 32));
@@ -141,7 +138,6 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->pos = 1;
 	data->fade = 0;
 	data->tan = 64;
-	data->tick = 0;
 	data->fadeout = false;
 	data->underscore = true;
 	strncpy(data->text, "#", 255);

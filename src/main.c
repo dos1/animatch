@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
 
 	game->handlers.event = GlobalEventHandler;
 	game->handlers.destroy = DestroyGameData;
+	game->handlers.postdraw = DrawBuildInfo;
 
 	al_show_mouse_cursor(game->display);
 

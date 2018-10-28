@@ -20,6 +20,16 @@
 
 #include "common.h"
 #include <libsuperderpy.h>
+#include <stdio.h>
+
+void DrawBuildInfo(struct Game* game) {
+	if (!game->_priv.showtimeline) {
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.995, game->viewport.height * 0.955, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
+		char revs[255];
+		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.995, game->viewport.height * 0.975, ALLEGRO_ALIGN_RIGHT, revs);
+	}
+}
 
 bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_F)) {
