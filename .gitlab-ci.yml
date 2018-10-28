@@ -54,8 +54,8 @@ build:linux-flatpak-amd64:
   retry: 1
   artifacts: *artifacts
   script:
-    - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=x86_64 --install --user
-    - flatpak build-bundle ~/.local/share/flatpak/repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch
+    - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=x86_64 --repo=build-flatpak-repo
+    - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch
 
 build:macos:
   image: dosowisko/libsuperderpy-macos
