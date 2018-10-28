@@ -55,6 +55,7 @@ build:linux-flatpak-amd64:
   artifacts: *artifacts
   script:
     - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=x86_64 --repo=build-flatpak-repo
+    - mkdir -p utils/output
     - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch
 
 build:macos:
