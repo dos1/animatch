@@ -49,7 +49,7 @@ build:linux-steamrt-i686:
     - NO_STEAM_RUNTIME=1 ./package_linux_i686.sh
 
 build:linux-flatpak-amd64:
-  image: dosowisko/libsuperderpy-flatpak
+  image: dosowisko/libsuperderpy-flatpak-amd64
   stage: build
   retry: 1
   artifacts: *artifacts
@@ -57,6 +57,17 @@ build:linux-flatpak-amd64:
     - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=x86_64 --repo=build-flatpak-repo
     - mkdir -p utils/output
     - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch
+
+build:linux-flatpak-arm64:
+  image: dosowisko/libsuperderpy-flatpak-arm64
+  stage: build
+  retry: 1
+  artifacts: *artifacts
+  script:
+    - update-binfmts --enable qemu-aarch64
+    - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=aarch64 --repo=build-flatpak-repo
+    - mkdir -p utils/output
+    - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-arm64.flatpak com.holypangolin.Animatch
 
 build:macos:
   image: dosowisko/libsuperderpy-macos
@@ -112,6 +123,21 @@ deploy:linux-flatpak-amd64:
   script:
     - butler push utils/output/animatch-linux-amd64.flatpak dos/animatch:ci-linux-flatpak-amd64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
+deploy:linux-flatpak-arm64:
+  image: dosowisko/butler
+  stage: deploy
+  when: on_success
+  retry: 2
+  environment:
+    name: itch-linux-flatpak-arm64
+    url: https://dos.itch.io/animatch
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build:linux-flatpak-arm64
+  script:
+    - butler push utils/output/animatch-linux-arm64.flatpak dos/animatch:ci-linux-flatpak-arm64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
 deploy:win32:
   image: dosowisko/butler
   stage: deploy
@@ -156,4 +182,3 @@ deploy:macos:
     - build:macos
   script:
     - butler push utils/output/animatch-osx.zip dos/animatch:ci-macos --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
-
