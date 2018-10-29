@@ -56,7 +56,7 @@ build:linux-flatpak-amd64:
   script:
     - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=x86_64 --repo=build-flatpak-repo
     - mkdir -p utils/output
-    - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch/x86_64/master
+    - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-amd64.flatpak com.holypangolin.Animatch --arch=x86_64
 
 build:linux-flatpak-arm64:
   image: dosowisko/libsuperderpy-flatpak-arm64
@@ -67,7 +67,7 @@ build:linux-flatpak-arm64:
     - update-binfmts --enable qemu-aarch64
     - flatpak-builder build-flatpak com.holypangolin.Animatch.json --arch=aarch64 --repo=build-flatpak-repo
     - mkdir -p utils/output
-    - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-arm64.flatpak com.holypangolin.Animatch/aarch64/master
+    - flatpak build-bundle build-flatpak-repo utils/output/animatch-linux-arm64.flatpak com.holypangolin.Animatch --arch=aarch64
 
 build:macos:
   image: dosowisko/libsuperderpy-macos
