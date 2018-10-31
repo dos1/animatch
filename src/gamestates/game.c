@@ -50,6 +50,7 @@ struct Field {
 	struct Character* animal;
 	enum FIELD_TYPE type;
 	struct FieldID id;
+	bool matched;
 };
 
 struct GamestateResources {
@@ -90,17 +91,202 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			if (IsSameID(data->current, (struct FieldID){i, j})) {
 				color = al_map_rgba(222, 222, 222, 222);
 			}
-			al_draw_filled_rectangle(i * 90 + 2, j * 90 + 180 + 2, (i + 1) * 90 - 2, (j + 1) * 90 + 180 - 2, color);
-			DrawCharacter(game, data->fields[i][j].animal);
+			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+				al_draw_filled_rectangle(i * 90 + 2, j * 90 + 180 + 2, (i + 1) * 90 - 2, (j + 1) * 90 + 180 - 2, color);
+			}
+			if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+				DrawCharacter(game, data->fields[i][j].animal);
+			}
 		}
 	}
 }
 
-static void Swap(struct Game* game, struct GamestateResources* data) {
+static struct FieldID ToLeft(struct FieldID id) {
+	id.i--;
+	if (id.i < 0) {
+		return (struct FieldID){-1, -1};
+	}
+	return id;
+}
+
+static struct FieldID ToRight(struct FieldID id) {
+	id.i++;
+	if (id.i >= COLS) {
+		return (struct FieldID){-1, -1};
+	}
+	return id;
+}
+
+static struct FieldID ToTop(struct FieldID id) {
+	id.j--;
+	if (id.j < 0) {
+		return (struct FieldID){-1, -1};
+	}
+	return id;
+}
+
+static struct FieldID ToBottom(struct FieldID id) {
+	id.j++;
+	if (id.j >= ROWS) {
+		return (struct FieldID){-1, -1};
+	}
+	return id;
+}
+
+static bool IsValidMove(struct FieldID one, struct FieldID two) {
+	if (one.i == two.i && abs(one.j - two.j) == 1) {
+		return true;
+	}
+	if (one.j == two.j && abs(one.i - two.i) == 1) {
+		return true;
+	}
+	return false;
+}
+
+static struct Field* GetField(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	if (!IsValidID(id)) {
+		return NULL;
+	}
+	return &data->fields[id.i][id.j];
+}
+
+static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	int lchain = 0, tchain = 0;
+	struct Field* orig = GetField(game, data, id);
+	if (orig->type >= FIELD_TYPE_ANIMALS) {
+		return 0;
+	}
+	struct FieldID pos = ToLeft(id);
+	while (IsValidID(pos)) {
+		struct Field* field = GetField(game, data, pos);
+		if (field->type != orig->type) {
+			break;
+		}
+		lchain++;
+		pos = ToLeft(pos);
+	}
+	pos = ToRight(id);
+	while (IsValidID(pos)) {
+		struct Field* field = GetField(game, data, pos);
+		if (field->type != orig->type) {
+			break;
+		}
+		lchain++;
+		pos = ToRight(pos);
+	}
+
+	pos = ToTop(id);
+	while (IsValidID(pos)) {
+		struct Field* field = GetField(game, data, pos);
+		if (field->type != orig->type) {
+			break;
+		}
+		tchain++;
+		pos = ToTop(pos);
+	}
+	pos = ToBottom(id);
+	while (IsValidID(pos)) {
+		struct Field* field = GetField(game, data, pos);
+		if (field->type != orig->type) {
+			break;
+		}
+		tchain++;
+		pos = ToBottom(pos);
+	}
+
+	int chain = 0;
+	if (lchain >= 2) {
+		chain += lchain;
+	}
+	if (tchain >= 2) {
+		chain += tchain;
+	}
+	if (chain) {
+		chain++;
+	}
+	PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
+	return chain;
+}
+
+static int MarkMatching(struct Game* game, struct GamestateResources* data) {
+	int matching = 0;
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->fields[i][j].matched = IsMatching(game, data, (struct FieldID){i, j});
+			if (data->fields[i][j].matched) {
+				matching++;
+			}
+		}
+	}
+	PrintConsole(game, "matching %d", matching);
+	return matching;
+}
+
+static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->fields[i][j].matched) {
+				data->fields[i][j].type = FIELD_TYPE_EMPTY;
+				data->fields[i][j].matched = false;
+			}
+		}
+	}
+}
+
+static void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	struct Field tmp = data->fields[one.i][one.j];
+	data->fields[one.i][one.j] = data->fields[two.i][two.j];
+	data->fields[two.i][two.j] = tmp;
+}
+
+static void Gravity(struct Game* game, struct GamestateResources* data) {
+	bool repeat;
+	do {
+		repeat = false;
+		for (int i = 0; i < COLS; i++) {
+			for (int j = ROWS - 1; j >= 0; j--) {
+				struct FieldID id = (struct FieldID){i, j};
+				struct Field* field = GetField(game, data, id);
+				if (field->type != FIELD_TYPE_EMPTY) {
+					continue;
+				}
+				struct FieldID up = ToTop(id);
+				if (IsValidID(up)) {
+					struct Field* upfield = GetField(game, data, up);
+					if (upfield->type == FIELD_TYPE_EMPTY) {
+						repeat = true;
+					} else {
+						Swap(game, data, id, up);
+					}
+				} else {
+					field->type = rand() % FIELD_TYPE_ANIMALS;
+					field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
+					SelectSpritesheet(game, field->animal, "stand");
+				}
+			}
+		}
+	} while (repeat);
+}
+
+static void ProcessFields(struct Game* game, struct GamestateResources* data) {
+	while (MarkMatching(game, data)) {
+		EmptyMatching(game, data);
+		Gravity(game, data);
+	}
+}
+
+static void Turn(struct Game* game, struct GamestateResources* data) {
+	if (!IsValidMove(data->current, data->hovered)) {
+		return;
+	}
+
 	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
-	struct Field tmp = data->fields[data->hovered.i][data->hovered.j];
-	data->fields[data->hovered.i][data->hovered.j] = data->fields[data->current.i][data->current.j];
-	data->fields[data->current.i][data->current.j] = tmp;
+	Swap(game, data, data->current, data->hovered);
+
+	if (!IsMatching(game, data, data->current) && !IsMatching(game, data, data->hovered)) {
+		Swap(game, data, data->current, data->hovered);
+	}
+	ProcessFields(game, data);
 }
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
@@ -124,7 +310,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
 		if (IsValidID(data->current) && IsValidID(data->hovered)) {
-			Swap(game, data);
+			Turn(game, data);
 		}
 	}
 }
@@ -158,6 +344,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			data->fields[i][j].animal->scaleY = 0.085;
 			data->fields[i][j].id.i = i;
 			data->fields[i][j].id.j = j;
+			data->fields[i][j].matched = false;
 		}
 	}
 
@@ -190,6 +377,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	data->current = (struct FieldID){-1, -1};
+	ProcessFields(game, data);
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
