@@ -24,10 +24,10 @@
 
 void DrawBuildInfo(struct Game* game) {
 	if (!game->_priv.showtimeline) {
-		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
+		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
 		char revs[255];
 		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
-		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
+		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
 	}
 }
 
@@ -50,7 +50,7 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 		game->data->mouseX = Clamp(0, 1, (ev->mouse.x - game->_priv.clip_rect.x) / (double)game->_priv.clip_rect.w);
 		game->data->mouseY = Clamp(0, 1, (ev->mouse.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
 	}
-	if (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) {
+	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE)) {
 		game->data->mouseX = Clamp(0, 1, (ev->touch.x - game->_priv.clip_rect.x) / (double)game->_priv.clip_rect.w);
 		game->data->mouseY = Clamp(0, 1, (ev->touch.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
 	}
@@ -60,9 +60,11 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
+	data->font = al_load_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"), (int)(1440 * 0.025), 0);
 	return data;
 }
 
 void DestroyGameData(struct Game* game) {
+	al_destroy_font(game->data->font);
 	free(game->data);
 }

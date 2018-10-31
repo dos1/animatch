@@ -22,6 +22,7 @@
 struct CommonResources {
 	// Fill in with common data accessible from all gamestates.
 	double mouseX, mouseY;
+	ALLEGRO_FONT* font;
 };
 
 struct CommonResources* CreateGameData(struct Game* game);
