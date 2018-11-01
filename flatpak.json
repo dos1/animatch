@@ -16,6 +16,19 @@
 "cleanup": ["/include", "/lib/pkgconfig", "/lib/*.a", "/lib/*.la", "/share/aclocal", "/share/doc", "/bin/test_physfs"],
 "modules": [
   {
+    "name": "SDL2",
+    "buildsystem": "cmake-ninja",
+    "config-opts": ["-DCMAKE_BUILD_TYPE=RelWithDebInfo"],
+    "builddir": true,
+    "sources": [
+      {
+        "type": "archive",
+        "url": "https://libsdl.org/release/SDL2-2.0.9.tar.gz",
+        "sha512": "a78a4708b2bb5b35a7c7b7501eb3bd60a9aa3bb95a3d84e57763df4a377185e7312a94b66321eef7ca0d17255e4b402fc950e83ef0dbbd08f14ff1194107dc10"
+      }
+    ]
+  },
+  {
     "name": "allegro5",
     "buildsystem": "cmake-ninja",
     "build-options": {
