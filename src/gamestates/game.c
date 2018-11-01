@@ -25,7 +25,7 @@
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
 
 #define COLS 8
-#define ROWS 12
+#define ROWS 8
 
 enum FIELD_TYPE {
 	FIELD_TYPE_BEE,
@@ -83,16 +83,17 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_clear_to_color(al_color_hsl(game->time * 64, 1.0, 0.5));
 	al_draw_bitmap(data->bg, 0, 0, 0);
 
-	for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 12; j++) {
-			SetCharacterPosition(game, data->fields[i][j].animal, i * 90 + 45, j * 90 + 45 + 180, 0);
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
+			SetCharacterPosition(game, data->fields[i][j].animal, i * 90 + 45, j * 90 + 45 + offsetY, 0);
 			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
 			ALLEGRO_COLOR color = hovered ? al_map_rgba(160, 160, 160, 160) : al_map_rgba(92, 92, 92, 92);
 			if (IsSameID(data->current, (struct FieldID){i, j})) {
 				color = al_map_rgba(222, 222, 222, 222);
 			}
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
-				al_draw_filled_rectangle(i * 90 + 2, j * 90 + 180 + 2, (i + 1) * 90 - 2, (j + 1) * 90 + 180 - 2, color);
+				al_draw_filled_rectangle(i * 90 + 2, j * 90 + offsetY + 2, (i + 1) * 90 - 2, (j + 1) * 90 + offsetY - 2, color);
 			}
 			if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
 				DrawCharacter(game, data->fields[i][j].animal);
@@ -297,9 +298,10 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		// When there are no active gamestates, the engine will quit.
 	}
 
+	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
 	data->hovered.i = (int)(game->data->mouseX * game->viewport.width / 90);
-	data->hovered.j = (int)((game->data->mouseY * game->viewport.height - 180) / 90);
-	if ((data->hovered.i < 0) || (data->hovered.j < 0) || (data->hovered.i >= COLS) || (data->hovered.j >= ROWS) || (game->data->mouseY * game->viewport.height < 180)) {
+	data->hovered.j = (int)((game->data->mouseY * game->viewport.height - offsetY) / 90);
+	if ((data->hovered.i < 0) || (data->hovered.j < 0) || (data->hovered.i >= COLS) || (data->hovered.j >= ROWS) || (game->data->mouseY * game->viewport.height <= offsetY) || (game->data->mouseX == 0.0)) {
 		data->hovered.i = -1;
 		data->hovered.j = -1;
 	}
