@@ -340,8 +340,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animal = CreateCharacter(game, ANIMALS[rand() % 6]);
 			data->fields[i][j].animal->shared = true;
-			data->fields[i][j].animal->scaleX = 0.085;
-			data->fields[i][j].animal->scaleY = 0.085;
+			data->fields[i][j].animal->scaleX = 0.18;
+			data->fields[i][j].animal->scaleY = 0.18;
 			data->fields[i][j].id.i = i;
 			data->fields[i][j].id.j = j;
 			data->fields[i][j].matched = false;
