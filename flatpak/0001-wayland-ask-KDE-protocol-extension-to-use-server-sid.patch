@@ -1,0 +1,247 @@
+From 25e38e5a3e9e59c46705d6df8162ee877e15d69c Mon Sep 17 00:00:00 2001
+From: "Ryan C. Gordon" <icculus@icculus.org>
+Date: Mon, 29 Oct 2018 10:14:59 -0400
+Subject: [PATCH] wayland: ask KDE protocol extension to use server-side
+ decorations if possible.
+
+--HG--
+branch : SDL-ryan-batching-renderer
+---
+ src/video/wayland/SDL_waylandvideo.c          |  6 ++
+ src/video/wayland/SDL_waylandvideo.h          |  1 +
+ src/video/wayland/SDL_waylandwindow.c         | 25 +++++
+ src/video/wayland/SDL_waylandwindow.h         |  2 +
+ ...org-kde-kwin-server-decoration-manager.xml | 94 +++++++++++++++++++
+ 5 files changed, 128 insertions(+)
+ create mode 100644 wayland-protocols/org-kde-kwin-server-decoration-manager.xml
+
+diff --git a/src/video/wayland/SDL_waylandvideo.c b/src/video/wayland/SDL_waylandvideo.c
+index 06230277f..acea440d6 100644
+--- a/src/video/wayland/SDL_waylandvideo.c
++++ b/src/video/wayland/SDL_waylandvideo.c
+@@ -47,6 +47,7 @@
+ 
+ #include "xdg-shell-client-protocol.h"
+ #include "xdg-shell-unstable-v6-client-protocol.h"
++#include "org-kde-kwin-server-decoration-manager-client-protocol.h"
+ 
+ #define WAYLANDVID_DRIVER_NAME "wayland"
+ 
+@@ -182,6 +183,7 @@ Wayland_CreateDevice(int devindex)
+     device->SetWindowFullscreen = Wayland_SetWindowFullscreen;
+     device->MaximizeWindow = Wayland_MaximizeWindow;
+     device->RestoreWindow = Wayland_RestoreWindow;
++    device->SetWindowBordered = Wayland_SetWindowBordered;
+     device->SetWindowSize = Wayland_SetWindowSize;
+     device->SetWindowTitle = Wayland_SetWindowTitle;
+     device->DestroyWindow = Wayland_DestroyWindow;
+@@ -345,6 +347,8 @@ display_handle_global(void *data, struct wl_registry *registry, uint32_t id,
+ {
+     SDL_VideoData *d = data;
+ 
++    /*printf("WAYLAND INTERFACE: %s\n", interface);*/
++
+     if (strcmp(interface, "wl_compositor") == 0) {
+         d->compositor = wl_registry_bind(d->registry, id, &wl_compositor_interface, 1);
+     } else if (strcmp(interface, "wl_output") == 0) {
+@@ -368,6 +372,8 @@ display_handle_global(void *data, struct wl_registry *registry, uint32_t id,
+         Wayland_display_add_pointer_constraints(d, id);
+     } else if (strcmp(interface, "wl_data_device_manager") == 0) {
+         d->data_device_manager = wl_registry_bind(d->registry, id, &wl_data_device_manager_interface, 3);
++    } else if (strcmp(interface, "org_kde_kwin_server_decoration_manager") == 0) {
++        d->kwin_server_decoration_manager = wl_registry_bind(d->registry, id, &org_kde_kwin_server_decoration_manager_interface, 1);
+ 
+ #ifdef SDL_VIDEO_DRIVER_WAYLAND_QT_TOUCH
+     } else if (strcmp(interface, "qt_touch_extension") == 0) {
+diff --git a/src/video/wayland/SDL_waylandvideo.h b/src/video/wayland/SDL_waylandvideo.h
+index c16c0bdd4..4d6658fca 100644
+--- a/src/video/wayland/SDL_waylandvideo.h
++++ b/src/video/wayland/SDL_waylandvideo.h
+@@ -61,6 +61,7 @@ typedef struct {
+     struct zwp_relative_pointer_manager_v1 *relative_pointer_manager;
+     struct zwp_pointer_constraints_v1 *pointer_constraints;
+     struct wl_data_device_manager *data_device_manager;
++    struct org_kde_kwin_server_decoration_manager *kwin_server_decoration_manager;
+ 
+     EGLDisplay edpy;
+     EGLContext context;
+diff --git a/src/video/wayland/SDL_waylandwindow.c b/src/video/wayland/SDL_waylandwindow.c
+index 7055336d6..cbd85088c 100644
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -35,6 +35,7 @@
+ 
+ #include "xdg-shell-client-protocol.h"
+ #include "xdg-shell-unstable-v6-client-protocol.h"
++#include "org-kde-kwin-server-decoration-manager-client-protocol.h"
+ 
+ /* On modern desktops, we probably will use the xdg-shell protocol instead
+    of wl_shell, but wl_shell might be useful on older Wayland installs that
+@@ -459,6 +460,17 @@ Wayland_RestoreWindow(_THIS, SDL_Window * window)
+     WAYLAND_wl_display_flush( ((SDL_VideoData*)_this->driverdata)->display );
+ }
+ 
++void
++Wayland_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered)
++{
++    SDL_WindowData *wind = window->driverdata;
++    const SDL_VideoData *viddata = (const SDL_VideoData *) _this->driverdata;
++    if ((viddata->kwin_server_decoration_manager) && (wind->kwin_server_decoration)) {
++        const enum org_kde_kwin_server_decoration_mode mode = bordered ? ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_SERVER : ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_NONE;
++        org_kde_kwin_server_decoration_request_mode(wind->kwin_server_decoration, mode);
++    }
++}
++
+ void
+ Wayland_MaximizeWindow(_THIS, SDL_Window * window)
+ {
+@@ -570,6 +582,15 @@ int Wayland_CreateWindow(_THIS, SDL_Window *window)
+     }
+ #endif /* SDL_VIDEO_DRIVER_WAYLAND_QT_TOUCH */
+ 
++    if (c->kwin_server_decoration_manager) {
++        data->kwin_server_decoration = org_kde_kwin_server_decoration_manager_create(c->kwin_server_decoration_manager, data->surface);
++        if (data->kwin_server_decoration) {
++            const SDL_bool bordered = (window->flags & SDL_WINDOW_BORDERLESS) == 0;
++            const enum org_kde_kwin_server_decoration_mode mode = bordered ? ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_SERVER : ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_NONE;
++            org_kde_kwin_server_decoration_request_mode(data->kwin_server_decoration, mode);
++        }
++    }
++
+     region = wl_compositor_create_region(c->compositor);
+     wl_region_add(region, 0, 0, window->w, window->h);
+     wl_surface_set_opaque_region(data->surface, region);
+@@ -644,6 +665,10 @@ void Wayland_DestroyWindow(_THIS, SDL_Window *window)
+         SDL_EGL_DestroySurface(_this, wind->egl_surface);
+         WAYLAND_wl_egl_window_destroy(wind->egl_window);
+ 
++        if (wind->kwin_server_decoration) {
++            org_kde_kwin_server_decoration_release(wind->kwin_server_decoration);
++        }
++
+         if (data->shell.xdg) {
+             if (wind->shell_surface.xdg.roleobj.toplevel) {
+                 xdg_toplevel_destroy(wind->shell_surface.xdg.roleobj.toplevel);
+diff --git a/src/video/wayland/SDL_waylandwindow.h b/src/video/wayland/SDL_waylandwindow.h
+index 69b988923..38a204e9a 100644
+--- a/src/video/wayland/SDL_waylandwindow.h
++++ b/src/video/wayland/SDL_waylandwindow.h
+@@ -62,6 +62,7 @@ typedef struct {
+     struct SDL_WaylandInput *keyboard_device;
+     EGLSurface egl_surface;
+     struct zwp_locked_pointer_v1 *locked_pointer;
++    struct org_kde_kwin_server_decoration *kwin_server_decoration;
+ 
+ #ifdef SDL_VIDEO_DRIVER_WAYLAND_QT_TOUCH
+     struct qt_extended_surface *extended_surface;
+@@ -74,6 +75,7 @@ extern void Wayland_SetWindowFullscreen(_THIS, SDL_Window * window,
+                                         SDL_bool fullscreen);
+ extern void Wayland_MaximizeWindow(_THIS, SDL_Window * window);
+ extern void Wayland_RestoreWindow(_THIS, SDL_Window * window);
++extern void Wayland_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered);
+ extern int Wayland_CreateWindow(_THIS, SDL_Window *window);
+ extern void Wayland_SetWindowSize(_THIS, SDL_Window * window);
+ extern void Wayland_SetWindowTitle(_THIS, SDL_Window * window);
+diff --git a/wayland-protocols/org-kde-kwin-server-decoration-manager.xml b/wayland-protocols/org-kde-kwin-server-decoration-manager.xml
+new file mode 100644
+index 000000000..8bc106c7c
+--- /dev/null
++++ b/wayland-protocols/org-kde-kwin-server-decoration-manager.xml
+@@ -0,0 +1,94 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<protocol name="server_decoration">
++  <copyright><![CDATA[
++    Copyright (C) 2015 Martin Gräßlin
++
++    This program is free software: you can redistribute it and/or modify
++    it under the terms of the GNU Lesser General Public License as published by
++    the Free Software Foundation, either version 2.1 of the License, or
++    (at your option) any later version.
++
++    This program is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU Lesser General Public License for more details.
++
++    You should have received a copy of the GNU Lesser General Public License
++    along with this program.  If not, see <http://www.gnu.org/licenses/>.
++  ]]></copyright>
++  <interface  name="org_kde_kwin_server_decoration_manager" version="1">
++      <description summary="Server side window decoration manager">
++        This interface allows to coordinate whether the server should create
++        a server-side window decoration around a wl_surface representing a
++        shell surface (wl_shell_surface or similar). By announcing support
++        for this interface the server indicates that it supports server
++        side decorations.
++      </description>
++      <request name="create">
++        <description summary="Create a server-side decoration object for a given surface">
++            When a client creates a server-side decoration object it indicates
++            that it supports the protocol. The client is supposed to tell the
++            server whether it wants server-side decorations or will provide
++            client-side decorations.
++
++            If the client does not create a server-side decoration object for
++            a surface the server interprets this as lack of support for this
++            protocol and considers it as client-side decorated. Nevertheless a
++            client-side decorated surface should use this protocol to indicate
++            to the server that it does not want a server-side deco.
++        </description>
++        <arg name="id" type="new_id" interface="org_kde_kwin_server_decoration"/>
++        <arg name="surface" type="object" interface="wl_surface"/>
++      </request>
++      <enum name="mode">
++            <description summary="Possible values to use in request_mode and the event mode."/>
++            <entry name="None" value="0" summary="Undecorated: The surface is not decorated at all, neither server nor client-side. An example is a popup surface which should not be decorated."/>
++            <entry name="Client" value="1" summary="Client-side decoration: The decoration is part of the surface and the client."/>
++            <entry name="Server" value="2" summary="Server-side decoration: The server embeds the surface into a decoration frame."/>
++      </enum>
++      <event name="default_mode">
++          <description summary="The default mode used on the server">
++              This event is emitted directly after binding the interface. It contains
++              the default mode for the decoration. When a new server decoration object
++              is created this new object will be in the default mode until the first
++              request_mode is requested.
++
++              The server may change the default mode at any time.
++          </description>
++          <arg name="mode" type="uint" summary="The default decoration mode applied to newly created server decorations."/>
++      </event>
++  </interface>
++  <interface name="org_kde_kwin_server_decoration" version="1">
++      <request name="release" type="destructor">
++        <description summary="release the server decoration object"/>
++      </request>
++      <enum name="mode">
++            <description summary="Possible values to use in request_mode and the event mode."/>
++            <entry name="None" value="0" summary="Undecorated: The surface is not decorated at all, neither server nor client-side. An example is a popup surface which should not be decorated."/>
++            <entry name="Client" value="1" summary="Client-side decoration: The decoration is part of the surface and the client."/>
++            <entry name="Server" value="2" summary="Server-side decoration: The server embeds the surface into a decoration frame."/>
++      </enum>
++      <request name="request_mode">
++          <description summary="The decoration mode the surface wants to use."/>
++          <arg name="mode" type="uint" summary="The mode this surface wants to use."/>
++      </request>
++      <event name="mode">
++          <description summary="The new decoration mode applied by the server">
++              This event is emitted directly after the decoration is created and
++              represents the base decoration policy by the server. E.g. a server
++              which wants all surfaces to be client-side decorated will send Client,
++              a server which wants server-side decoration will send Server.
++
++              The client can request a different mode through the decoration request.
++              The server will acknowledge this by another event with the same mode. So
++              even if a server prefers server-side decoration it's possible to force a
++              client-side decoration.
++
++              The server may emit this event at any time. In this case the client can
++              again request a different mode. It's the responsibility of the server to
++              prevent a feedback loop.
++          </description>
++          <arg name="mode" type="uint" summary="The decoration mode applied to the surface by the server."/>
++      </event>
++  </interface>
++</protocol>
+-- 
+2.19.1
+

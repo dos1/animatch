@@ -53,7 +53,7 @@ build:linux-flatpak-amd64:
   retry: 1
   artifacts: *artifacts
   script:
-    - flatpak-builder build-flatpak flatpak.json --arch=x86_64 --repo=build-flatpak-repo
+    - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=x86_64 --repo=build-flatpak-repo
     - mkdir -p utils/output
     - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-amd64.flatpak $BUNDLE_ID --arch=x86_64
 
@@ -64,7 +64,7 @@ build:linux-flatpak-arm64:
   artifacts: *artifacts
   script:
     - update-binfmts --enable qemu-aarch64
-    - flatpak-builder build-flatpak flatpak.json --arch=aarch64 --repo=build-flatpak-repo
+    - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=aarch64 --repo=build-flatpak-repo
     - mkdir -p utils/output
     - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-arm64.flatpak $BUNDLE_ID --arch=aarch64
 
@@ -75,7 +75,7 @@ build:linux-flatpak-armv7:
   artifacts: *artifacts
   script:
     - update-binfmts --enable qemu-arm
-    - flatpak-builder build-flatpak flatpak.json --arch=arm --repo=build-flatpak-repo
+    - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=arm --repo=build-flatpak-repo
     - mkdir -p utils/output
     - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-armv7.flatpak $BUNDLE_ID --arch=arm
 
@@ -85,7 +85,7 @@ build:linux-flatpak-i686:
   retry: 1
   artifacts: *artifacts
   script:
-    - flatpak-builder build-flatpak flatpak.json --arch=i386 --repo=build-flatpak-repo
+    - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=i386 --repo=build-flatpak-repo
     - mkdir -p utils/output
     - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-i686.flatpak $BUNDLE_ID --arch=i386
 
