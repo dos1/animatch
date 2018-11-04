@@ -1,0 +1,276 @@
+From 3330af1958cc3aa702165cc8cd177eb84fd3ef9d Mon Sep 17 00:00:00 2001
+From: Sebastian Krzyszkowiak <dos@dosowisko.net>
+Date: Sun, 4 Nov 2018 04:48:18 +0100
+Subject: [PATCH] wayland: ask xdg-decoration protocol extension to use
+ server-side decorations if possible.
+
+---
+ src/video/wayland/SDL_waylandvideo.c          |   3 +
+ src/video/wayland/SDL_waylandvideo.h          |   1 +
+ src/video/wayland/SDL_waylandwindow.c         |  19 ++-
+ src/video/wayland/SDL_waylandwindow.h         |   1 +
+ .../xdg-decoration-unstable-v1.xml            | 156 ++++++++++++++++++
+ 5 files changed, 178 insertions(+), 2 deletions(-)
+ create mode 100644 wayland-protocols/xdg-decoration-unstable-v1.xml
+
+diff --git a/src/video/wayland/SDL_waylandvideo.c b/src/video/wayland/SDL_waylandvideo.c
+index 0759719d3..a1849d8d1 100644
+--- a/src/video/wayland/SDL_waylandvideo.c
++++ b/src/video/wayland/SDL_waylandvideo.c
+@@ -47,6 +47,7 @@
+ 
+ #include "xdg-shell-client-protocol.h"
+ #include "xdg-shell-unstable-v6-client-protocol.h"
++#include "xdg-decoration-unstable-v1-client-protocol.h"
+ #include "org-kde-kwin-server-decoration-manager-client-protocol.h"
+ 
+ #define WAYLANDVID_DRIVER_NAME "wayland"
+@@ -372,6 +373,8 @@ display_handle_global(void *data, struct wl_registry *registry, uint32_t id,
+         Wayland_display_add_pointer_constraints(d, id);
+     } else if (strcmp(interface, "wl_data_device_manager") == 0) {
+         d->data_device_manager = wl_registry_bind(d->registry, id, &wl_data_device_manager_interface, 3);
++    } else if (strcmp(interface, "zxdg_decoration_manager_v1") == 0) {
++        d->decoration_manager = wl_registry_bind(d->registry, id, &zxdg_decoration_manager_v1_interface, 1);
+     } else if (strcmp(interface, "org_kde_kwin_server_decoration_manager") == 0) {
+         d->kwin_server_decoration_manager = wl_registry_bind(d->registry, id, &org_kde_kwin_server_decoration_manager_interface, 1);
+ 
+diff --git a/src/video/wayland/SDL_waylandvideo.h b/src/video/wayland/SDL_waylandvideo.h
+index 4d6658fca..d173b28e5 100644
+--- a/src/video/wayland/SDL_waylandvideo.h
++++ b/src/video/wayland/SDL_waylandvideo.h
+@@ -61,6 +61,7 @@ typedef struct {
+     struct zwp_relative_pointer_manager_v1 *relative_pointer_manager;
+     struct zwp_pointer_constraints_v1 *pointer_constraints;
+     struct wl_data_device_manager *data_device_manager;
++    struct zxdg_decoration_manager_v1 *decoration_manager;
+     struct org_kde_kwin_server_decoration_manager *kwin_server_decoration_manager;
+ 
+     EGLDisplay edpy;
+diff --git a/src/video/wayland/SDL_waylandwindow.c b/src/video/wayland/SDL_waylandwindow.c
+index 828d69c3a..a743e1b49 100644
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -35,6 +35,7 @@
+ 
+ #include "xdg-shell-client-protocol.h"
+ #include "xdg-shell-unstable-v6-client-protocol.h"
++#include "xdg-decoration-unstable-v1-client-protocol.h"
+ #include "org-kde-kwin-server-decoration-manager-client-protocol.h"
+ 
+ /* On modern desktops, we probably will use the xdg-shell protocol instead
+@@ -457,7 +458,10 @@ Wayland_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered)
+ {
+     SDL_WindowData *wind = window->driverdata;
+     const SDL_VideoData *viddata = (const SDL_VideoData *) _this->driverdata;
+-    if ((viddata->kwin_server_decoration_manager) && (wind->kwin_server_decoration)) {
++    if ((viddata->decoration_manager) && (wind->server_decoration)) {
++        const enum zxdg_toplevel_decoration_v1_mode mode = bordered ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE;
++        zxdg_toplevel_decoration_v1_set_mode(wind->server_decoration, mode);
++    } else if ((viddata->kwin_server_decoration_manager) && (wind->kwin_server_decoration)) {
+         const enum org_kde_kwin_server_decoration_mode mode = bordered ? ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_SERVER : ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_NONE;
+         org_kde_kwin_server_decoration_request_mode(wind->kwin_server_decoration, mode);
+     }
+@@ -574,7 +578,14 @@ int Wayland_CreateWindow(_THIS, SDL_Window *window)
+     }
+ #endif /* SDL_VIDEO_DRIVER_WAYLAND_QT_TOUCH */
+ 
+-    if (c->kwin_server_decoration_manager) {
++    if (c->decoration_manager && c->shell.xdg && data->shell_surface.xdg.surface) {
++        data->server_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(c->decoration_manager, data->shell_surface.xdg.roleobj.toplevel);
++        if (data->server_decoration) {
++            const SDL_bool bordered = (window->flags & SDL_WINDOW_BORDERLESS) == 0;
++            const enum zxdg_toplevel_decoration_v1_mode mode = bordered ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE;
++            zxdg_toplevel_decoration_v1_set_mode(data->server_decoration, mode);
++        }
++    } else if (c->kwin_server_decoration_manager) {
+         data->kwin_server_decoration = org_kde_kwin_server_decoration_manager_create(c->kwin_server_decoration_manager, data->surface);
+         if (data->kwin_server_decoration) {
+             const SDL_bool bordered = (window->flags & SDL_WINDOW_BORDERLESS) == 0;
+@@ -657,6 +668,10 @@ void Wayland_DestroyWindow(_THIS, SDL_Window *window)
+         SDL_EGL_DestroySurface(_this, wind->egl_surface);
+         WAYLAND_wl_egl_window_destroy(wind->egl_window);
+ 
++        if (wind->server_decoration) {
++           zxdg_toplevel_decoration_v1_destroy(wind->server_decoration);
++        }
++
+         if (wind->kwin_server_decoration) {
+             org_kde_kwin_server_decoration_release(wind->kwin_server_decoration);
+         }
+diff --git a/src/video/wayland/SDL_waylandwindow.h b/src/video/wayland/SDL_waylandwindow.h
+index 38a204e9a..c46540fc2 100644
+--- a/src/video/wayland/SDL_waylandwindow.h
++++ b/src/video/wayland/SDL_waylandwindow.h
+@@ -62,6 +62,7 @@ typedef struct {
+     struct SDL_WaylandInput *keyboard_device;
+     EGLSurface egl_surface;
+     struct zwp_locked_pointer_v1 *locked_pointer;
++    struct zxdg_toplevel_decoration_v1 *server_decoration;
+     struct org_kde_kwin_server_decoration *kwin_server_decoration;
+ 
+ #ifdef SDL_VIDEO_DRIVER_WAYLAND_QT_TOUCH
+diff --git a/wayland-protocols/xdg-decoration-unstable-v1.xml b/wayland-protocols/xdg-decoration-unstable-v1.xml
+new file mode 100644
+index 000000000..378e8ff4b
+--- /dev/null
++++ b/wayland-protocols/xdg-decoration-unstable-v1.xml
+@@ -0,0 +1,156 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<protocol name="xdg_decoration_unstable_v1">
++  <copyright>
++    Copyright © 2018 Simon Ser
++
++    Permission is hereby granted, free of charge, to any person obtaining a
++    copy of this software and associated documentation files (the "Software"),
++    to deal in the Software without restriction, including without limitation
++    the rights to use, copy, modify, merge, publish, distribute, sublicense,
++    and/or sell copies of the Software, and to permit persons to whom the
++    Software is furnished to do so, subject to the following conditions:
++
++    The above copyright notice and this permission notice (including the next
++    paragraph) shall be included in all copies or substantial portions of the
++    Software.
++
++    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++    DEALINGS IN THE SOFTWARE.
++  </copyright>
++
++  <interface name="zxdg_decoration_manager_v1" version="1">
++    <description summary="window decoration manager">
++      This interface allows a compositor to announce support for server-side
++      decorations.
++
++      A window decoration is a set of window controls as deemed appropriate by
++      the party managing them, such as user interface components used to move,
++      resize and change a window's state.
++
++      A client can use this protocol to request being decorated by a supporting
++      compositor.
++
++      If compositor and client do not negotiate the use of a server-side
++      decoration using this protocol, clients continue to self-decorate as they
++      see fit.
++
++      Warning! The protocol described in this file is experimental and
++      backward incompatible changes may be made. Backward compatible changes
++      may be added together with the corresponding interface version bump.
++      Backward incompatible changes are done by bumping the version number in
++      the protocol and interface names and resetting the interface version.
++      Once the protocol is to be declared stable, the 'z' prefix and the
++      version number in the protocol and interface names are removed and the
++      interface version number is reset.
++    </description>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy the decoration manager object">
++        Destroy the decoration manager. This doesn't destroy objects created
++        with the manager.
++      </description>
++    </request>
++
++    <request name="get_toplevel_decoration">
++      <description summary="create a new toplevel decoration object">
++        Create a new decoration object associated with the given toplevel.
++
++        Creating an xdg_toplevel_decoration from an xdg_toplevel which has a
++        buffer attached or committed is a client error, and any attempts by a
++        client to attach or manipulate a buffer prior to the first
++        xdg_toplevel_decoration.configure event must also be treated as
++        errors.
++      </description>
++      <arg name="id" type="new_id" interface="zxdg_toplevel_decoration_v1"/>
++      <arg name="toplevel" type="object" interface="xdg_toplevel"/>
++    </request>
++  </interface>
++
++  <interface name="zxdg_toplevel_decoration_v1" version="1">
++    <description summary="decoration object for a toplevel surface">
++      The decoration object allows the compositor to toggle server-side window
++      decorations for a toplevel surface. The client can request to switch to
++      another mode.
++
++      The xdg_toplevel_decoration object must be destroyed before its
++      xdg_toplevel.
++    </description>
++
++    <enum name="error">
++      <entry name="unconfigured_buffer" value="0"
++        summary="xdg_toplevel has a buffer attached before configure"/>
++      <entry name="already_constructed" value="1"
++        summary="xdg_toplevel already has a decoration object"/>
++      <entry name="orphaned" value="2"
++        summary="xdg_toplevel destroyed before the decoration object"/>
++    </enum>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy the decoration object">
++        Switch back to a mode without any server-side decorations at the next
++        commit.
++      </description>
++    </request>
++
++    <enum name="mode">
++      <description summary="window decoration modes">
++        These values describe window decoration modes.
++      </description>
++      <entry name="client_side" value="1"
++        summary="no server-side window decoration"/>
++      <entry name="server_side" value="2"
++        summary="server-side window decoration"/>
++    </enum>
++
++    <request name="set_mode">
++      <description summary="set the decoration mode">
++        Set the toplevel surface decoration mode. This informs the compositor
++        that the client prefers the provided decoration mode.
++
++        After requesting a decoration mode, the compositor will respond by
++        emitting a xdg_surface.configure event. The client should then update
++        its content, drawing it without decorations if the received mode is
++        server-side decorations. The client must also acknowledge the configure
++        when committing the new content (see xdg_surface.ack_configure).
++
++        The compositor can decide not to use the client's mode and enforce a
++        different mode instead.
++
++        Clients whose decoration mode depend on the xdg_toplevel state may send
++        a set_mode request in response to a xdg_surface.configure event and wait
++        for the next xdg_surface.configure event to prevent unwanted state.
++        Such clients are responsible for preventing configure loops and must
++        make sure not to send multiple successive set_mode requests with the
++        same decoration mode.
++      </description>
++      <arg name="mode" type="uint" enum="mode" summary="the decoration mode"/>
++    </request>
++
++    <request name="unset_mode">
++      <description summary="unset the decoration mode">
++        Unset the toplevel surface decoration mode. This informs the compositor
++        that the client doesn't prefer a particular decoration mode.
++
++        This request has the same semantics as set_mode.
++      </description>
++    </request>
++
++    <event name="configure">
++      <description summary="suggest a surface change">
++        The configure event asks the client to change its decoration mode. The
++        configured state should not be applied immediately. Clients must send an
++        ack_configure in response to this event. See xdg_surface.configure and
++        xdg_surface.ack_configure for details.
++
++        A configure event can be sent at any time. The specified mode must be
++        obeyed by the client.
++      </description>
++      <arg name="mode" type="uint" enum="mode" summary="the decoration mode"/>
++    </event>
++  </interface>
++</protocol>
+-- 
+2.19.1
+
