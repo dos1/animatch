@@ -38,7 +38,9 @@ enum FIELD_TYPE {
 	FIELD_TYPE_ANIMALS,
 
 	FIELD_TYPE_EMPTY,
-	FIELD_TYPE_DISABLED
+	FIELD_TYPE_DISABLED,
+
+	FIELD_TYPES
 };
 
 struct FieldID {
@@ -313,6 +315,33 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
 		if (IsValidID(data->current) && IsValidID(data->hovered)) {
 			Turn(game, data);
+		}
+	}
+
+	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
+		int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
+
+		if (type < 0) {
+			return;
+		}
+		if (type >= FIELD_TYPE_ANIMALS) {
+			type++;
+		}
+		if (type >= FIELD_TYPES) {
+			return;
+		}
+
+		struct Field* field = GetField(game, data, data->hovered);
+
+		if (!field) {
+			return;
+		}
+
+		field->type = type;
+
+		if (type < FIELD_TYPE_ANIMALS) {
+			field->animal->spritesheets = data->archetypes[type]->spritesheets;
+			SelectSpritesheet(game, field->animal, "stand");
 		}
 	}
 }
