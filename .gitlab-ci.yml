@@ -52,6 +52,10 @@ build:linux-flatpak-amd64:
   stage: build
   retry: 1
   artifacts: *artifacts
+  cache:
+    key: linux-flatpak-amd64
+    paths:
+      - .flatpak-builder/
   script:
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=x86_64 --repo=build-flatpak-repo
     - mkdir -p utils/output
@@ -62,6 +66,10 @@ build:linux-flatpak-arm64:
   stage: build
   retry: 1
   artifacts: *artifacts
+  cache:
+    key: linux-flatpak-arm64
+    paths:
+      - .flatpak-builder/
   script:
     - update-binfmts --enable qemu-aarch64
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=aarch64 --repo=build-flatpak-repo
@@ -73,6 +81,10 @@ build:linux-flatpak-armv7:
   stage: build
   retry: 1
   artifacts: *artifacts
+  cache:
+    key: linux-flatpak-armv7
+    paths:
+      - .flatpak-builder/
   script:
     - update-binfmts --enable qemu-arm
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=arm --repo=build-flatpak-repo
@@ -84,6 +96,10 @@ build:linux-flatpak-i686:
   stage: build
   retry: 1
   artifacts: *artifacts
+  cache:
+    key: linux-flatpak-i686
+    paths:
+      - .flatpak-builder/
   script:
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=i386 --repo=build-flatpak-repo
     - mkdir -p utils/output
