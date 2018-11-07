@@ -24,6 +24,9 @@
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
 
+#define MATCHING_TIME 0.6
+#define FALLING_TIME 0.5
+
 #define COLS 8
 #define ROWS 8
 
@@ -53,6 +56,9 @@ struct Field {
 	enum FIELD_TYPE type;
 	struct FieldID id;
 	bool matched;
+
+	struct Tween hiding, falling;
+	int fallLevels;
 };
 
 struct GamestateResources {
@@ -63,6 +69,10 @@ struct GamestateResources {
 	struct Character* archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
 	struct FieldID current, hovered;
 	struct Field fields[COLS][ROWS];
+
+	struct Timeline* timeline;
+
+	bool locked;
 };
 
 int Gamestate_ProgressCount = 8; // number of loading steps as reported by Gamestate_Load
@@ -77,6 +87,14 @@ static inline bool IsValidID(struct FieldID id) {
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
+	TM_Process(data->timeline, delta);
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			AnimateCharacter(game, data->fields[i][j].animal, delta, 1.0);
+			UpdateTween(&data->fields[i][j].falling, delta);
+			UpdateTween(&data->fields[i][j].hiding, delta);
+		}
+	}
 }
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
@@ -88,11 +106,21 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
-			SetCharacterPosition(game, data->fields[i][j].animal, i * 90 + 45, j * 90 + 45 + offsetY, 0);
+
+			float tint = 1.0 - GetTweenValue(&data->fields[i][j].hiding);
+			data->fields[i][j].animal->tint = al_map_rgba_f(tint, tint, tint, tint);
+
+			int levelDiff = data->fields[i][j].fallLevels * 90 * (1.0 - GetTweenValue(&data->fields[i][j].falling));
+
+			SetCharacterPosition(game, data->fields[i][j].animal, i * 90 + 45, j * 90 + 45 + offsetY - levelDiff, 0);
+
 			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
 			ALLEGRO_COLOR color = hovered ? al_map_rgba(160, 160, 160, 160) : al_map_rgba(92, 92, 92, 92);
 			if (IsSameID(data->current, (struct FieldID){i, j})) {
 				color = al_map_rgba(222, 222, 222, 222);
+			}
+			if (data->locked) {
+				color = al_map_rgba(92, 92, 92, 92);
 			}
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
 				al_draw_filled_rectangle(i * 90 + 2, j * 90 + offsetY + 2, (i + 1) * 90 - 2, (j + 1) * 90 + offsetY - 2, color);
@@ -207,7 +235,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	if (chain) {
 		chain++;
 	}
-	PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
+	//PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
 	return chain;
 }
 
@@ -225,12 +253,26 @@ static int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	return matching;
 }
 
-static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
+static void AnimateMatching(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
+				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
+				data->locked = true;
+			}
+		}
+	}
+}
+
+static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->fields[i][j].fallLevels = 0;
+			if (data->fields[i][j].matched) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].matched = false;
+				data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
+				data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
 			}
 		}
 	}
@@ -259,22 +301,40 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 					if (upfield->type == FIELD_TYPE_EMPTY) {
 						repeat = true;
 					} else {
+						upfield->fallLevels++;
+						upfield->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME);
 						Swap(game, data, id, up);
 					}
 				} else {
 					field->type = rand() % FIELD_TYPE_ANIMALS;
 					field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
 					SelectSpritesheet(game, field->animal, "stand");
+					field->fallLevels++;
+					field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME);
+					field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
 				}
 			}
 		}
 	} while (repeat);
+
+	data->locked = false;
+}
+
+static void ProcessFields(struct Game* game, struct GamestateResources* data);
+
+static TM_ACTION(AfterMatching) {
+	TM_RunningOnly;
+	EmptyMatching(game, data);
+	Gravity(game, data);
+	ProcessFields(game, data);
+	return true;
 }
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data) {
-	while (MarkMatching(game, data)) {
-		EmptyMatching(game, data);
-		Gravity(game, data);
+	if (MarkMatching(game, data)) {
+		AnimateMatching(game, data);
+		TM_AddDelay(data->timeline, MATCHING_TIME * 1000);
+		TM_AddAction(data->timeline, AfterMatching, NULL);
 	}
 }
 
@@ -306,6 +366,10 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((data->hovered.i < 0) || (data->hovered.j < 0) || (data->hovered.i >= COLS) || (data->hovered.j >= ROWS) || (game->data->mouseY * game->viewport.height <= offsetY) || (game->data->mouseX == 0.0)) {
 		data->hovered.i = -1;
 		data->hovered.j = -1;
+	}
+
+	if (data->locked) {
+		return;
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
@@ -379,6 +443,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 		}
 	}
 
+	data->timeline = TM_Init(game, data, "timeline");
+
 	return data;
 }
 
@@ -394,6 +460,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	}
 	al_destroy_bitmap(data->bg);
 	al_destroy_font(data->font);
+	TM_Destroy(data->timeline);
 	free(data);
 }
 
@@ -405,10 +472,15 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].type = rand() % FIELD_TYPE_ANIMALS;
 			data->fields[i][j].animal->spritesheets = data->archetypes[data->fields[i][j].type]->spritesheets;
 			SelectSpritesheet(game, data->fields[i][j].animal, "stand");
+			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
+			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
 		}
 	}
 	data->current = (struct FieldID){-1, -1};
-	ProcessFields(game, data);
+	while (MarkMatching(game, data)) {
+		EmptyMatching(game, data);
+		Gravity(game, data);
+	}
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
