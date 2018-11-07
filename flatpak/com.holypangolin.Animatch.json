@@ -33,6 +33,10 @@
       {
         "type": "patch",
         "path": "0001-wayland-ask-xdg-decoration-protocol-extension-to-use.patch"
+      },
+      {
+        "type": "patch",
+        "path": "0001-wayland-fix-resizing-and-fullscreen-toggling.patch"
       }
     ]
   },
