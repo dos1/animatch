@@ -55,6 +55,13 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 		game->data->mouseY = Clamp(0, 1, (ev->touch.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
 	}
 
+	if (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) {
+		game->data->touch = true;
+	}
+	if (ev->type == ALLEGRO_EVENT_MOUSE_AXES) {
+		game->data->touch = false;
+	}
+
 	return false;
 }
 

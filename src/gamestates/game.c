@@ -27,6 +27,8 @@ static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
 #define MATCHING_TIME 0.6
 #define FALLING_TIME 0.5
 
+#define BLUR_DIVIDER 8
+
 #define COLS 8
 #define ROWS 8
 
@@ -58,7 +60,7 @@ struct Field {
 	bool matched;
 
 	struct Tween hiding, falling;
-	int fallLevels;
+	int fall_levels, level_no;
 };
 
 struct GamestateResources {
@@ -66,16 +68,23 @@ struct GamestateResources {
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_FONT* font;
 	ALLEGRO_BITMAP* bg;
+
+	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
+
 	struct Character* archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
 	struct FieldID current, hovered;
 	struct Field fields[COLS][ROWS];
 
 	struct Timeline* timeline;
 
+	ALLEGRO_BITMAP* field_bgs[4];
+
+	ALLEGRO_SHADER *combine_shader, *kawese_shader;
+
 	bool locked;
 };
 
-int Gamestate_ProgressCount = 8; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 13; // number of loading steps as reported by Gamestate_Load
 
 static inline bool IsSameID(struct FieldID one, struct FieldID two) {
 	return one.i == two.i && one.j == two.j;
@@ -100,36 +109,78 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
-	al_clear_to_color(al_color_hsl(game->time * 64, 1.0, 0.5));
+	al_set_target_bitmap(data->scene);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
 
+	al_set_target_bitmap(data->lowres_scene);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
+		0, 0, al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene), 0);
+
+	float size[2] = {al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene)};
+	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
+
+	al_set_target_bitmap(data->lowres_scene_blur);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
+	al_use_shader(data->kawese_shader);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_set_shader_float_vector("size", 2, size, 1);
+	al_set_shader_float("kernel", 0);
+	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
+
+	al_set_target_bitmap(data->lowres_scene);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
+	al_use_shader(data->kawese_shader);
+	al_set_shader_float_vector("size", 2, size, 1);
+	al_set_shader_float("kernel", 0);
+	al_draw_bitmap(data->lowres_scene_blur, 0, 0, 0);
+
+	al_set_target_bitmap(data->board);
+	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+	al_set_clipping_rectangle(0, offsetY, game->viewport.width, game->viewport.height - offsetY * 2);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
-
 			float tint = 1.0 - GetTweenValue(&data->fields[i][j].hiding);
 			data->fields[i][j].animal->tint = al_map_rgba_f(tint, tint, tint, tint);
 
-			int levelDiff = data->fields[i][j].fallLevels * 90 * (1.0 - GetTweenValue(&data->fields[i][j].falling));
+			int levels = data->fields[i][j].fall_levels;
+			int level_no = data->fields[i][j].level_no;
+			float tween = Interpolate(GetTweenPosition(&data->fields[i][j].falling), TWEEN_STYLE_EXPONENTIAL_OUT) * (0.5 - level_no * 0.1) +
+				sqrt(Interpolate(GetTweenPosition(&data->fields[i][j].falling), TWEEN_STYLE_BOUNCE_OUT)) * (0.5 + level_no * 0.1);
+
+			//			tween = Interpolate(GetTweenPosition(&data->fields[i][j].falling), TWEEN_STYLE_ELASTIC_OUT);
+			int levelDiff = (int)(levels * 90 * (1.0 - tween));
 
 			SetCharacterPosition(game, data->fields[i][j].animal, i * 90 + 45, j * 90 + 45 + offsetY - levelDiff, 0);
 
 			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
-			ALLEGRO_COLOR color = hovered ? al_map_rgba(160, 160, 160, 160) : al_map_rgba(92, 92, 92, 92);
-			if (IsSameID(data->current, (struct FieldID){i, j})) {
-				color = al_map_rgba(222, 222, 222, 222);
-			}
-			if (data->locked) {
-				color = al_map_rgba(92, 92, 92, 92);
+			ALLEGRO_COLOR color = al_map_rgba(222, 222, 222, 222);
+			if (data->locked || game->data->touch || !hovered) {
+				color = al_map_rgba(180, 180, 180, 180);
 			}
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
-				al_draw_filled_rectangle(i * 90 + 2, j * 90 + offsetY + 2, (i + 1) * 90 - 2, (j + 1) * 90 + offsetY - 2, color);
+				ALLEGRO_BITMAP* bmp = data->field_bgs[(j * ROWS + i + j % 2) % 4];
+				al_draw_tinted_scaled_bitmap(bmp, color, 0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
+					i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
 			}
 			if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
 				DrawCharacter(game, data->fields[i][j].animal);
 			}
 		}
 	}
+
+	SetFramebufferAsTarget(game);
+	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+	al_draw_bitmap(data->scene, 0, 0, 0);
+
+	al_use_shader(data->combine_shader);
+	al_set_shader_sampler("tex_bg", data->lowres_scene, 1);
+	al_set_shader_float_vector("size", 2, size, 1);
+	al_draw_bitmap(data->board, 0, 0, 0);
+	al_use_shader(NULL);
 }
 
 static struct FieldID ToLeft(struct FieldID id) {
@@ -267,13 +318,25 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].fallLevels = 0;
+			data->fields[i][j].fall_levels = 0;
+			data->fields[i][j].level_no = 0;
 			if (data->fields[i][j].matched) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].matched = false;
 				data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
 				data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
 			}
+		}
+	}
+}
+
+static void StopAnimations(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->fields[i][j].fall_levels = 0;
+			data->fields[i][j].level_no = 0;
+			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
+			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
 		}
 	}
 }
@@ -301,16 +364,17 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 					if (upfield->type == FIELD_TYPE_EMPTY) {
 						repeat = true;
 					} else {
-						upfield->fallLevels++;
-						upfield->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME);
+						upfield->level_no = field->level_no++;
+						upfield->fall_levels++;
+						upfield->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + upfield->level_no * 0.025));
 						Swap(game, data, id, up);
 					}
 				} else {
 					field->type = rand() % FIELD_TYPE_ANIMALS;
 					field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
 					SelectSpritesheet(game, field->animal, "stand");
-					field->fallLevels++;
-					field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME);
+					field->fall_levels++;
+					field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
 					field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
 				}
 			}
@@ -435,13 +499,29 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animal = CreateCharacter(game, ANIMALS[rand() % 6]);
 			data->fields[i][j].animal->shared = true;
-			data->fields[i][j].animal->scaleX = 0.18;
-			data->fields[i][j].animal->scaleY = 0.18;
 			data->fields[i][j].id.i = i;
 			data->fields[i][j].id.j = j;
 			data->fields[i][j].matched = false;
 		}
 	}
+	progress(game);
+
+	data->field_bgs[0] = al_load_bitmap(GetDataFilePath(game, "kwadrat1.png"));
+	progress(game);
+	data->field_bgs[1] = al_load_bitmap(GetDataFilePath(game, "kwadrat2.png"));
+	progress(game);
+	data->field_bgs[2] = al_load_bitmap(GetDataFilePath(game, "kwadrat3.png"));
+	progress(game);
+	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.png"));
+	progress(game);
+
+	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
+	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->lowres_scene_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
+
+	data->combine_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/combine.glsl"));
+	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
 
 	data->timeline = TM_Init(game, data, "timeline");
 
@@ -460,6 +540,12 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	}
 	al_destroy_bitmap(data->bg);
 	al_destroy_font(data->font);
+	al_destroy_bitmap(data->scene);
+	al_destroy_bitmap(data->lowres_scene);
+	al_destroy_bitmap(data->lowres_scene_blur);
+	al_destroy_bitmap(data->board);
+	DestroyShader(game, data->combine_shader);
+	DestroyShader(game, data->kawese_shader);
 	TM_Destroy(data->timeline);
 	free(data);
 }
@@ -481,6 +567,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 		EmptyMatching(game, data);
 		Gravity(game, data);
 	}
+	StopAnimations(game, data);
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
@@ -499,4 +586,8 @@ void Gamestate_Resume(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
 	// Called when the display gets lost and not preserved bitmaps need to be recreated.
 	// Unless you want to support mobile platforms, you should be able to ignore it.
+	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
+	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->lowres_scene_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 }
