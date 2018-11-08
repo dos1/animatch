@@ -84,7 +84,7 @@ struct GamestateResources {
 	bool locked;
 };
 
-int Gamestate_ProgressCount = 13; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 19; // number of loading steps as reported by Gamestate_Load
 
 static inline bool IsSameID(struct FieldID one, struct FieldID two) {
 	return one.i == two.i && one.j == two.j;
@@ -372,7 +372,7 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 				} else {
 					field->type = rand() % FIELD_TYPE_ANIMALS;
 					field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
-					SelectSpritesheet(game, field->animal, "stand");
+					SelectSpritesheet(game, field->animal, "anim");
 					field->fall_levels++;
 					field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
 					field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
@@ -469,7 +469,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 		if (type < FIELD_TYPE_ANIMALS) {
 			field->animal->spritesheets = data->archetypes[type]->spritesheets;
-			SelectSpritesheet(game, field->animal, "stand");
+			SelectSpritesheet(game, field->animal, "anim");
 		}
 	}
 }
@@ -489,6 +489,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
 		data->archetypes[i] = CreateCharacter(game, ANIMALS[i]);
 		RegisterSpritesheet(game, data->archetypes[i], "stand");
+		RegisterSpritesheet(game, data->archetypes[i], "anim");
 		LoadSpritesheets(game, data->archetypes[i], progress);
 	}
 
@@ -557,9 +558,10 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].type = rand() % FIELD_TYPE_ANIMALS;
 			data->fields[i][j].animal->spritesheets = data->archetypes[data->fields[i][j].type]->spritesheets;
-			SelectSpritesheet(game, data->fields[i][j].animal, "stand");
+			SelectSpritesheet(game, data->fields[i][j].animal, "anim");
 			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
 			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
+			data->fields[i][j].animal->pos = rand() % data->fields[i][j].animal->spritesheet->frameCount;
 		}
 	}
 	data->current = (struct FieldID){-1, -1};
