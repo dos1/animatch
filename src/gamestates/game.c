@@ -81,7 +81,7 @@ struct GamestateResources {
 
 	ALLEGRO_SHADER *combine_shader, *kawese_shader;
 
-	bool locked;
+	bool locked, clicked;
 };
 
 int Gamestate_ProgressCount = 19; // number of loading steps as reported by Gamestate_Load
@@ -406,6 +406,7 @@ static void Turn(struct Game* game, struct GamestateResources* data) {
 	if (!IsValidMove(data->current, data->hovered)) {
 		return;
 	}
+	data->clicked = false;
 
 	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
 	Swap(game, data, data->current, data->hovered);
@@ -438,12 +439,17 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
 		data->current = data->hovered;
+		data->clicked = true;
 	}
 
-	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
+	if (((ev->type == ALLEGRO_EVENT_MOUSE_AXES) && (data->clicked)) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE)) {
 		if (IsValidID(data->current) && IsValidID(data->hovered)) {
 			Turn(game, data);
 		}
+	}
+
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
+		data->clicked = false;
 	}
 
 	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
@@ -554,6 +560,8 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
+	data->locked = false;
+	data->clicked = false;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].type = rand() % FIELD_TYPE_ANIMALS;
