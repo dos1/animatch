@@ -26,6 +26,7 @@ static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
 
 #define MATCHING_TIME 0.6
 #define FALLING_TIME 0.5
+#define SWAPPING_TIME 0.15
 
 #define BLUR_DIVIDER 8
 
@@ -59,7 +60,8 @@ struct Field {
 	struct FieldID id;
 	bool matched;
 
-	struct Tween hiding, falling;
+	struct Tween hiding, falling, swapping;
+	struct FieldID swapee;
 	int fall_levels, level_no;
 };
 
@@ -86,6 +88,8 @@ struct GamestateResources {
 
 int Gamestate_ProgressCount = 19; // number of loading steps as reported by Gamestate_Load
 
+static void ProcessFields(struct Game* game, struct GamestateResources* data);
+
 static inline bool IsSameID(struct FieldID one, struct FieldID two) {
 	return one.i == two.i && one.j == two.j;
 }
@@ -102,6 +106,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			AnimateCharacter(game, data->fields[i][j].animal, delta, 1.0);
 			UpdateTween(&data->fields[i][j].falling, delta);
 			UpdateTween(&data->fields[i][j].hiding, delta);
+			UpdateTween(&data->fields[i][j].swapping, delta);
 		}
 	}
 }
@@ -143,6 +148,21 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_clipping_rectangle(0, offsetY, game->viewport.width, game->viewport.height - offsetY * 2);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
+			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
+			ALLEGRO_COLOR color = al_map_rgba(222, 222, 222, 222);
+			if (data->locked || game->data->touch || !hovered) {
+				color = al_map_rgba(180, 180, 180, 180);
+			}
+			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+				ALLEGRO_BITMAP* bmp = data->field_bgs[(j * ROWS + i + j % 2) % 4];
+				al_draw_tinted_scaled_bitmap(bmp, color, 0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
+					i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
+			}
+		}
+	}
+
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
 			float tint = 1.0 - GetTweenValue(&data->fields[i][j].hiding);
 			data->fields[i][j].animal->tint = al_map_rgba_f(tint, tint, tint, tint);
 
@@ -154,18 +174,11 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			//			tween = Interpolate(GetTweenPosition(&data->fields[i][j].falling), TWEEN_STYLE_ELASTIC_OUT);
 			int levelDiff = (int)(levels * 90 * (1.0 - tween));
 
-			SetCharacterPosition(game, data->fields[i][j].animal, i * 90 + 45, j * 90 + 45 + offsetY - levelDiff, 0);
+			int x = i * 90 + 45, y = j * 90 + 45 + offsetY - levelDiff;
+			int swapeeX = data->fields[i][j].swapee.i * 90 + 45, swapeeY = data->fields[i][j].swapee.j * 90 + 45 + offsetY;
 
-			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
-			ALLEGRO_COLOR color = al_map_rgba(222, 222, 222, 222);
-			if (data->locked || game->data->touch || !hovered) {
-				color = al_map_rgba(180, 180, 180, 180);
-			}
-			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
-				ALLEGRO_BITMAP* bmp = data->field_bgs[(j * ROWS + i + j % 2) % 4];
-				al_draw_tinted_scaled_bitmap(bmp, color, 0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
-					i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
-			}
+			SetCharacterPosition(game, data->fields[i][j].animal, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].swapping)), 0);
+
 			if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
 				DrawCharacter(game, data->fields[i][j].animal);
 			}
@@ -345,6 +358,38 @@ static void Swap(struct Game* game, struct GamestateResources* data, struct Fiel
 	struct Field tmp = data->fields[one.i][one.j];
 	data->fields[one.i][one.j] = data->fields[two.i][two.j];
 	data->fields[two.i][two.j] = tmp;
+	data->fields[one.i][one.j].id = (struct FieldID){.i = one.i, .j = one.j};
+	data->fields[two.i][two.j].id = (struct FieldID){.i = two.i, .j = two.j};
+}
+
+static TM_ACTION(AfterSwapping) {
+	TM_RunningOnly;
+	struct Field* one = TM_GetArg(action->arguments, 0);
+	struct Field* two = TM_GetArg(action->arguments, 1);
+	Swap(game, data, one->id, two->id);
+	one->swapping = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
+	two->swapping = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
+	data->locked = false;
+	ProcessFields(game, data);
+	return true;
+}
+
+static TM_ACTION(StartSwapping) {
+	TM_RunningOnly;
+	struct Field* one = TM_GetArg(action->arguments, 0);
+	struct Field* two = TM_GetArg(action->arguments, 1);
+	data->locked = true;
+	one->swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, SWAPPING_TIME);
+	one->swapee = two->id;
+	two->swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, SWAPPING_TIME);
+	two->swapee = one->id;
+	return true;
+}
+
+static void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	TM_AddAction(data->timeline, StartSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
+	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
+	TM_AddAction(data->timeline, AfterSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
 }
 
 static void Gravity(struct Game* game, struct GamestateResources* data) {
@@ -384,8 +429,6 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 	data->locked = false;
 }
 
-static void ProcessFields(struct Game* game, struct GamestateResources* data);
-
 static TM_ACTION(AfterMatching) {
 	TM_RunningOnly;
 	EmptyMatching(game, data);
@@ -407,14 +450,16 @@ static void Turn(struct Game* game, struct GamestateResources* data) {
 		return;
 	}
 	data->clicked = false;
+	data->locked = true;
 
 	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
-	Swap(game, data, data->current, data->hovered);
+	AnimateSwapping(game, data, data->current, data->hovered);
 
+	Swap(game, data, data->current, data->hovered);
 	if (!IsMatching(game, data, data->current) && !IsMatching(game, data, data->hovered)) {
-		Swap(game, data, data->current, data->hovered);
+		AnimateSwapping(game, data, data->current, data->hovered);
 	}
-	ProcessFields(game, data);
+	Swap(game, data, data->current, data->hovered);
 }
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
