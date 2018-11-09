@@ -24,6 +24,21 @@
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
 
+#define MAX_ACTIONS 16
+
+static struct {
+	int actions;
+	char* names[MAX_ACTIONS];
+} ACTIONS[] = {
+	{.actions = 3, .names = {"eyeroll", "fly1", "fly2"}}, // bee
+	{.actions = 3, .names = {"eyeroll", "sing1", "sing2"}}, // bird
+	{.actions = 3, .names = {"action1", "action2", "action3"}}, // cat
+	{.actions = 3, .names = {"eyeroll", "swim1", "swim2"}}, // fish
+	{.actions = 5, .names = {"bump1", "bump2", "eyeroll", "tonque1", "tonque2"}}, // frog
+	{.actions = 6, .names = {"bump1", "bump2", "bump3", "eyeroll1", "eyeroll2", "kiss"}} // ladybug
+	//
+};
+
 #define MATCHING_TIME 0.6
 #define FALLING_TIME 0.5
 #define SWAPPING_TIME 0.15
@@ -63,6 +78,9 @@ struct Field {
 	struct Tween hiding, falling, swapping;
 	struct FieldID swapee;
 	int fall_levels, level_no;
+
+	int time_to_action, action_time;
+	int time_to_blink, blink_time;
 };
 
 struct GamestateResources {
@@ -86,7 +104,7 @@ struct GamestateResources {
 	bool locked, clicked;
 };
 
-int Gamestate_ProgressCount = 19; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 42; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
 
@@ -107,6 +125,45 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].falling, delta);
 			UpdateTween(&data->fields[i][j].hiding, delta);
 			UpdateTween(&data->fields[i][j].swapping, delta);
+
+			if (data->fields[i][j].blink_time) {
+				data->fields[i][j].blink_time -= delta * 1000;
+				if (data->fields[i][j].blink_time <= 0) {
+					data->fields[i][j].blink_time = 0;
+					if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+						SelectSpritesheet(game, data->fields[i][j].animal, "stand");
+					}
+				}
+			} else if (data->fields[i][j].action_time) {
+				data->fields[i][j].action_time -= delta * 1000;
+				if (data->fields[i][j].action_time <= 0) {
+					data->fields[i][j].action_time = 0;
+					if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+						SelectSpritesheet(game, data->fields[i][j].animal, "stand");
+					}
+				}
+			} else {
+				data->fields[i][j].time_to_action -= delta * 1000;
+				data->fields[i][j].time_to_blink -= delta * 1000;
+
+				if (data->fields[i][j].time_to_action <= 0) {
+					data->fields[i][j].time_to_action = rand() % 250000 + 500000;
+					data->fields[i][j].action_time = rand() % 2000 + 1000;
+					if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+						SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+					}
+				}
+
+				if (data->fields[i][j].time_to_blink <= 0) {
+					if (strcmp(data->fields[i][j].animal->spritesheet->name, "stand") == 0) {
+						if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+							SelectSpritesheet(game, data->fields[i][j].animal, "blink");
+						}
+						data->fields[i][j].time_to_blink = rand() % 100000 + 200000;
+						data->fields[i][j].blink_time = rand() % 400 + 100;
+					}
+				}
+			}
 		}
 	}
 }
@@ -321,6 +378,7 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
+				SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
 				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->locked = true;
 			}
@@ -417,7 +475,7 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 				} else {
 					field->type = rand() % FIELD_TYPE_ANIMALS;
 					field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
-					SelectSpritesheet(game, field->animal, "anim");
+					SelectSpritesheet(game, field->animal, "stand");
 					field->fall_levels++;
 					field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
 					field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
@@ -520,7 +578,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 		if (type < FIELD_TYPE_ANIMALS) {
 			field->animal->spritesheets = data->archetypes[type]->spritesheets;
-			SelectSpritesheet(game, field->animal, "anim");
+			SelectSpritesheet(game, field->animal, "stand");
 		}
 	}
 }
@@ -540,7 +598,10 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
 		data->archetypes[i] = CreateCharacter(game, ANIMALS[i]);
 		RegisterSpritesheet(game, data->archetypes[i], "stand");
-		RegisterSpritesheet(game, data->archetypes[i], "anim");
+		RegisterSpritesheet(game, data->archetypes[i], "blink");
+		for (int j = 0; j < ACTIONS[i].actions; j++) {
+			RegisterSpritesheet(game, data->archetypes[i], ACTIONS[i].names[j]);
+		}
 		LoadSpritesheets(game, data->archetypes[i], progress);
 	}
 
@@ -611,10 +672,13 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].type = rand() % FIELD_TYPE_ANIMALS;
 			data->fields[i][j].animal->spritesheets = data->archetypes[data->fields[i][j].type]->spritesheets;
-			SelectSpritesheet(game, data->fields[i][j].animal, "anim");
+			SelectSpritesheet(game, data->fields[i][j].animal, "stand");
 			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
 			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
 			data->fields[i][j].animal->pos = rand() % data->fields[i][j].animal->spritesheet->frameCount;
+
+			data->fields[i][j].time_to_action = (int)((rand() % 250000 + 500000) * (rand() / (double)RAND_MAX));
+			data->fields[i][j].time_to_blink = (int)((rand() % 100000 + 200000) * (rand() / (double)RAND_MAX));
 		}
 	}
 	data->current = (struct FieldID){-1, -1};
