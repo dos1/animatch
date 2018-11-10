@@ -62,6 +62,12 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 		game->data->touch = false;
 	}
 
+#ifdef ALLEGRO_ANDROID
+	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_BACK)) {
+		QuitGame(game, true);
+	}
+#endif
+
 	return false;
 }
 
