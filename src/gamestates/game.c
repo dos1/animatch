@@ -444,10 +444,26 @@ static TM_ACTION(StartSwapping) {
 	return true;
 }
 
+static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	if ((GetField(game, data, one)->type != FIELD_TYPE_DISABLED) && (GetField(game, data, two)->type != FIELD_TYPE_DISABLED)) {
+		return true;
+	}
+	return false;
+}
+
 static void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
 	TM_AddAction(data->timeline, StartSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
 	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
 	TM_AddAction(data->timeline, AfterSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
+}
+
+static void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field) {
+	field->type = rand() % FIELD_TYPE_ANIMALS;
+	field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
+	SelectSpritesheet(game, field->animal, "stand");
+	field->fall_levels++;
+	field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
+	field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
 }
 
 static void Gravity(struct Game* game, struct GamestateResources* data) {
@@ -462,6 +478,9 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 					continue;
 				}
 				struct FieldID up = ToTop(id);
+				while (IsValidID(up) && (GetField(game, data, up)->type == FIELD_TYPE_DISABLED)) {
+					up = ToTop(up);
+				}
 				if (IsValidID(up)) {
 					struct Field* upfield = GetField(game, data, up);
 					if (upfield->type == FIELD_TYPE_EMPTY) {
@@ -473,12 +492,7 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 						Swap(game, data, id, up);
 					}
 				} else {
-					field->type = rand() % FIELD_TYPE_ANIMALS;
-					field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
-					SelectSpritesheet(game, field->animal, "stand");
-					field->fall_levels++;
-					field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
-					field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
+					GenerateAnimal(game, data, field);
 				}
 			}
 		}
@@ -507,10 +521,15 @@ static void Turn(struct Game* game, struct GamestateResources* data) {
 	if (!IsValidMove(data->current, data->hovered)) {
 		return;
 	}
+
+	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
+
+	if (!IsSwappable(game, data, data->current, data->hovered)) {
+		return;
+	}
 	data->clicked = false;
 	data->locked = true;
 
-	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
 	AnimateSwapping(game, data, data->current, data->hovered);
 
 	Swap(game, data, data->current, data->hovered);
