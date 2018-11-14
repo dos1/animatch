@@ -617,6 +617,9 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			return;
 		}
 
+		if (type == -1) {
+			ProcessFields(game, data);
+		}
 		if (type < 0) {
 			return;
 		}
