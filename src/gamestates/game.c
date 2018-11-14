@@ -22,9 +22,18 @@
 #include <allegro5/allegro_color.h>
 #include <libsuperderpy.h>
 
-static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
-
 #define MAX_ACTIONS 16
+#define MATCHING_TIME 0.6
+#define FALLING_TIME 0.5
+#define SWAPPING_TIME 0.15
+
+#define BLUR_DIVIDER 8
+
+#define COLS 8
+#define ROWS 8
+
+static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
+static char* SPECIALS[] = {"egg"};
 
 static struct {
 	int actions;
@@ -35,29 +44,25 @@ static struct {
 	{.actions = 3, .names = {"action1", "action2", "action3"}}, // cat
 	{.actions = 3, .names = {"eyeroll", "swim1", "swim2"}}, // fish
 	{.actions = 5, .names = {"bump1", "bump2", "eyeroll", "tonque1", "tonque2"}}, // frog
-	{.actions = 6, .names = {"bump1", "bump2", "bump3", "eyeroll1", "eyeroll2", "kiss"}} // ladybug
+	{.actions = 6, .names = {"bump1", "bump2", "bump3", "eyeroll1", "eyeroll2", "kiss"}}, // ladybug
 	//
+	{.actions = 0, .names = {}}, // egg
 };
 
-#define MATCHING_TIME 0.6
-#define FALLING_TIME 0.5
-#define SWAPPING_TIME 0.15
+enum ANIMAL_TYPE {
+	ANIMAL_TYPE_BEE,
+	ANIMAL_TYPE_BIRD,
+	ANIMAL_TYPE_CAT,
+	ANIMAL_TYPE_FISH,
+	ANIMAL_TYPE_FROG,
+	ANIMAL_TYPE_LADYBUG,
 
-#define BLUR_DIVIDER 8
-
-#define COLS 8
-#define ROWS 8
+	ANIMAL_TYPES
+};
 
 enum FIELD_TYPE {
-	FIELD_TYPE_BEE,
-	FIELD_TYPE_BIRD,
-	FIELD_TYPE_CAT,
-	FIELD_TYPE_FISH,
-	FIELD_TYPE_FROG,
-	FIELD_TYPE_LADYBUG,
-
-	FIELD_TYPE_ANIMALS,
-
+	FIELD_TYPE_ANIMAL,
+	FIELD_TYPE_FREEFALL,
 	FIELD_TYPE_EMPTY,
 	FIELD_TYPE_DISABLED,
 
@@ -71,6 +76,7 @@ struct FieldID {
 
 struct Field {
 	struct Character* animal;
+	enum ANIMAL_TYPE animal_type;
 	enum FIELD_TYPE type;
 	struct FieldID id;
 	bool matched;
@@ -91,7 +97,7 @@ struct GamestateResources {
 
 	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
 
-	struct Character* archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
+	struct Character* archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0]) + sizeof(SPECIALS) / sizeof(SPECIALS[0])];
 	struct FieldID current, hovered;
 	struct Field fields[COLS][ROWS];
 
@@ -99,14 +105,18 @@ struct GamestateResources {
 
 	ALLEGRO_BITMAP* field_bgs[4];
 
-	ALLEGRO_SHADER *combine_shader, *kawese_shader;
+	ALLEGRO_SHADER *combine_shader, *kawese_shader, *desaturate_shader;
 
 	bool locked, clicked;
 };
 
-int Gamestate_ProgressCount = 42; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 47; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
+
+static inline bool IsDrawable(enum FIELD_TYPE type) {
+	return (type == FIELD_TYPE_ANIMAL) || (type == FIELD_TYPE_FREEFALL);
+}
 
 static inline bool IsSameID(struct FieldID one, struct FieldID two) {
 	return one.i == two.i && one.j == two.j;
@@ -130,7 +140,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 				data->fields[i][j].blink_time -= delta * 1000;
 				if (data->fields[i][j].blink_time <= 0) {
 					data->fields[i][j].blink_time = 0;
-					if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
 						SelectSpritesheet(game, data->fields[i][j].animal, "stand");
 					}
 				}
@@ -138,7 +148,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 				data->fields[i][j].action_time -= delta * 1000;
 				if (data->fields[i][j].action_time <= 0) {
 					data->fields[i][j].action_time = 0;
-					if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
 						SelectSpritesheet(game, data->fields[i][j].animal, "stand");
 					}
 				}
@@ -149,14 +159,14 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 				if (data->fields[i][j].time_to_action <= 0) {
 					data->fields[i][j].time_to_action = rand() % 250000 + 500000;
 					data->fields[i][j].action_time = rand() % 2000 + 1000;
-					if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
-						SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+						SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].animal_type].names[rand() % ACTIONS[data->fields[i][j].animal_type].actions]);
 					}
 				}
 
 				if (data->fields[i][j].time_to_blink <= 0) {
 					if (strcmp(data->fields[i][j].animal->spritesheet->name, "stand") == 0) {
-						if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+						if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
 							SelectSpritesheet(game, data->fields[i][j].animal, "blink");
 						}
 						data->fields[i][j].time_to_blink = rand() % 100000 + 200000;
@@ -236,7 +246,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 			SetCharacterPosition(game, data->fields[i][j].animal, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].swapping)), 0);
 
-			if (data->fields[i][j].type < FIELD_TYPE_ANIMALS) {
+			if (IsDrawable(data->fields[i][j].type)) {
 				DrawCharacter(game, data->fields[i][j].animal);
 			}
 		}
@@ -302,16 +312,36 @@ static struct Field* GetField(struct Game* game, struct GamestateResources* data
 	return &data->fields[id.i][id.j];
 }
 
+static inline void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct Field* field = GetField(game, data, id);
+	if (!IsDrawable(field->type)) {
+		return;
+	}
+	int index = field->animal_type;
+	if (field->type != FIELD_TYPE_ANIMAL) {
+		index = ANIMAL_TYPES + field->type - 1;
+	}
+	free(field->animal->name);
+	field->animal->name = strdup(data->archetypes[index]->name);
+	field->animal->spritesheets = data->archetypes[index]->spritesheets;
+	SelectSpritesheet(game, field->animal, "stand");
+}
+
 static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	int lchain = 0, tchain = 0;
 	struct Field* orig = GetField(game, data, id);
-	if (orig->type >= FIELD_TYPE_ANIMALS) {
+	if (orig->type == FIELD_TYPE_FREEFALL) {
+		if (id.j == ROWS - 1) {
+			return 1;
+		}
+	}
+	if (orig->type != FIELD_TYPE_ANIMAL) {
 		return 0;
 	}
 	struct FieldID pos = ToLeft(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
-		if (field->type != orig->type) {
+		if (field->animal_type != orig->animal_type) {
 			break;
 		}
 		lchain++;
@@ -320,7 +350,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	pos = ToRight(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
-		if (field->type != orig->type) {
+		if (field->animal_type != orig->animal_type) {
 			break;
 		}
 		lchain++;
@@ -330,7 +360,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	pos = ToTop(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
-		if (field->type != orig->type) {
+		if (field->animal_type != orig->animal_type) {
 			break;
 		}
 		tchain++;
@@ -339,7 +369,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	pos = ToBottom(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
-		if (field->type != orig->type) {
+		if (field->animal_type != orig->animal_type) {
 			break;
 		}
 		tchain++;
@@ -378,7 +408,7 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
-				SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+				SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].animal_type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
 				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->locked = true;
 			}
@@ -445,7 +475,7 @@ static TM_ACTION(StartSwapping) {
 }
 
 static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	if ((GetField(game, data, one)->type != FIELD_TYPE_DISABLED) && (GetField(game, data, two)->type != FIELD_TYPE_DISABLED)) {
+	if ((GetField(game, data, one)->type == FIELD_TYPE_ANIMAL) && (GetField(game, data, two)->type == FIELD_TYPE_ANIMAL)) {
 		return true;
 	}
 	return false;
@@ -458,8 +488,9 @@ static void AnimateSwapping(struct Game* game, struct GamestateResources* data, 
 }
 
 static void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	field->type = rand() % FIELD_TYPE_ANIMALS;
-	field->animal->spritesheets = data->archetypes[field->type]->spritesheets;
+	field->type = FIELD_TYPE_ANIMAL;
+	field->animal_type = rand() % ANIMAL_TYPES;
+	field->animal->spritesheets = data->archetypes[field->animal_type]->spritesheets;
 	SelectSpritesheet(game, field->animal, "stand");
 	field->fall_levels++;
 	field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
@@ -577,27 +608,29 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
 		int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
 
-		if (type < 0) {
-			return;
-		}
-		if (type >= FIELD_TYPE_ANIMALS) {
-			type++;
-		}
-		if (type >= FIELD_TYPES) {
-			return;
-		}
-
 		struct Field* field = GetField(game, data, data->hovered);
 
 		if (!field) {
 			return;
 		}
 
-		field->type = type;
-
-		if (type < FIELD_TYPE_ANIMALS) {
-			field->animal->spritesheets = data->archetypes[type]->spritesheets;
-			SelectSpritesheet(game, field->animal, "stand");
+		if (type < 0) {
+			return;
+		}
+		if (type >= ANIMAL_TYPES + FIELD_TYPES) {
+			return;
+		}
+		if (type >= ANIMAL_TYPES) {
+			type -= ANIMAL_TYPES - 1;
+			field->type = type;
+			PrintConsole(game, "Setting field type to %d", type);
+		} else {
+			field->type = FIELD_TYPE_ANIMAL;
+			field->animal_type = type;
+			PrintConsole(game, "Setting animal type to %d", type);
+		}
+		if (IsDrawable(field->type)) {
+			UpdateDrawable(game, data, field->id);
 		}
 	}
 }
@@ -622,6 +655,16 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			RegisterSpritesheet(game, data->archetypes[i], ACTIONS[i].names[j]);
 		}
 		LoadSpritesheets(game, data->archetypes[i], progress);
+	}
+	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
+		int ii = sizeof(ANIMALS) / sizeof(ANIMALS[0]) + i;
+		data->archetypes[ii] = CreateCharacter(game, SPECIALS[i]);
+		RegisterSpritesheet(game, data->archetypes[ii], "stand");
+		//RegisterSpritesheet(game, data->archetypes[ii], "blink");
+		for (int j = 0; j < ACTIONS[ii].actions; j++) {
+			RegisterSpritesheet(game, data->archetypes[ii], ACTIONS[ii].names[j]);
+		}
+		LoadSpritesheets(game, data->archetypes[ii], progress);
 	}
 
 	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.webp"));
@@ -651,9 +694,14 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->lowres_scene_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
+	progress(game);
 
 	data->combine_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/combine.glsl"));
+	progress(game);
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
+	progress(game);
+	data->desaturate_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/desaturate.glsl"));
+	progress(game);
 
 	data->timeline = TM_Init(game, data, "timeline");
 
@@ -678,6 +726,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->board);
 	DestroyShader(game, data->combine_shader);
 	DestroyShader(game, data->kawese_shader);
+	DestroyShader(game, data->desaturate_shader);
 	TM_Destroy(data->timeline);
 	free(data);
 }
@@ -689,8 +738,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->clicked = false;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].type = rand() % FIELD_TYPE_ANIMALS;
-			data->fields[i][j].animal->spritesheets = data->archetypes[data->fields[i][j].type]->spritesheets;
+			data->fields[i][j].type = FIELD_TYPE_ANIMAL;
+			data->fields[i][j].animal_type = rand() % ANIMAL_TYPES;
+			data->fields[i][j].animal->spritesheets = data->archetypes[data->fields[i][j].animal_type]->spritesheets;
 			SelectSpritesheet(game, data->fields[i][j].animal, "stand");
 			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
 			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
