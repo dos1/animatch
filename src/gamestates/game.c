@@ -487,11 +487,14 @@ static void AnimateSwapping(struct Game* game, struct GamestateResources* data, 
 	TM_AddAction(data->timeline, AfterSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
 }
 
-static void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	field->type = FIELD_TYPE_ANIMAL;
-	field->animal_type = rand() % ANIMAL_TYPES;
-	field->animal->spritesheets = data->archetypes[field->animal_type]->spritesheets;
-	SelectSpritesheet(game, field->animal, "stand");
+static void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
+	if (rand() / (float)RAND_MAX < 0.01) {
+		field->type = FIELD_TYPE_FREEFALL;
+	} else {
+		field->type = FIELD_TYPE_ANIMAL;
+		field->animal_type = rand() % ANIMAL_TYPES;
+	}
+	UpdateDrawable(game, data, field->id);
 	field->fall_levels++;
 	field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
 	field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
@@ -523,7 +526,7 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 						Swap(game, data, id, up);
 					}
 				} else {
-					GenerateAnimal(game, data, field);
+					GenerateField(game, data, field);
 				}
 			}
 		}
