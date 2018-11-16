@@ -80,6 +80,7 @@ struct Field {
 	enum FIELD_TYPE type;
 	struct FieldID id;
 	bool matched;
+	bool sleeping;
 
 	struct Tween hiding, falling, swapping;
 	struct FieldID swapee;
@@ -228,6 +229,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 
+	al_use_shader(data->desaturate_shader);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			float tint = 1.0 - GetTweenValue(&data->fields[i][j].hiding);
@@ -247,10 +249,12 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			SetCharacterPosition(game, data->fields[i][j].animal, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].swapping)), 0);
 
 			if (IsDrawable(data->fields[i][j].type)) {
+				al_set_shader_bool("enabled", data->fields[i][j].sleeping);
 				DrawCharacter(game, data->fields[i][j].animal);
 			}
 		}
 	}
+	al_use_shader(NULL);
 
 	SetFramebufferAsTarget(game);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
@@ -338,10 +342,20 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	if (orig->type != FIELD_TYPE_ANIMAL) {
 		return 0;
 	}
+	if (orig->sleeping) {
+		return 0;
+	}
+	// TODO: DRY
 	struct FieldID pos = ToLeft(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
+		if (field->type != FIELD_TYPE_ANIMAL) {
+			break;
+		}
 		if (field->animal_type != orig->animal_type) {
+			break;
+		}
+		if (field->sleeping) {
 			break;
 		}
 		lchain++;
@@ -350,7 +364,13 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	pos = ToRight(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
+		if (field->type != FIELD_TYPE_ANIMAL) {
+			break;
+		}
 		if (field->animal_type != orig->animal_type) {
+			break;
+		}
+		if (field->sleeping) {
 			break;
 		}
 		lchain++;
@@ -360,7 +380,13 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	pos = ToTop(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
+		if (field->type != FIELD_TYPE_ANIMAL) {
+			break;
+		}
 		if (field->animal_type != orig->animal_type) {
+			break;
+		}
+		if (field->sleeping) {
 			break;
 		}
 		tchain++;
@@ -369,7 +395,13 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	pos = ToBottom(id);
 	while (IsValidID(pos)) {
 		struct Field* field = GetField(game, data, pos);
+		if (field->type != FIELD_TYPE_ANIMAL) {
+			break;
+		}
 		if (field->animal_type != orig->animal_type) {
+			break;
+		}
+		if (field->sleeping) {
 			break;
 		}
 		tchain++;
@@ -404,6 +436,20 @@ static int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	return matching;
 }
 
+static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
+	for (int i = 0; i < 3; i++) {
+		id = func(id);
+		if (!IsValidID(id) || !GetField(game, data, id)->matched) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static int ShouldWakeUp(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	return AreAdjacentMatching(game, data, id, ToTop) || AreAdjacentMatching(game, data, id, ToBottom) || AreAdjacentMatching(game, data, id, ToLeft) || AreAdjacentMatching(game, data, id, ToRight);
+}
+
 static void AnimateMatching(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -411,6 +457,10 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 				SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].animal_type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
 				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->locked = true;
+			}
+
+			if (data->fields[i][j].sleeping && ShouldWakeUp(game, data, data->fields[i][j].id)) {
+				data->fields[i][j].sleeping = false;
 			}
 		}
 	}
@@ -474,11 +524,16 @@ static TM_ACTION(StartSwapping) {
 	return true;
 }
 
-static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	if ((GetField(game, data, one)->type == FIELD_TYPE_ANIMAL) && (GetField(game, data, two)->type == FIELD_TYPE_ANIMAL)) {
+static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct Field* field = GetField(game, data, id);
+	if ((field->type == FIELD_TYPE_ANIMAL) && (!field->sleeping)) {
 		return true;
 	}
 	return false;
+}
+
+static bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	return IsSwappable(game, data, one) && IsSwappable(game, data, two);
 }
 
 static void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
@@ -495,6 +550,10 @@ static void GenerateField(struct Game* game, struct GamestateResources* data, st
 		field->animal_type = rand() % ANIMAL_TYPES;
 	}
 	UpdateDrawable(game, data, field->id);
+}
+
+static void CreateNewField(struct Game* game, struct GamestateResources* data, struct Field* field) {
+	GenerateField(game, data, field);
 	field->fall_levels++;
 	field->falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->level_no * 0.025));
 	field->hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
@@ -526,7 +585,7 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 						Swap(game, data, id, up);
 					}
 				} else {
-					GenerateField(game, data, field);
+					CreateNewField(game, data, field);
 				}
 			}
 		}
@@ -558,7 +617,7 @@ static void Turn(struct Game* game, struct GamestateResources* data) {
 
 	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
 
-	if (!IsSwappable(game, data, data->current, data->hovered)) {
+	if (!AreSwappable(game, data, data->current, data->hovered)) {
 		return;
 	}
 	data->clicked = false;
@@ -614,6 +673,12 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		struct Field* field = GetField(game, data, data->hovered);
 
 		if (!field) {
+			return;
+		}
+
+		if (ev->keyboard.keycode == ALLEGRO_KEY_S) {
+			field->sleeping = !field->sleeping;
+			PrintConsole(game, "Field %dx%d, sleeping = %d", field->id.i, field->id.j, field->sleeping);
 			return;
 		}
 
@@ -744,13 +809,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->clicked = false;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].type = FIELD_TYPE_ANIMAL;
-			data->fields[i][j].animal_type = rand() % ANIMAL_TYPES;
-			data->fields[i][j].animal->spritesheets = data->archetypes[data->fields[i][j].animal_type]->spritesheets;
-			SelectSpritesheet(game, data->fields[i][j].animal, "stand");
+			GenerateField(game, data, &data->fields[i][j]);
 			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
 			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
-			data->fields[i][j].animal->pos = rand() % data->fields[i][j].animal->spritesheet->frameCount;
 
 			data->fields[i][j].time_to_action = (int)((rand() % 250000 + 500000) * (rand() / (double)RAND_MAX));
 			data->fields[i][j].time_to_blink = (int)((rand() % 100000 + 200000) * (rand() / (double)RAND_MAX));
