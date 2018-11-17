@@ -23,7 +23,8 @@
 #include <libsuperderpy.h>
 
 #define MAX_ACTIONS 16
-#define MATCHING_TIME 0.6
+#define MATCHING_TIME 0.4
+#define MATCHING_DELAY_TIME 0.2
 #define FALLING_TIME 0.5
 #define SWAPPING_TIME 0.15
 
@@ -345,67 +346,26 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	if (orig->sleeping) {
 		return 0;
 	}
-	// TODO: DRY
-	struct FieldID pos = ToLeft(id);
-	while (IsValidID(pos)) {
-		struct Field* field = GetField(game, data, pos);
-		if (field->type != FIELD_TYPE_ANIMAL) {
-			break;
-		}
-		if (field->animal_type != orig->animal_type) {
-			break;
-		}
-		if (field->sleeping) {
-			break;
-		}
-		lchain++;
-		pos = ToLeft(pos);
-	}
-	pos = ToRight(id);
-	while (IsValidID(pos)) {
-		struct Field* field = GetField(game, data, pos);
-		if (field->type != FIELD_TYPE_ANIMAL) {
-			break;
-		}
-		if (field->animal_type != orig->animal_type) {
-			break;
-		}
-		if (field->sleeping) {
-			break;
-		}
-		lchain++;
-		pos = ToRight(pos);
-	}
 
-	pos = ToTop(id);
-	while (IsValidID(pos)) {
-		struct Field* field = GetField(game, data, pos);
-		if (field->type != FIELD_TYPE_ANIMAL) {
-			break;
+	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+	int* accumulators[] = {&lchain, &lchain, &tchain, &tchain};
+
+	for (int i = 0; i < 4; i++) {
+		struct FieldID pos = (callbacks[i])(id);
+		while (IsValidID(pos)) {
+			struct Field* field = GetField(game, data, pos);
+			if (field->type != FIELD_TYPE_ANIMAL) {
+				break;
+			}
+			if (field->animal_type != orig->animal_type) {
+				break;
+			}
+			if (field->sleeping) {
+				break;
+			}
+			(*accumulators[i])++;
+			pos = (callbacks[i])(pos);
 		}
-		if (field->animal_type != orig->animal_type) {
-			break;
-		}
-		if (field->sleeping) {
-			break;
-		}
-		tchain++;
-		pos = ToTop(pos);
-	}
-	pos = ToBottom(id);
-	while (IsValidID(pos)) {
-		struct Field* field = GetField(game, data, pos);
-		if (field->type != FIELD_TYPE_ANIMAL) {
-			break;
-		}
-		if (field->animal_type != orig->animal_type) {
-			break;
-		}
-		if (field->sleeping) {
-			break;
-		}
-		tchain++;
-		pos = ToBottom(pos);
 	}
 
 	int chain = 0;
@@ -455,8 +415,8 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
 				SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].animal_type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
-				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME - 0.2);
-				data->fields[i][j].hiding.predelay = 0.2;
+				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
+				data->fields[i][j].hiding.predelay = MATCHING_DELAY_TIME;
 				data->locked = true;
 			}
 
@@ -606,7 +566,7 @@ static TM_ACTION(AfterMatching) {
 static void ProcessFields(struct Game* game, struct GamestateResources* data) {
 	if (MarkMatching(game, data)) {
 		AnimateMatching(game, data);
-		TM_AddDelay(data->timeline, MATCHING_TIME * 1000);
+		TM_AddDelay(data->timeline, (MATCHING_TIME + MATCHING_DELAY_TIME) * 1000);
 		TM_AddAction(data->timeline, AfterMatching, NULL);
 	}
 }
