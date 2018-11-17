@@ -455,7 +455,8 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
 				SelectSpritesheet(game, data->fields[i][j].animal, ACTIONS[data->fields[i][j].animal_type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
-				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
+				data->fields[i][j].hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME - 0.2);
+				data->fields[i][j].hiding.predelay = 0.2;
 				data->locked = true;
 			}
 
@@ -474,8 +475,8 @@ static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].matched) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].matched = false;
-				data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
-				data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
+				data->fields[i][j].hiding = StaticTween(game, 0.0);
+				data->fields[i][j].falling = StaticTween(game, 1.0);
 			}
 		}
 	}
@@ -486,8 +487,8 @@ static void StopAnimations(struct Game* game, struct GamestateResources* data) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].fall_levels = 0;
 			data->fields[i][j].level_no = 0;
-			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
-			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
+			data->fields[i][j].hiding = StaticTween(game, 0.0);
+			data->fields[i][j].falling = StaticTween(game, 1.0);
 		}
 	}
 }
@@ -505,8 +506,8 @@ static TM_ACTION(AfterSwapping) {
 	struct Field* one = TM_GetArg(action->arguments, 0);
 	struct Field* two = TM_GetArg(action->arguments, 1);
 	Swap(game, data, one->id, two->id);
-	one->swapping = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
-	two->swapping = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
+	one->swapping = StaticTween(game, 0.0);
+	two->swapping = StaticTween(game, 0.0);
 	data->locked = false;
 	ProcessFields(game, data);
 	return true;
@@ -810,8 +811,8 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			GenerateField(game, data, &data->fields[i][j]);
-			data->fields[i][j].hiding = Tween(game, 0.0, 0.0, TWEEN_STYLE_LINEAR, 0.0);
-			data->fields[i][j].falling = Tween(game, 1.0, 1.0, TWEEN_STYLE_LINEAR, 0.0);
+			data->fields[i][j].hiding = StaticTween(game, 0.0);
+			data->fields[i][j].falling = StaticTween(game, 1.0);
 
 			data->fields[i][j].time_to_action = (int)((rand() % 250000 + 500000) * (rand() / (double)RAND_MAX));
 			data->fields[i][j].time_to_blink = (int)((rand() % 100000 + 200000) * (rand() / (double)RAND_MAX));
