@@ -139,7 +139,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].swapping, delta);
 
 			if (data->fields[i][j].blink_time) {
-				data->fields[i][j].blink_time -= delta * 1000;
+				data->fields[i][j].blink_time -= (int)(delta * 1000);
 				if (data->fields[i][j].blink_time <= 0) {
 					data->fields[i][j].blink_time = 0;
 					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
@@ -147,7 +147,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 					}
 				}
 			} else if (data->fields[i][j].action_time) {
-				data->fields[i][j].action_time -= delta * 1000;
+				data->fields[i][j].action_time -= (int)(delta * 1000);
 				if (data->fields[i][j].action_time <= 0) {
 					data->fields[i][j].action_time = 0;
 					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
@@ -155,8 +155,8 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 					}
 				}
 			} else {
-				data->fields[i][j].time_to_action -= delta * 1000;
-				data->fields[i][j].time_to_blink -= delta * 1000;
+				data->fields[i][j].time_to_action -= (int)(delta * 1000);
+				data->fields[i][j].time_to_blink -= (int)(delta * 1000);
 
 				if (data->fields[i][j].time_to_action <= 0) {
 					data->fields[i][j].time_to_action = rand() % 250000 + 500000;
@@ -566,7 +566,7 @@ static TM_ACTION(AfterMatching) {
 static void ProcessFields(struct Game* game, struct GamestateResources* data) {
 	if (MarkMatching(game, data)) {
 		AnimateMatching(game, data);
-		TM_AddDelay(data->timeline, (MATCHING_TIME + MATCHING_DELAY_TIME) * 1000);
+		TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
 		TM_AddAction(data->timeline, AfterMatching, NULL);
 	}
 }
@@ -749,6 +749,11 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
+		DestroyCharacter(game, data->archetypes[i]);
+	}
+	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
+		int ii = sizeof(ANIMALS) / sizeof(ANIMALS[0]) + i;
+		DestroyCharacter(game, data->archetypes[ii]);
 	}
 	al_destroy_bitmap(data->bg);
 	al_destroy_font(data->font);
