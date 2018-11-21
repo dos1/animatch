@@ -621,7 +621,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		data->clicked = true;
 	}
 
-	if (((ev->type == ALLEGRO_EVENT_MOUSE_AXES) && (data->clicked)) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE)) {
+	if (((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE)) && (data->clicked)) {
 		if (IsValidID(data->current) && IsValidID(data->hovered)) {
 			Turn(game, data);
 		}
