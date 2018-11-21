@@ -509,6 +509,9 @@ static void GenerateField(struct Game* game, struct GamestateResources* data, st
 	} else {
 		field->type = FIELD_TYPE_ANIMAL;
 		field->animal_type = rand() % ANIMAL_TYPES;
+		if (rand() / (float)RAND_MAX < 0.01) {
+			field->sleeping = true;
+		}
 	}
 	UpdateDrawable(game, data, field->id);
 }
