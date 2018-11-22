@@ -28,6 +28,8 @@ struct CommonResources {
 	ALLEGRO_SHADER* kawese_shader;
 };
 
+void Compositor(struct Game* game, struct Gamestate* gamestates);
+void PostLogic(struct Game* game, double delta);
 struct CommonResources* CreateGameData(struct Game* game);
 void DestroyGameData(struct Game* game);
 bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev);

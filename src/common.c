@@ -22,12 +22,36 @@
 #include <libsuperderpy.h>
 #include <stdio.h>
 
+void Compositor(struct Game* game, struct Gamestate* gamestates) {
+	struct Gamestate* tmp = gamestates;
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	while (tmp) {
+		if ((tmp->loaded) && (tmp->started)) {
+			al_draw_bitmap(tmp->fb, 0, 0, 0);
+		}
+		tmp = tmp->next;
+	}
+	if (game->data->loading_fade) {
+		double fade = Interpolate(game->data->loading_fade, TWEEN_STYLE_SINE_IN);
+		al_draw_tinted_bitmap(game->loading_fb, al_map_rgba_f(fade, fade, fade, fade), 0, 0, 0);
+	}
+}
+
+void PostLogic(struct Game* game, double delta) {
+	if (!game->_priv.loading.inProgress) {
+		game->data->loading_fade -= 0.0333;
+		if (game->data->loading_fade < 0.0) {
+			game->data->loading_fade = 0.0;
+		}
+	}
+}
+
 void DrawBuildInfo(struct Game* game) {
 	if (!game->_priv.showtimeline) {
-		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
+		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->_priv.clip_rect.w * 0.985, game->_priv.clip_rect.h * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
 		char revs[255];
 		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
-		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->viewport.width * 0.985, game->viewport.height * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
+		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->_priv.clip_rect.w * 0.985, game->_priv.clip_rect.h * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
 	}
 }
 
