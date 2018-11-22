@@ -345,7 +345,7 @@ static inline void UpdateDrawable(struct Game* game, struct GamestateResources* 
 	free(field->animal->name);
 	field->animal->name = strdup(data->archetypes[index]->name);
 	field->animal->spritesheets = data->archetypes[index]->spritesheets;
-	SelectSpritesheet(game, field->animal, "stand");
+	SelectSpritesheet(game, field->animal, field->sleeping ? "blink" : "stand");
 }
 
 static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
@@ -661,6 +661,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 		if (ev->keyboard.keycode == ALLEGRO_KEY_S) {
 			field->sleeping = !field->sleeping;
+			UpdateDrawable(game, data, field->id);
 			PrintConsole(game, "Field %dx%d, sleeping = %d", field->id.i, field->id.j, field->sleeping);
 			return;
 		}
