@@ -40,7 +40,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_clear_to_color(al_map_rgb(255, 255, 255));
-	al_draw_tinted_scaled_bitmap(data->bg_blur, al_map_rgba(80, 80, 80, 80), 0, 0,
+	al_draw_tinted_scaled_bitmap(data->bg_blur, al_map_rgba(30, 30, 30, 30), 0, 0,
 		al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur),
 		0, 0,
 		game->viewport.width, game->viewport.height, 0);
@@ -80,6 +80,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
 	al_draw_bitmap(data->bg_blur, 0, 0, 0);
+	al_use_shader(NULL);
 
 	al_set_target_bitmap(data->bg_blur);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -87,6 +88,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
 	al_draw_bitmap(data->bg_lowres, 0, 0, 0);
+	al_use_shader(NULL);
 
 	return data;
 }

@@ -32,14 +32,28 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 		tmp = tmp->next;
 	}
 	if (game->data->loading_fade) {
-		double fade = Interpolate(game->data->loading_fade, TWEEN_STYLE_SINE_IN);
-		al_draw_tinted_bitmap(game->loading_fb, al_map_rgba_f(fade, fade, fade, fade), 0, 0, 0);
+		al_set_target_bitmap(game->loading_fb);
+
+		al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
+
+		double scale = Interpolate(1.0 - game->data->loading_fade, TWEEN_STYLE_QUINTIC_IN) * 6.0;
+		al_draw_scaled_rotated_bitmap(game->data->silhouette,
+			al_get_bitmap_width(game->data->silhouette) / 2,
+			al_get_bitmap_height(game->data->silhouette) / 2,
+			game->viewport.width / 2, game->viewport.height / 2,
+			scale, scale, 0.0, 0);
+
+		al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+
+		al_set_target_backbuffer(game->display);
+
+		al_draw_bitmap(game->loading_fb, 0, 0, 0);
 	}
 }
 
 void PostLogic(struct Game* game, double delta) {
 	if (!game->_priv.loading.inProgress) {
-		game->data->loading_fade -= 0.0333;
+		game->data->loading_fade -= 0.02;
 		if (game->data->loading_fade < 0.0) {
 			game->data->loading_fade = 0.0;
 		}
@@ -99,11 +113,14 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
 	data->font = al_load_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"), (int)(1440 * 0.025), 0);
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
+	char* names[] = {"silhouette/frog.png", "silhouette/bee.png", "silhouette/ladybug.png", "silhouette/cat.png", "silhouette/fish.png"};
+	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
 	return data;
 }
 
 void DestroyGameData(struct Game* game) {
 	al_destroy_font(game->data->font);
 	DestroyShader(game, game->data->kawese_shader);
+	al_destroy_bitmap(game->data->silhouette);
 	free(game->data);
 }

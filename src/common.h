@@ -25,6 +25,7 @@ struct CommonResources {
 	ALLEGRO_FONT* font;
 	bool touch;
 	float loading_fade;
+	ALLEGRO_BITMAP* silhouette;
 	ALLEGRO_SHADER* kawese_shader;
 };
 
