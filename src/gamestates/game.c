@@ -27,6 +27,7 @@
 #define MATCHING_DELAY_TIME 0.2
 #define FALLING_TIME 0.5
 #define SWAPPING_TIME 0.15
+#define SHAKING_TIME 0.5
 
 #define BLUR_DIVIDER 8
 
@@ -83,7 +84,7 @@ struct Field {
 	bool matched;
 	bool sleeping;
 
-	struct Tween hiding, falling, swapping;
+	struct Tween hiding, falling, swapping, shaking;
 	struct FieldID swapee;
 	int fall_levels, level_no;
 
@@ -137,6 +138,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].falling, delta);
 			UpdateTween(&data->fields[i][j].hiding, delta);
 			UpdateTween(&data->fields[i][j].swapping, delta);
+			UpdateTween(&data->fields[i][j].shaking, delta);
 
 			if (data->fields[i][j].blink_time) {
 				data->fields[i][j].blink_time -= (int)(delta * 1000);
@@ -259,6 +261,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 			if (IsDrawable(data->fields[i][j].type)) {
 				al_set_shader_bool("enabled", data->fields[i][j].sleeping);
+				data->fields[i][j].animal->angle = sin(GetTweenValue(&data->fields[i][j].shaking) * 3 * ALLEGRO_PI) / 6.0;
 				DrawCharacter(game, data->fields[i][j].animal);
 			}
 		}
@@ -446,6 +449,7 @@ static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
 				data->fields[i][j].matched = false;
 				data->fields[i][j].hiding = StaticTween(game, 0.0);
 				data->fields[i][j].falling = StaticTween(game, 1.0);
+				data->fields[i][j].shaking = StaticTween(game, 0.0);
 			}
 		}
 	}
@@ -458,6 +462,7 @@ static void StopAnimations(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].level_no = 0;
 			data->fields[i][j].hiding = StaticTween(game, 0.0);
 			data->fields[i][j].falling = StaticTween(game, 1.0);
+			data->fields[i][j].shaking = StaticTween(game, 0.0);
 		}
 	}
 }
@@ -589,11 +594,12 @@ static void Turn(struct Game* game, struct GamestateResources* data) {
 	}
 
 	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
+	data->clicked = false;
 
 	if (!AreSwappable(game, data, data->current, data->hovered)) {
+		GetField(game, data, data->current)->shaking = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_OUT, SHAKING_TIME);
 		return;
 	}
-	data->clicked = false;
 	data->locked = true;
 
 	AnimateSwapping(game, data, data->current, data->hovered);
