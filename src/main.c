@@ -51,7 +51,6 @@ int main(int argc, char** argv) {
 	game->handlers.destroy = DestroyGameData;
 	game->handlers.postdraw = DrawBuildInfo;
 	game->handlers.postlogic = PostLogic;
-	EnableCompositor(game, Compositor);
 
 	al_show_mouse_cursor(game->display);
 

@@ -31,12 +31,13 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 		}
 		tmp = tmp->next;
 	}
+
 	if (game->data->loading_fade) {
 		al_set_target_bitmap(game->loading_fb);
 
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
 
-		double scale = Interpolate(1.0 - game->data->loading_fade, TWEEN_STYLE_QUINTIC_IN) * 6.0;
+		double scale = Interpolate((1.0 - game->data->loading_fade) * 0.7 + 0.3, TWEEN_STYLE_QUINTIC_IN) * 6.0;
 		al_draw_scaled_rotated_bitmap(game->data->silhouette,
 			al_get_bitmap_width(game->data->silhouette) / 2,
 			al_get_bitmap_height(game->data->silhouette) / 2,
@@ -52,9 +53,10 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 }
 
 void PostLogic(struct Game* game, double delta) {
-	if (!game->_priv.loading.inProgress) {
+	if (!game->_priv.loading.inProgress && game->data->loading_fade) {
 		game->data->loading_fade -= 0.02 * delta / (1 / 60.0);
-		if (game->data->loading_fade < 0.0) {
+		if (game->data->loading_fade <= 0.0) {
+			DisableCompositor(game);
 			game->data->loading_fade = 0.0;
 		}
 	}

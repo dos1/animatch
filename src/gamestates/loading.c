@@ -34,9 +34,7 @@ int Gamestate_ProgressCount = -1;
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev){};
 
-void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
-	game->data->loading_fade = 1.0;
-};
+void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta){};
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_clear_to_color(al_map_rgb(255, 255, 255));
@@ -103,7 +101,11 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	free(data);
 }
 
-void Gamestate_Start(struct Game* game, struct GamestateResources* data) {}
+void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
+	EnableCompositor(game, Compositor);
+	game->data->loading_fade = 1.0;
+}
+
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {}
 
 void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {}
