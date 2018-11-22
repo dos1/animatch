@@ -615,8 +615,7 @@ static bool WillMatch(struct Game* game, struct GamestateResources* data, struct
 	return res;
 }
 
-static void ShowHint(struct Game* game, struct GamestateResources* data) {
-	struct Field* field = NULL;
+static bool ShowHint(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			struct FieldID id = {.i = i, .j = j};
@@ -625,16 +624,33 @@ static void ShowHint(struct Game* game, struct GamestateResources* data) {
 			for (int q = 0; q < 4; q++) {
 				if (IsValidMove(id, callbacks[q](id))) {
 					if (WillMatch(game, data, id, callbacks[q](id))) {
-						field = GetField(game, data, id);
-						break;
+						GetField(game, data, id)->hinting = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, HINT_TIME);
+						return true;
 					}
 				}
 			}
 		}
 	}
-	if (field) {
-		field->hinting = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, HINT_TIME);
+	return false;
+}
+
+static bool AutoMove(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			struct FieldID id = {.i = i, .j = j};
+			struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+
+			for (int q = 0; q < 4; q++) {
+				if (IsValidMove(id, callbacks[q](id))) {
+					if (WillMatch(game, data, id, callbacks[q](id))) {
+						AnimateSwapping(game, data, id, callbacks[q](id));
+						return true;
+					}
+				}
+			}
+		}
 	}
+	return false;
 }
 
 static void Turn(struct Game* game, struct GamestateResources* data) {
@@ -698,6 +714,10 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
 		if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
 			ShowHint(game, data);
+			return;
+		}
+		if (ev->keyboard.keycode == ALLEGRO_KEY_A) {
+			AutoMove(game, data);
 			return;
 		}
 
