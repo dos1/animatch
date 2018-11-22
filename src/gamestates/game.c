@@ -140,6 +140,10 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].swapping, delta);
 			UpdateTween(&data->fields[i][j].shaking, delta);
 
+			if (data->fields[i][j].sleeping) {
+				continue;
+			}
+
 			if (data->fields[i][j].blink_time) {
 				data->fields[i][j].blink_time -= (int)(delta * 1000);
 				if (data->fields[i][j].blink_time <= 0) {
