@@ -438,6 +438,7 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 
 			if (data->fields[i][j].sleeping && ShouldWakeUp(game, data, data->fields[i][j].id)) {
 				data->fields[i][j].sleeping = false;
+				UpdateDrawable(game, data, data->fields[i][j].id);
 			}
 		}
 	}
