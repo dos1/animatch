@@ -27,7 +27,7 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	while (tmp) {
 		if ((tmp->loaded) && (tmp->started)) {
-			al_draw_bitmap(tmp->fb, 0, 0, 0);
+			al_draw_bitmap(tmp->fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
 		}
 		tmp = tmp->next;
 	}
@@ -48,7 +48,7 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 
 		al_set_target_backbuffer(game->display);
 
-		al_draw_bitmap(game->loading_fb, 0, 0, 0);
+		al_draw_bitmap(game->loading_fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
 	}
 }
 
@@ -64,10 +64,12 @@ void PostLogic(struct Game* game, double delta) {
 
 void DrawBuildInfo(struct Game* game) {
 	if (!game->_priv.showtimeline) {
-		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->_priv.clip_rect.w * 0.985, game->_priv.clip_rect.h * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
+		int x, y, w, h;
+		al_get_clipping_rectangle(&x, &y, &w, &h);
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
 		char revs[255];
 		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
-		DrawTextWithShadow(game->data->font, al_map_rgb(255, 255, 255), game->_priv.clip_rect.w * 0.985, game->_priv.clip_rect.h * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
 	}
 }
 
@@ -113,7 +115,6 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
-	data->font = al_load_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"), (int)(1440 * 0.025), 0);
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
 	char* names[] = {"silhouette/frog.png", "silhouette/bee.png", "silhouette/ladybug.png", "silhouette/cat.png", "silhouette/fish.png"};
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
@@ -121,7 +122,6 @@ struct CommonResources* CreateGameData(struct Game* game) {
 }
 
 void DestroyGameData(struct Game* game) {
-	al_destroy_font(game->data->font);
 	DestroyShader(game, game->data->kawese_shader);
 	al_destroy_bitmap(game->data->silhouette);
 	free(game->data);
