@@ -187,13 +187,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
 
-	al_set_target_bitmap(data->lowres_scene);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
-		0, 0, al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene), 0);
-
 	float size[2] = {al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene)};
 	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
+
+	al_set_target_bitmap(data->lowres_scene);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
+	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
+		0, 0, al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene), 0);
+	al_reset_clipping_rectangle();
 
 	al_set_target_bitmap(data->lowres_scene_blur);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -203,6 +205,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
 	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
+	al_use_shader(NULL);
+	al_reset_clipping_rectangle();
 
 	al_set_target_bitmap(data->lowres_scene);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -211,6 +215,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
 	al_draw_bitmap(data->lowres_scene_blur, 0, 0, 0);
+	al_use_shader(NULL);
+	al_reset_clipping_rectangle();
 
 	al_set_target_bitmap(data->board);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
@@ -258,6 +264,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	al_use_shader(NULL);
+	al_reset_clipping_rectangle();
 
 	SetFramebufferAsTarget(game);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
