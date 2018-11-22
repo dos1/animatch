@@ -105,7 +105,7 @@ struct GamestateResources {
 
 	struct Timeline* timeline;
 
-	ALLEGRO_BITMAP* field_bgs[4];
+	ALLEGRO_BITMAP *field_bgs[4], *field_bgs_bmp;
 
 	ALLEGRO_SHADER *combine_shader, *desaturate_shader;
 
@@ -215,6 +215,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->board);
 	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
 	al_set_clipping_rectangle(0, offsetY, game->viewport.width, game->viewport.height - offsetY * 2);
+	al_hold_bitmap_drawing(true);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
@@ -229,6 +230,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			}
 		}
 	}
+	al_hold_bitmap_drawing(false);
 
 	al_use_shader(data->desaturate_shader);
 	for (int i = 0; i < COLS; i++) {
@@ -741,6 +743,17 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	return data;
 }
 
+void Gamestate_PostLoad(struct Game* game, struct GamestateResources* data) {
+	data->field_bgs_bmp = al_create_bitmap(88 * 4, 88);
+	al_set_target_bitmap(data->field_bgs_bmp);
+	al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+	for (int i = 0; i < 4; i++) {
+		al_draw_bitmap(data->field_bgs[i], i * 88, 0, 0);
+		al_destroy_bitmap(data->field_bgs[i]);
+		data->field_bgs[i] = al_create_sub_bitmap(data->field_bgs_bmp, i * 88, 0, 88, 88);
+	}
+}
+
 void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	// Called when the gamestate library is being unloaded.
 	// Good place for freeing all allocated memory and resources.
@@ -756,6 +769,10 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 		int ii = sizeof(ANIMALS) / sizeof(ANIMALS[0]) + i;
 		DestroyCharacter(game, data->archetypes[ii]);
 	}
+	for (int i = 0; i < 4; i++) {
+		al_destroy_bitmap(data->field_bgs[i]);
+	}
+	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
 	al_destroy_font(data->font);
 	al_destroy_bitmap(data->scene);
