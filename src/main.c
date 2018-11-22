@@ -42,9 +42,8 @@ int main(int argc, char** argv) {
 
 	al_set_window_title(game->display, LIBSUPERDERPY_GAMENAME_PRETTY);
 
-	LoadGamestate(game, "holypangolin");
-	LoadGamestate(game, "dosowisko");
-	StartGamestate(game, "holypangolin");
+	game->show_loading_on_launch = true;
+	StartGamestate(game, "game");
 
 	game->data = CreateGameData(game);
 

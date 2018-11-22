@@ -74,10 +74,12 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
 	data->font = al_load_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"), (int)(1440 * 0.025), 0);
+	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
 	return data;
 }
 
 void DestroyGameData(struct Game* game) {
 	al_destroy_font(game->data->font);
+	DestroyShader(game, game->data->kawese_shader);
 	free(game->data);
 }

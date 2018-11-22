@@ -21,28 +21,83 @@
 #include "../common.h"
 #include <libsuperderpy.h>
 
+#define BLUR_DIVIDER 8
+
 /*! \brief Resources used by Loading state. */
 struct GamestateResources {
-	bool unused;
+	ALLEGRO_BITMAP* pangolin;
+	ALLEGRO_BITMAP *bg, *bg_lowres, *bg_blur;
+	ALLEGRO_BITMAP *bar1, *bar2;
 };
 
 int Gamestate_ProgressCount = -1;
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev){};
 
-void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta){};
+void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
+	game->data->loading_fade = 1.0;
+};
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
-	al_draw_filled_rectangle(0, game->viewport.height * 0.98, game->viewport.width, game->viewport.height, al_map_rgba(32, 32, 32, 32));
-	al_draw_filled_rectangle(0, game->viewport.height * 0.98, game->loading_progress * game->viewport.width, game->viewport.height, al_map_rgba(128, 128, 128, 128));
+	al_clear_to_color(al_map_rgb(255, 255, 255));
+	al_draw_tinted_scaled_bitmap(data->bg_blur, al_map_rgba(80, 80, 80, 80), 0, 0,
+		al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur),
+		0, 0,
+		game->viewport.width, game->viewport.height, 0);
+	al_draw_bitmap(data->pangolin, (game->viewport.width - al_get_bitmap_width(data->pangolin)) / 2,
+		(game->viewport.height - al_get_bitmap_height(data->pangolin)) / 2 - al_get_bitmap_height(data->bar1) / 2, 0);
+
+	al_draw_bitmap(data->bar1, (game->viewport.width - al_get_bitmap_width(data->bar1)) / 2,
+		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2, 0);
+	al_draw_bitmap_region(data->bar2, 0, 0,
+		al_get_bitmap_width(data->bar2) * game->loading_progress, al_get_bitmap_height(data->bar2),
+		(game->viewport.width - al_get_bitmap_width(data->bar1)) / 2,
+		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2, 0);
 };
 
 void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	struct GamestateResources* data = malloc(sizeof(struct GamestateResources));
+	data->pangolin = al_load_bitmap(GetDataFilePath(game, "holypangolin.webp"));
+	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.webp"));
+
+	data->bar1 = al_load_bitmap(GetDataFilePath(game, "bar1.webp"));
+	data->bar2 = al_load_bitmap(GetDataFilePath(game, "bar2.webp"));
+
+	data->bg_lowres = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->bg_blur = al_create_bitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+
+	al_set_target_bitmap(data->bg_blur);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_draw_scaled_bitmap(data->bg, 0, 0, al_get_bitmap_width(data->bg), al_get_bitmap_height(data->bg),
+		0, 0, al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur), 0);
+
+	float size[2] = {al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur)};
+
+	al_set_target_bitmap(data->bg_lowres);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_use_shader(game->data->kawese_shader);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_set_shader_float_vector("size", 2, size, 1);
+	al_set_shader_float("kernel", 0);
+	al_draw_bitmap(data->bg_blur, 0, 0, 0);
+
+	al_set_target_bitmap(data->bg_blur);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_use_shader(game->data->kawese_shader);
+	al_set_shader_float_vector("size", 2, size, 1);
+	al_set_shader_float("kernel", 0);
+	al_draw_bitmap(data->bg_lowres, 0, 0, 0);
+
 	return data;
 }
 
 void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
+	al_destroy_bitmap(data->pangolin);
+	al_destroy_bitmap(data->bg);
+	al_destroy_bitmap(data->bg_lowres);
+	al_destroy_bitmap(data->bg_blur);
+	al_destroy_bitmap(data->bar1);
+	al_destroy_bitmap(data->bar2);
 	free(data);
 }
 

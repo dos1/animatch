@@ -24,6 +24,8 @@ struct CommonResources {
 	double mouseX, mouseY;
 	ALLEGRO_FONT* font;
 	bool touch;
+	float loading_fade;
+	ALLEGRO_SHADER* kawese_shader;
 };
 
 struct CommonResources* CreateGameData(struct Game* game);

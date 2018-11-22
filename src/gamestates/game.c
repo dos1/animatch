@@ -107,12 +107,12 @@ struct GamestateResources {
 
 	ALLEGRO_BITMAP* field_bgs[4];
 
-	ALLEGRO_SHADER *combine_shader, *kawese_shader, *desaturate_shader;
+	ALLEGRO_SHADER *combine_shader, *desaturate_shader;
 
 	bool locked, clicked;
 };
 
-int Gamestate_ProgressCount = 47; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 46; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
 
@@ -198,7 +198,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->lowres_scene_blur);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
-	al_use_shader(data->kawese_shader);
+	al_use_shader(game->data->kawese_shader);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
@@ -207,7 +207,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->lowres_scene);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
-	al_use_shader(data->kawese_shader);
+	al_use_shader(game->data->kawese_shader);
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
 	al_draw_bitmap(data->lowres_scene_blur, 0, 0, 0);
@@ -733,8 +733,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	data->combine_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/combine.glsl"));
 	progress(game);
-	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
-	progress(game);
 	data->desaturate_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/desaturate.glsl"));
 	progress(game);
 
@@ -765,7 +763,6 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->lowres_scene_blur);
 	al_destroy_bitmap(data->board);
 	DestroyShader(game, data->combine_shader);
-	DestroyShader(game, data->kawese_shader);
 	DestroyShader(game, data->desaturate_shader);
 	TM_Destroy(data->timeline);
 	free(data);
