@@ -28,6 +28,7 @@
 #define FALLING_TIME 0.5
 #define SWAPPING_TIME 0.15
 #define SHAKING_TIME 0.5
+#define HINT_TIME 1.0
 
 #define BLUR_DIVIDER 8
 
@@ -84,7 +85,7 @@ struct Field {
 	bool matched;
 	bool sleeping;
 
-	struct Tween hiding, falling, swapping, shaking;
+	struct Tween hiding, falling, swapping, shaking, hinting;
 	struct FieldID swapee;
 	int fall_levels, level_no;
 
@@ -139,6 +140,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].hiding, delta);
 			UpdateTween(&data->fields[i][j].swapping, delta);
 			UpdateTween(&data->fields[i][j].shaking, delta);
+			UpdateTween(&data->fields[i][j].hinting, delta);
 
 			if (data->fields[i][j].sleeping) {
 				continue;
@@ -265,7 +267,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 			if (IsDrawable(data->fields[i][j].type)) {
 				al_set_shader_bool("enabled", data->fields[i][j].sleeping);
-				data->fields[i][j].animal->angle = sin(GetTweenValue(&data->fields[i][j].shaking) * 3 * ALLEGRO_PI) / 6.0;
+				data->fields[i][j].animal->angle = sin(GetTweenValue(&data->fields[i][j].shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&data->fields[i][j].hinting) * 5 * ALLEGRO_PI) / 6.0;
+				data->fields[i][j].animal->scaleX = 1.0 + sin(GetTweenValue(&data->fields[i][j].hinting) * ALLEGRO_PI) / 3.0;
+				data->fields[i][j].animal->scaleY = data->fields[i][j].animal->scaleX;
 				DrawCharacter(game, data->fields[i][j].animal);
 			}
 		}
@@ -455,6 +459,7 @@ static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
 				data->fields[i][j].hiding = StaticTween(game, 0.0);
 				data->fields[i][j].falling = StaticTween(game, 1.0);
 				data->fields[i][j].shaking = StaticTween(game, 0.0);
+				data->fields[i][j].hinting = StaticTween(game, 0.0);
 			}
 		}
 	}
@@ -468,6 +473,7 @@ static void StopAnimations(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].hiding = StaticTween(game, 0.0);
 			data->fields[i][j].falling = StaticTween(game, 1.0);
 			data->fields[i][j].shaking = StaticTween(game, 0.0);
+			data->fields[i][j].hinting = StaticTween(game, 0.0);
 		}
 	}
 }
@@ -505,6 +511,9 @@ static TM_ACTION(StartSwapping) {
 }
 
 static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	if (!IsValidID(id)) {
+		return false;
+	}
 	struct Field* field = GetField(game, data, id);
 	if ((field->type == FIELD_TYPE_ANIMAL) && (!field->sleeping)) {
 		return true;
@@ -593,6 +602,41 @@ static void ProcessFields(struct Game* game, struct GamestateResources* data) {
 	}
 }
 
+static bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	if (!AreSwappable(game, data, one, two)) {
+		return false;
+	}
+	bool res = false;
+	Swap(game, data, one, two);
+	if (IsMatching(game, data, two)) {
+		res = true;
+	}
+	Swap(game, data, one, two);
+	return res;
+}
+
+static void ShowHint(struct Game* game, struct GamestateResources* data) {
+	struct Field* field = NULL;
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			struct FieldID id = {.i = i, .j = j};
+			struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+
+			for (int q = 0; q < 4; q++) {
+				if (IsValidMove(id, callbacks[q](id))) {
+					if (WillMatch(game, data, id, callbacks[q](id))) {
+						field = GetField(game, data, id);
+						break;
+					}
+				}
+			}
+		}
+	}
+	if (field) {
+		field->hinting = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, HINT_TIME);
+	}
+}
+
 static void Turn(struct Game* game, struct GamestateResources* data) {
 	if (!IsValidMove(data->current, data->hovered)) {
 		return;
@@ -652,6 +696,11 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
+		if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
+			ShowHint(game, data);
+			return;
+		}
+
 		int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
 
 		struct Field* field = GetField(game, data, data->hovered);
