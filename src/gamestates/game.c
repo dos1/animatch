@@ -29,6 +29,7 @@
 #define SWAPPING_TIME 0.15
 #define SHAKING_TIME 0.5
 #define HINT_TIME 1.0
+#define COLLECTING_TIME 0.6
 
 #define BLUR_DIVIDER 8
 
@@ -99,7 +100,7 @@ struct Field {
 	bool matched;
 	bool sleeping;
 
-	struct Tween hiding, falling, swapping, shaking, hinting;
+	struct Tween hiding, falling, swapping, shaking, hinting, collecting;
 	struct FieldID swapee;
 	int variant;
 	int fall_levels, level_no;
@@ -156,6 +157,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].swapping, delta);
 			UpdateTween(&data->fields[i][j].shaking, delta);
 			UpdateTween(&data->fields[i][j].hinting, delta);
+			UpdateTween(&data->fields[i][j].collecting, delta);
 
 			if (data->fields[i][j].sleeping) {
 				continue;
@@ -278,11 +280,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			int x = i * 90 + 45, y = j * 90 + 45 + offsetY - levelDiff;
 			int swapeeX = data->fields[i][j].swapee.i * 90 + 45, swapeeY = data->fields[i][j].swapee.j * 90 + 45 + offsetY;
 
+			y -= sin(GetTweenValue(&data->fields[i][j].collecting) * ALLEGRO_PI) * 10;
+
 			SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].swapping)), 0);
 
 			if (IsDrawable(data->fields[i][j].type)) {
 				al_set_shader_bool("enabled", data->fields[i][j].sleeping);
-				data->fields[i][j].drawable->angle = sin(GetTweenValue(&data->fields[i][j].shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&data->fields[i][j].hinting) * 5 * ALLEGRO_PI) / 6.0;
+				data->fields[i][j].drawable->angle = sin(GetTweenValue(&data->fields[i][j].shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&data->fields[i][j].hinting) * 5 * ALLEGRO_PI) / 6.0 + sin(GetTweenPosition(&data->fields[i][j].collecting) * 2 * ALLEGRO_PI) / 12.0;
 				data->fields[i][j].drawable->scaleX = 1.0 + sin(GetTweenValue(&data->fields[i][j].hinting) * ALLEGRO_PI) / 3.0;
 				data->fields[i][j].drawable->scaleY = data->fields[i][j].drawable->scaleX;
 				DrawCharacter(game, data->fields[i][j].drawable);
@@ -486,6 +490,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					collected++;
 				}
+				data->fields[i][j].collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 			}
 		}
 	}
@@ -518,6 +523,7 @@ static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
 				data->fields[i][j].falling = StaticTween(game, 1.0);
 				data->fields[i][j].shaking = StaticTween(game, 0.0);
 				data->fields[i][j].hinting = StaticTween(game, 0.0);
+				data->fields[i][j].collecting = StaticTween(game, 0.0);
 			}
 		}
 	}
@@ -532,6 +538,7 @@ static void StopAnimations(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].falling = StaticTween(game, 1.0);
 			data->fields[i][j].shaking = StaticTween(game, 0.0);
 			data->fields[i][j].hinting = StaticTween(game, 0.0);
+			data->fields[i][j].collecting = StaticTween(game, 0.0);
 		}
 	}
 }
@@ -573,7 +580,7 @@ static bool IsSwappable(struct Game* game, struct GamestateResources* data, stru
 		return false;
 	}
 	struct Field* field = GetField(game, data, id);
-	if ((field->type == FIELD_TYPE_ANIMAL) && (!field->sleeping)) {
+	if (((field->type == FIELD_TYPE_ANIMAL) && (!field->sleeping)) || (field->type == FIELD_TYPE_COLLECTIBLE)) {
 		return true;
 	}
 	return false;
@@ -825,6 +832,11 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				field->subtype.collectible_type = 0;
 			}
 			field->type = type;
+			if (field->type == FIELD_TYPE_FREEFALL) {
+				field->variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
+			} else {
+				field->variant = 0;
+			}
 			PrintConsole(game, "Setting field type to %d", type);
 		} else {
 			field->type = FIELD_TYPE_ANIMAL;
