@@ -480,6 +480,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 				if (data->fields[i][j].sleeping) {
 					data->fields[i][j].sleeping = false;
 					UpdateDrawable(game, data, data->fields[i][j].id);
+					data->fields[i][j].collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					collected++;
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].variant++;
@@ -488,9 +489,9 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 						data->fields[i][j].matched = true;
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
+					data->fields[i][j].collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					collected++;
 				}
-				data->fields[i][j].collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 			}
 		}
 	}
