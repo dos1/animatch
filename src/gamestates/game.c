@@ -37,7 +37,7 @@
 #define ROWS 8
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
-static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut"};
+static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes"};
 
 static struct {
 	int actions;
@@ -53,7 +53,9 @@ static struct {
 	{.actions = 2, .names = {"stand", "stand2"}}, // egg
 	{.actions = 1, .names = {"stand"}}, // berry
 	{.actions = 2, .names = {"stand", "stand2"}}, // apple
-	{.actions = 3, .names = {"stand", "stand2", "stand3"}} // chestnut
+	{.actions = 3, .names = {"stand", "stand2", "stand3"}}, // chestnut
+	{.actions = 6, .names = {"bee", "bird", "cat", "fish", "frog", "ladybug"}}, // special
+	{.actions = 1, .names = {"eyes"}} // eyes
 };
 
 enum ANIMAL_TYPE {
@@ -106,9 +108,10 @@ struct Field {
 			int variant;
 		} freefall;
 	} data;
-	bool matched;
+	int matched;
 
-	struct Character* drawable;
+	struct Character *drawable, *overlay;
+	bool overlay_visible;
 
 	struct {
 		struct Tween hiding, falling, swapping, shaking, hinting, collecting;
@@ -128,7 +131,7 @@ struct GamestateResources {
 	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
 
 	struct Character* archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0]) + sizeof(SPECIALS) / sizeof(SPECIALS[0])];
-	struct FieldID current, hovered;
+	struct FieldID current, hovered, swap1, swap2;
 	struct Field fields[COLS][ROWS];
 
 	struct Timeline* timeline;
@@ -140,7 +143,7 @@ struct GamestateResources {
 	bool locked, clicked;
 };
 
-int Gamestate_ProgressCount = 53; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 60; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
 
@@ -166,6 +169,9 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
+			if (data->fields[i][j].overlay_visible) {
+				AnimateCharacter(game, data->fields[i][j].overlay, delta, 1.0);
+			}
 			UpdateTween(&data->fields[i][j].animation.falling, delta);
 			UpdateTween(&data->fields[i][j].animation.hiding, delta);
 			UpdateTween(&data->fields[i][j].animation.swapping, delta);
@@ -304,6 +310,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 				data->fields[i][j].drawable->scaleX = 1.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * ALLEGRO_PI) / 3.0;
 				data->fields[i][j].drawable->scaleY = data->fields[i][j].drawable->scaleX;
 				DrawCharacter(game, data->fields[i][j].drawable);
+				if (data->fields[i][j].overlay_visible) {
+					DrawCharacter(game, data->fields[i][j].overlay);
+				}
 			}
 		}
 	}
@@ -370,7 +379,36 @@ static struct Field* GetField(struct Game* game, struct GamestateResources* data
 	return &data->fields[id.i][id.j];
 }
 
-static inline void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static void UpdateOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct Field* field = GetField(game, data, id);
+	if (!IsDrawable(field->type)) {
+		return;
+	}
+	char* name = NULL;
+	int index = -1;
+	if (field->type == FIELD_TYPE_ANIMAL) {
+		if (field->data.animal.special) {
+			name = "eyes";
+			index = ANIMAL_TYPES + 5; // FIXME
+		}
+	}
+
+	if (name) {
+		struct Character* archetype = data->archetypes[index];
+		if (field->overlay->name) {
+			free(field->overlay->name);
+		}
+		field->overlay->name = strdup(archetype->name);
+		field->overlay->spritesheets = archetype->spritesheets;
+
+		SelectSpritesheet(game, field->overlay, name);
+		field->overlay_visible = true;
+	} else {
+		field->overlay_visible = false;
+	}
+}
+
+static void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	struct Field* field = GetField(game, data, id);
 	if (!IsDrawable(field->type)) {
 		return;
@@ -394,13 +432,23 @@ static inline void UpdateDrawable(struct Game* game, struct GamestateResources* 
 		name = ACTIONS[index].names[variant];
 	} else if (field->type == FIELD_TYPE_ANIMAL) {
 		index = field->data.animal.type;
+		if (field->data.animal.special) {
+			index = ANIMAL_TYPES + 4; // FIXME
+			name = ANIMALS[field->data.animal.type];
+		}
 	}
 
-	free(field->drawable->name);
-	field->drawable->name = strdup(data->archetypes[index]->name);
-	field->drawable->spritesheets = data->archetypes[index]->spritesheets;
+	struct Character* archetype = data->archetypes[index];
+
+	if (field->drawable->name) {
+		free(field->drawable->name);
+	}
+	field->drawable->name = strdup(archetype->name);
+	field->drawable->spritesheets = archetype->spritesheets;
 
 	SelectSpritesheet(game, field->drawable, name);
+
+	UpdateOverlay(game, data, id);
 }
 
 static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
@@ -519,6 +567,13 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 			if (data->fields[i][j].matched) {
 				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
 					SelectSpritesheet(game, data->fields[i][j].drawable, ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+
+					if (data->fields[i][j].matched >= 4 && ((IsSameID(data->swap1, data->fields[i][j].id)) || (IsSameID(data->swap2, data->fields[i][j].id)))) {
+						data->fields[i][j].data.animal.special = true;
+						data->fields[i][j].matched = false;
+						UpdateDrawable(game, data, data->fields[i][j].id);
+						continue;
+					}
 				}
 				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
@@ -608,6 +663,8 @@ static bool AreSwappable(struct Game* game, struct GamestateResources* data, str
 }
 
 static void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	data->swap1 = one;
+	data->swap2 = two;
 	TM_AddAction(data->timeline, StartSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
 	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
 	TM_AddAction(data->timeline, AfterSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
@@ -627,8 +684,9 @@ static void GenerateField(struct Game* game, struct GamestateResources* data, st
 		if (rand() / (float)RAND_MAX < 0.01) {
 			field->data.animal.sleeping = true;
 		}
+		field->data.animal.special = false;
 	}
-	field->data.animal.special = false;
+	field->overlay_visible = false;
 	UpdateDrawable(game, data, field->id);
 }
 
@@ -828,6 +886,16 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			return;
 		}
 
+		if (ev->keyboard.keycode == ALLEGRO_KEY_D) {
+			if (field->type != FIELD_TYPE_ANIMAL) {
+				return;
+			}
+			field->data.animal.special = !field->data.animal.special;
+			UpdateDrawable(game, data, field->id);
+			PrintConsole(game, "Field %dx%d, special = %d", field->id.i, field->id.j, field->data.animal.special);
+			return;
+		}
+
 		if (ev->keyboard.keycode == ALLEGRO_KEY_MINUS) {
 			Gravity(game, data);
 			ProcessFields(game, data);
@@ -905,8 +973,12 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].drawable = CreateCharacter(game, ANIMALS[rand() % 6]);
+			data->fields[i][j].drawable = CreateCharacter(game, NULL);
 			data->fields[i][j].drawable->shared = true;
+			data->fields[i][j].overlay = CreateCharacter(game, NULL);
+			data->fields[i][j].overlay->shared = true;
+			SetParentCharacter(game, data->fields[i][j].overlay, data->fields[i][j].drawable);
+			SetCharacterPosition(game, data->fields[i][j].overlay, 108 / 2, 108 / 2, 0); // FIXME: subcharacters should be positioned by parent pivot
 			data->fields[i][j].id.i = i;
 			data->fields[i][j].id.j = j;
 			data->fields[i][j].matched = false;
@@ -956,6 +1028,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
+			DestroyCharacter(game, data->fields[i][j].overlay);
 		}
 	}
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
