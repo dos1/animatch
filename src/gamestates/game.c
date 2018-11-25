@@ -102,6 +102,9 @@ struct Field {
 			bool sleeping;
 			bool special;
 		} animal;
+		struct {
+			int variant;
+		} freefall;
 	} data;
 	bool matched;
 
@@ -381,7 +384,7 @@ static inline void UpdateDrawable(struct Game* game, struct GamestateResources* 
 	int index = 0;
 	if (field->type == FIELD_TYPE_FREEFALL) {
 		index = ANIMAL_TYPES;
-		name = ACTIONS[index].names[rand() % ACTIONS[index].actions];
+		name = ACTIONS[index].names[field->data.freefall.variant];
 	} else if (field->type == FIELD_TYPE_COLLECTIBLE) {
 		index = ANIMAL_TYPES + 1 + field->data.collectible.type;
 		int variant = field->data.collectible.variant;
@@ -514,7 +517,9 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
-				SelectSpritesheet(game, data->fields[i][j].drawable, ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+					SelectSpritesheet(game, data->fields[i][j].drawable, ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+				}
 				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
 				data->locked = true;
@@ -611,7 +616,7 @@ static void AnimateSwapping(struct Game* game, struct GamestateResources* data, 
 static void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
 	if (rand() / (float)RAND_MAX < 0.01) {
 		field->type = FIELD_TYPE_FREEFALL;
-		field->data.collectible.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
+		field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
 	} else if (rand() / (float)RAND_MAX < 0.01) {
 		field->type = FIELD_TYPE_COLLECTIBLE;
 		field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
@@ -849,7 +854,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			}
 			field->type = type;
 			if (field->type == FIELD_TYPE_FREEFALL) {
-				field->data.collectible.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
+				field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
 			} else {
 				field->data.collectible.variant = 0;
 			}
