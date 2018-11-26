@@ -42,15 +42,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur),
 		0, 0,
 		game->viewport.width, game->viewport.height, 0);
-	al_draw_bitmap(data->pangolin, (game->viewport.width - al_get_bitmap_width(data->pangolin)) / 2,
-		(game->viewport.height - al_get_bitmap_height(data->pangolin)) / 2 - al_get_bitmap_height(data->bar1) / 2, 0);
+	al_draw_bitmap(data->pangolin, (game->viewport.width - al_get_bitmap_width(data->pangolin)) / 2.0,
+		(game->viewport.height - al_get_bitmap_height(data->pangolin)) / 2.0 - al_get_bitmap_height(data->bar1) / 2.0, 0);
 
-	al_draw_bitmap(data->bar1, (game->viewport.width - al_get_bitmap_width(data->bar1)) / 2,
-		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2, 0);
+	al_draw_bitmap(data->bar1, (game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
+		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
 	al_draw_bitmap_region(data->bar2, 0, 0,
 		al_get_bitmap_width(data->bar2) * game->loading_progress, al_get_bitmap_height(data->bar2),
-		(game->viewport.width - al_get_bitmap_width(data->bar1)) / 2,
-		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2, 0);
+		(game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
+		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
 };
 
 void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {

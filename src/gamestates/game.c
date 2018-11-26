@@ -141,6 +141,8 @@ struct GamestateResources {
 	ALLEGRO_SHADER *combine_shader, *desaturate_shader;
 
 	bool locked, clicked;
+
+	struct ParticleBucket* particles;
 };
 
 int Gamestate_ProgressCount = 60; // number of loading steps as reported by Gamestate_Load
@@ -166,8 +168,14 @@ static inline bool IsValidID(struct FieldID id) {
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
 	TM_Process(data->timeline, delta);
+	UpdateParticles(game, data->particles, delta);
+
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
+			if (GetTweenPosition(&data->fields[i][j].animation.hiding) < 1.0) {
+				EmitParticle(game, data->particles, data->archetypes[rand() % ANIMAL_TYPES], FaderParticle, SpawnParticleIn(GetCharacterX(game, data->fields[i][j].drawable) / (double)game->viewport.width, GetCharacterY(game, data->fields[i][j].drawable) / (double)game->viewport.height), FaderParticleData(2.0, 0.01, GravityParticle, GravityParticleData((rand() / (double)RAND_MAX - 0.5) / 6.0, (rand() / (double)RAND_MAX - 0.5) / 6.0, 0.002, 0.0003), free));
+			}
+
 			AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
 			if (data->fields[i][j].overlay_visible) {
 				AnimateCharacter(game, data->fields[i][j].overlay, delta, 1.0);
@@ -300,7 +308,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			int x = i * 90 + 45, y = j * 90 + 45 + offsetY - levelDiff;
 			int swapeeX = data->fields[i][j].animation.swapee.i * 90 + 45, swapeeY = data->fields[i][j].animation.swapee.j * 90 + 45 + offsetY;
 
-			y -= sin(GetTweenValue(&data->fields[i][j].animation.collecting) * ALLEGRO_PI) * 10;
+			y -= (int)(sin(GetTweenValue(&data->fields[i][j].animation.collecting) * ALLEGRO_PI) * 10);
 
 			SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].animation.swapping)), 0);
 
@@ -328,6 +336,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_draw_bitmap(data->board, 0, 0, 0);
 	al_use_shader(NULL);
+
+	DrawParticles(game, data->particles);
 }
 
 static struct FieldID ToLeft(struct FieldID id) {
@@ -978,7 +988,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			data->fields[i][j].overlay = CreateCharacter(game, NULL);
 			data->fields[i][j].overlay->shared = true;
 			SetParentCharacter(game, data->fields[i][j].overlay, data->fields[i][j].drawable);
-			SetCharacterPosition(game, data->fields[i][j].overlay, 108 / 2, 108 / 2, 0); // FIXME: subcharacters should be positioned by parent pivot
+			SetCharacterPosition(game, data->fields[i][j].overlay, 108 / 2.0, 108 / 2.0, 0); // FIXME: subcharacters should be positioned by parent pivot
 			data->fields[i][j].id.i = i;
 			data->fields[i][j].id.j = j;
 			data->fields[i][j].matched = false;
@@ -1008,6 +1018,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	data->timeline = TM_Init(game, data, "timeline");
 
+	data->particles = CreateParticleBucket(game, 8192, true);
+
 	return data;
 }
 
@@ -1025,6 +1037,7 @@ void Gamestate_PostLoad(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	// Called when the gamestate library is being unloaded.
 	// Good place for freeing all allocated memory and resources.
+	DestroyParticleBucket(game, data->particles);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
