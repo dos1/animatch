@@ -24,14 +24,6 @@
 
 void Compositor(struct Game* game, struct Gamestate* gamestates) {
 	struct Gamestate* tmp = gamestates;
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-	while (tmp) {
-		if ((tmp->loaded) && (tmp->started)) {
-			al_draw_bitmap(tmp->fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
-		}
-		tmp = tmp->next;
-	}
-
 	if (game->data->loading_fade) {
 		al_set_target_bitmap(game->loading_fb);
 
@@ -47,7 +39,15 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
 
 		al_set_target_backbuffer(game->display);
-
+	}
+	ClearToColor(game, al_map_rgb(0, 0, 0));
+	while (tmp) {
+		if ((tmp->loaded) && (tmp->started)) {
+			al_draw_bitmap(tmp->fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
+		}
+		tmp = tmp->next;
+	}
+	if (game->data->loading_fade) {
 		al_draw_bitmap(game->loading_fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
 	}
 }
@@ -66,10 +66,12 @@ void DrawBuildInfo(struct Game* game) {
 	if (!game->_priv.showtimeline) {
 		int x, y, w, h;
 		al_get_clipping_rectangle(&x, &y, &w, &h);
+		al_hold_bitmap_drawing(true);
 		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
 		char revs[255];
 		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
 		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.965, ALLEGRO_ALIGN_RIGHT, revs);
+		al_hold_bitmap_drawing(false);
 	}
 }
 
