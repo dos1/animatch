@@ -126,7 +126,6 @@ struct Field {
 struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
-	ALLEGRO_FONT* font;
 	ALLEGRO_BITMAP* bg;
 
 	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
@@ -146,7 +145,7 @@ struct GamestateResources {
 	struct ParticleBucket* particles;
 };
 
-int Gamestate_ProgressCount = 61; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 60; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
 
@@ -176,7 +175,7 @@ static struct DandelionParticleData* DandelionParticleData() {
 	struct DandelionParticleData* data = calloc(1, sizeof(struct DandelionParticleData));
 	data->data = GravityParticleData((rand() / (double)RAND_MAX - 0.5) / 64.0, (rand() / (double)RAND_MAX - 0.5) / 64.0, 0.000075, 0.000075);
 	data->angle = rand() / (double)RAND_MAX * 2 * ALLEGRO_PI;
-	data->dangle = rand() / (double)RAND_MAX - 0.5;
+	data->dangle = (rand() / (double)RAND_MAX - 0.5) * ALLEGRO_PI;
 	data->scale = 0.6 + 0.1 * rand() / (double)RAND_MAX;
 	data->dscale = (rand() / (double)RAND_MAX - 0.5) * 0.002;
 	return data;
@@ -263,43 +262,46 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	}
 }
 
-void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
-	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
-	// Draw everything to the screen here.
+static void DrawScene(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->scene);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
+}
+
+static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
+	DrawScene(game, data);
 
 	float size[2] = {al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene)};
-	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
-
-	al_set_target_bitmap(data->lowres_scene);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
-	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
-		0, 0, al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene), 0);
-	al_reset_clipping_rectangle();
 
 	al_set_target_bitmap(data->lowres_scene_blur);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
+	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
+		0, 0, al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur), 0);
+
+	al_set_target_bitmap(data->lowres_scene);
+	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_use_shader(game->data->kawese_shader);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
-	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
+	al_draw_bitmap(data->lowres_scene_blur, 0, 0, 0);
 	al_use_shader(NULL);
-	al_reset_clipping_rectangle();
 
-	al_set_target_bitmap(data->lowres_scene);
+	al_set_target_bitmap(data->lowres_scene_blur);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_set_clipping_rectangle(0, offsetY / BLUR_DIVIDER - 10, game->viewport.width / BLUR_DIVIDER, (game->viewport.height - offsetY * 2) / BLUR_DIVIDER + 20);
 	al_use_shader(game->data->kawese_shader);
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
-	al_draw_bitmap(data->lowres_scene_blur, 0, 0, 0);
+	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
 	al_use_shader(NULL);
-	al_reset_clipping_rectangle();
+}
+
+void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
+	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
+	// Draw everything to the screen here.
+	DrawScene(game, data);
+
+	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
 
 	al_set_target_bitmap(data->board);
 	ClearToColor(game, al_map_rgba(0, 0, 0, 0));
@@ -361,8 +363,10 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_draw_bitmap(data->scene, 0, 0, 0);
 
+	float size[2] = {al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur)};
+
 	al_use_shader(data->combine_shader);
-	al_set_shader_sampler("tex_bg", data->lowres_scene, 1);
+	al_set_shader_sampler("tex_bg", data->lowres_scene_blur, 1);
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_draw_bitmap(data->board, 0, 0, 0);
 	al_use_shader(NULL);
@@ -735,7 +739,7 @@ static void AnimateSwapping(struct Game* game, struct GamestateResources* data, 
 }
 
 static void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	if (rand() / (float)RAND_MAX < 0.01) {
+	if (rand() / (float)RAND_MAX < 0.001) {
 		field->type = FIELD_TYPE_FREEFALL;
 		field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
 	} else if (rand() / (float)RAND_MAX < 0.01) {
@@ -745,7 +749,7 @@ static void GenerateField(struct Game* game, struct GamestateResources* data, st
 	} else {
 		field->type = FIELD_TYPE_ANIMAL;
 		field->data.animal.type = rand() % ANIMAL_TYPES;
-		if (rand() / (float)RAND_MAX < 0.01) {
+		if (rand() / (float)RAND_MAX < 0.005) {
 			field->data.animal.sleeping = true;
 		}
 		field->data.animal.special = false;
@@ -1011,9 +1015,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	// require main OpenGL context.
 
 	struct GamestateResources* data = calloc(1, sizeof(struct GamestateResources));
-	data->font = al_load_ttf_font(GetDataFilePath(game, "fonts/DejaVuSansMono.ttf"), 42, 0);
-	progress(game); // report that we progressed with the loading, so the engine can move a progress bar
-
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
 		data->archetypes[i] = CreateCharacter(game, ANIMALS[i]);
 		RegisterSpritesheet(game, data->archetypes[i], "stand");
@@ -1061,7 +1062,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
-	data->lowres_scene_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->lowres_scene_blur = al_create_bitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	progress(game);
 
@@ -1086,6 +1087,8 @@ void Gamestate_PostLoad(struct Game* game, struct GamestateResources* data) {
 		al_destroy_bitmap(data->field_bgs[i]);
 		data->field_bgs[i] = al_create_sub_bitmap(data->field_bgs_bmp, i * 88, 0, 88, 88);
 	}
+
+	UpdateBlur(game, data);
 }
 
 void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
@@ -1110,7 +1113,6 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	}
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
-	al_destroy_font(data->font);
 	al_destroy_bitmap(data->scene);
 	al_destroy_bitmap(data->lowres_scene);
 	al_destroy_bitmap(data->lowres_scene_blur);
@@ -1162,6 +1164,5 @@ void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
 	// Unless you want to support mobile platforms, you should be able to ignore it.
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
-	data->lowres_scene_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 }

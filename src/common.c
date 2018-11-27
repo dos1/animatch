@@ -63,7 +63,7 @@ void PostLogic(struct Game* game, double delta) {
 }
 
 void DrawBuildInfo(struct Game* game) {
-	if (!game->_priv.showtimeline) {
+	if (game->config.debug || game->_priv.showconsole) {
 		int x, y, w, h;
 		al_get_clipping_rectangle(&x, &y, &w, &h);
 		al_hold_bitmap_drawing(true);
