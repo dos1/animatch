@@ -37,7 +37,7 @@
 #define ROWS 8
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
-static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes"};
+static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes", "dandelion"};
 
 static struct {
 	int actions;
@@ -55,7 +55,8 @@ static struct {
 	{.actions = 2, .names = {"stand", "stand2"}}, // apple
 	{.actions = 3, .names = {"stand", "stand2", "stand3"}}, // chestnut
 	{.actions = 6, .names = {"bee", "bird", "cat", "fish", "frog", "ladybug"}}, // special
-	{.actions = 1, .names = {"eyes"}} // eyes
+	{.actions = 1, .names = {"eyes"}}, // eyes
+	{.actions = 1, .names = {"stand"}} // dandelion
 };
 
 enum ANIMAL_TYPE {
@@ -145,7 +146,7 @@ struct GamestateResources {
 	struct ParticleBucket* particles;
 };
 
-int Gamestate_ProgressCount = 60; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 61; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
 
@@ -165,6 +166,39 @@ static inline bool IsValidID(struct FieldID id) {
 	return id.i != -1 && id.j != -1;
 }
 
+struct DandelionParticleData {
+	double angle, dangle;
+	double scale, dscale;
+	struct GravityParticleData* data;
+};
+
+static struct DandelionParticleData* DandelionParticleData() {
+	struct DandelionParticleData* data = calloc(1, sizeof(struct DandelionParticleData));
+	data->data = GravityParticleData((rand() / (double)RAND_MAX - 0.5) / 64.0, (rand() / (double)RAND_MAX - 0.5) / 64.0, 0.000075, 0.000075);
+	data->angle = rand() / (double)RAND_MAX * 2 * ALLEGRO_PI;
+	data->dangle = rand() / (double)RAND_MAX - 0.5;
+	data->scale = 0.6 + 0.1 * rand() / (double)RAND_MAX;
+	data->dscale = (rand() / (double)RAND_MAX - 0.5) * 0.002;
+	return data;
+}
+
+static bool DandelionParticle(struct Game* game, struct ParticleState* particle, double delta, void* d) {
+	struct DandelionParticleData* data = d;
+	data->angle += data->dangle * delta;
+	data->scale += data->dscale * delta;
+
+	particle->tint = al_map_rgba(222, 222, 222, 222);
+	particle->angle = data->angle;
+	particle->scaleX = data->scale;
+	particle->scaleY = data->scale;
+	bool res = GravityParticle(game, particle, delta, data->data);
+	if (!res) {
+		free(data->data);
+		free(data);
+	}
+	return res;
+}
+
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
 	TM_Process(data->timeline, delta);
@@ -172,10 +206,6 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			if (GetTweenPosition(&data->fields[i][j].animation.hiding) < 1.0) {
-				EmitParticle(game, data->particles, data->archetypes[rand() % ANIMAL_TYPES], FaderParticle, SpawnParticleIn(GetCharacterX(game, data->fields[i][j].drawable) / (double)game->viewport.width, GetCharacterY(game, data->fields[i][j].drawable) / (double)game->viewport.height), FaderParticleData(2.0, 0.01, GravityParticle, GravityParticleData((rand() / (double)RAND_MAX - 0.5) / 6.0, (rand() / (double)RAND_MAX - 0.5) / 6.0, 0.002, 0.0003), free));
-			}
-
 			AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
 			if (data->fields[i][j].overlay_visible) {
 				AnimateCharacter(game, data->fields[i][j].overlay, delta, 1.0);
@@ -571,6 +601,18 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 	return collected;
 }
 
+static void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num) {
+	struct Field* field = GetField(game, data, id);
+	for (int p = 0; p < num; p++) {
+		data->archetypes[12]->pos = rand() % data->archetypes[12]->spritesheet->frameCount;
+		if (rand() % 2) {
+			data->archetypes[12]->pos = 0;
+		}
+		float x = GetCharacterX(game, field->drawable) / (double)game->viewport.width, y = GetCharacterY(game, field->drawable) / (double)game->viewport.height;
+		EmitParticle(game, data->particles, data->archetypes[12], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(), free));
+	}
+}
+
 static void AnimateMatching(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -582,12 +624,15 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 						data->fields[i][j].data.animal.special = true;
 						data->fields[i][j].matched = false;
 						UpdateDrawable(game, data, data->fields[i][j].id);
+						SpawnParticles(game, data, data->fields[i][j].id, 64);
 						continue;
 					}
 				}
 				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
 				data->locked = true;
+
+				SpawnParticles(game, data, data->fields[i][j].id, 16);
 			}
 		}
 	}
