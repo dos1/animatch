@@ -493,6 +493,9 @@ static void UpdateDrawable(struct Game* game, struct GamestateResources* data, s
 
 static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	int lchain = 0, tchain = 0;
+	if (!IsValidID(id)) {
+		return 0;
+	}
 	struct Field* orig = GetField(game, data, id);
 	if (orig->type == FIELD_TYPE_FREEFALL) {
 		if (id.j == ROWS - 1) {
@@ -560,6 +563,7 @@ static int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	return matching;
 }
 
+/*
 static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
 	for (int i = 0; i < 3; i++) {
 		id = func(id);
@@ -570,8 +574,13 @@ static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* da
 	return true;
 }
 
-static int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	return AreAdjacentMatching(game, data, id, ToTop) || AreAdjacentMatching(game, data, id, ToBottom) || AreAdjacentMatching(game, data, id, ToLeft) || AreAdjacentMatching(game, data, id, ToRight);
+}
+*/
+
+static int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	return IsMatching(game, data, ToTop(id)) || IsMatching(game, data, ToBottom(id)) || IsMatching(game, data, ToLeft(id)) || IsMatching(game, data, ToRight(id));
 }
 
 static int Collect(struct Game* game, struct GamestateResources* data) {
