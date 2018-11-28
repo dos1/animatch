@@ -941,7 +941,7 @@ static bool AnimateSpecials(struct Game* game, struct GamestateResources* data) 
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data) {
 	if (MarkMatching(game, data)) {
-		AnimateSpecials(game, data);
+		while (AnimateSpecials(game, data)) {};
 		Collect(game, data);
 		TM_AddAction(data->timeline, DispatchAnimations, NULL);
 	}
