@@ -38,6 +38,14 @@
 #define ROWS 8
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
+static ALLEGRO_COLOR COLORS[] = {
+	{.r = 0.937, .g = 0.729, .b = 0.353, .a = 1.0}, // bee
+	{.r = 0.694, .g = 0.639, .b = 0.894, .a = 1.0}, // bird
+	{.r = 0.8, .g = 0.396, .b = 0.212, .a = 1.0}, // cat
+	{.r = 0.251, .g = 0.529, .b = 0.91, .a = 1.0}, // fish
+	{.r = 0.584, .g = 0.757, .b = 0.31, .a = 1.0}, // frog
+	{.r = 0.792, .g = 0.294, .b = 0.314, .a = 1.0} // ladybug
+};
 static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes", "dandelion"};
 
 static struct {
@@ -171,16 +179,20 @@ static inline bool IsValidID(struct FieldID id) {
 struct DandelionParticleData {
 	double angle, dangle;
 	double scale, dscale;
+	ALLEGRO_COLOR color;
 	struct GravityParticleData* data;
 };
 
-static struct DandelionParticleData* DandelionParticleData() {
+static struct DandelionParticleData* DandelionParticleData(ALLEGRO_COLOR color) {
 	struct DandelionParticleData* data = calloc(1, sizeof(struct DandelionParticleData));
 	data->data = GravityParticleData((rand() / (double)RAND_MAX - 0.5) / 64.0, (rand() / (double)RAND_MAX - 0.5) / 64.0, 0.000075, 0.000075);
 	data->angle = rand() / (double)RAND_MAX * 2 * ALLEGRO_PI;
 	data->dangle = (rand() / (double)RAND_MAX - 0.5) * ALLEGRO_PI;
 	data->scale = 0.6 + 0.1 * rand() / (double)RAND_MAX;
 	data->dscale = (rand() / (double)RAND_MAX - 0.5) * 0.002;
+	color = InterpolateColor(color, al_map_rgb(255, 255, 255), 1.0 - rand() / (double)RAND_MAX * 0.3);
+	double opacity = 0.9 - rand() / (double)RAND_MAX * 0.1;
+	data->color = al_map_rgba_f(color.r * opacity, color.g * opacity, color.b * opacity, color.a * opacity);
 	return data;
 }
 
@@ -189,7 +201,7 @@ static bool DandelionParticle(struct Game* game, struct ParticleState* particle,
 	data->angle += data->dangle * delta;
 	data->scale += data->dscale * delta;
 
-	particle->tint = al_map_rgba(222, 222, 222, 222);
+	particle->tint = data->color;
 	particle->angle = data->angle;
 	particle->scaleX = data->scale;
 	particle->scaleY = data->scale;
@@ -638,13 +650,17 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 
 static void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num) {
 	struct Field* field = GetField(game, data, id);
+	ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
+	if (field->type == FIELD_TYPE_ANIMAL) {
+		color = COLORS[field->data.animal.type];
+	}
 	for (int p = 0; p < num; p++) {
 		data->archetypes[12]->pos = rand() % data->archetypes[12]->spritesheet->frameCount;
 		if (rand() % 2) {
 			data->archetypes[12]->pos = 0;
 		}
 		float x = GetCharacterX(game, field->drawable) / (double)game->viewport.width, y = GetCharacterY(game, field->drawable) / (double)game->viewport.height;
-		EmitParticle(game, data->particles, data->archetypes[12], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(), free));
+		EmitParticle(game, data->particles, data->archetypes[12], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color), free));
 	}
 }
 
