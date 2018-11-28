@@ -29,6 +29,7 @@
 #define SWAPPING_TIME 0.15
 #define SHAKING_TIME 0.5
 #define HINT_TIME 1.0
+#define LAUNCHING_TIME 1.5
 #define COLLECTING_TIME 0.6
 
 #define BLUR_DIVIDER 8
@@ -110,12 +111,14 @@ struct Field {
 		} freefall;
 	} data;
 	int matched;
+	bool to_remove;
+	bool handled;
 
 	struct Character *drawable, *overlay;
 	bool overlay_visible;
 
 	struct {
-		struct Tween hiding, falling, swapping, shaking, hinting, collecting;
+		struct Tween hiding, falling, swapping, shaking, hinting, launching, collecting;
 		struct FieldID swapee;
 		int fall_levels, level_no;
 		int time_to_action, action_time;
@@ -214,6 +217,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].animation.swapping, delta);
 			UpdateTween(&data->fields[i][j].animation.shaking, delta);
 			UpdateTween(&data->fields[i][j].animation.hinting, delta);
+			UpdateTween(&data->fields[i][j].animation.launching, delta);
 			UpdateTween(&data->fields[i][j].animation.collecting, delta);
 
 			if (IsSleeping(&data->fields[i][j])) {
@@ -346,8 +350,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 			if (IsDrawable(data->fields[i][j].type)) {
 				al_set_shader_bool("enabled", IsSleeping(&data->fields[i][j]));
-				data->fields[i][j].drawable->angle = sin(GetTweenValue(&data->fields[i][j].animation.shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * 5 * ALLEGRO_PI) / 6.0 + sin(GetTweenPosition(&data->fields[i][j].animation.collecting) * 2 * ALLEGRO_PI) / 12.0;
-				data->fields[i][j].drawable->scaleX = 1.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * ALLEGRO_PI) / 3.0;
+				data->fields[i][j].drawable->angle = sin(GetTweenValue(&data->fields[i][j].animation.shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * 5 * ALLEGRO_PI) / 6.0 + sin(GetTweenPosition(&data->fields[i][j].animation.collecting) * 2 * ALLEGRO_PI) / 12.0 + sin(GetTweenValue(&data->fields[i][j].animation.launching) * 5 * ALLEGRO_PI) / 6.0;
+				data->fields[i][j].drawable->scaleX = 1.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * ALLEGRO_PI) / 3.0 + sin(GetTweenValue(&data->fields[i][j].animation.launching) * ALLEGRO_PI) / 3.0;
 				data->fields[i][j].drawable->scaleY = data->fields[i][j].drawable->scaleX;
 				DrawCharacter(game, data->fields[i][j].drawable);
 				if (data->fields[i][j].overlay_visible) {
@@ -372,6 +376,20 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_use_shader(NULL);
 
 	DrawParticles(game, data->particles);
+
+	al_use_shader(data->desaturate_shader);
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (IsDrawable(data->fields[i][j].type) && GetTweenPosition(&data->fields[i][j].animation.launching) < 1.0) {
+				al_set_shader_bool("enabled", IsSleeping(&data->fields[i][j]));
+				DrawCharacter(game, data->fields[i][j].drawable);
+				if (data->fields[i][j].overlay_visible) {
+					DrawCharacter(game, data->fields[i][j].overlay);
+				}
+			}
+		}
+	}
+	al_use_shader(NULL);
 }
 
 static struct FieldID ToLeft(struct FieldID id) {
@@ -559,6 +577,7 @@ static int MarkMatching(struct Game* game, struct GamestateResources* data) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].matched = IsMatching(game, data, (struct FieldID){i, j});
 			if (data->fields[i][j].matched) {
+				data->fields[i][j].to_remove = true;
 				matching++;
 			}
 		}
@@ -591,9 +610,10 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 	int collected = 0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			if (ShouldBeCollected(game, data, data->fields[i][j].id)) {
+			if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
 				if (IsSleeping(&data->fields[i][j])) {
 					data->fields[i][j].data.animal.sleeping = false;
+					data->fields[i][j].to_remove = false;
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					collected++;
@@ -601,7 +621,9 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					data->fields[i][j].data.collectible.variant++;
 
 					if (data->fields[i][j].data.collectible.variant == ACTIONS[ANIMAL_TYPES + 1 + data->fields[i][j].data.collectible.type].actions) {
-						data->fields[i][j].matched = true;
+						data->fields[i][j].to_remove = true;
+					} else {
+						data->fields[i][j].to_remove = false;
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
@@ -635,14 +657,12 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 
 					if (data->fields[i][j].matched >= 4 && ((IsSameID(data->swap1, data->fields[i][j].id)) || (IsSameID(data->swap2, data->fields[i][j].id)))) {
 						data->fields[i][j].data.animal.special = true;
-						data->fields[i][j].matched = false;
+						data->fields[i][j].to_remove = false;
 						UpdateDrawable(game, data, data->fields[i][j].id);
 						SpawnParticles(game, data, data->fields[i][j].id, 64);
 						continue;
 					}
 				}
-				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
-				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
 				data->locked = true;
 
 				SpawnParticles(game, data, data->fields[i][j].id, 16);
@@ -651,18 +671,32 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 	}
 }
 
-static void EmptyMatching(struct Game* game, struct GamestateResources* data) {
+static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->fields[i][j].to_remove) {
+				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
+				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
+			}
+		}
+	}
+}
+
+static void DoRemoval(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animation.fall_levels = 0;
 			data->fields[i][j].animation.level_no = 0;
-			if (data->fields[i][j].matched) {
+			if (data->fields[i][j].to_remove) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].matched = false;
+				data->fields[i][j].to_remove = false;
+				data->fields[i][j].handled = false;
 				data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
 				data->fields[i][j].animation.falling = StaticTween(game, 1.0);
 				data->fields[i][j].animation.shaking = StaticTween(game, 0.0);
 				data->fields[i][j].animation.hinting = StaticTween(game, 0.0);
+				data->fields[i][j].animation.launching = StaticTween(game, 0.0);
 				data->fields[i][j].animation.collecting = StaticTween(game, 0.0);
 			}
 		}
@@ -678,6 +712,7 @@ static void StopAnimations(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].animation.falling = StaticTween(game, 1.0);
 			data->fields[i][j].animation.shaking = StaticTween(game, 0.0);
 			data->fields[i][j].animation.hinting = StaticTween(game, 0.0);
+			data->fields[i][j].animation.launching = StaticTween(game, 0.0);
 			data->fields[i][j].animation.collecting = StaticTween(game, 0.0);
 		}
 	}
@@ -733,9 +768,9 @@ static bool AreSwappable(struct Game* game, struct GamestateResources* data, str
 static void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
 	data->swap1 = one;
 	data->swap2 = two;
-	TM_AddAction(data->timeline, StartSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
+	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
 	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
-	TM_AddAction(data->timeline, AfterSwapping, TM_AddToArgs(NULL, 2, GetField(game, data, one), GetField(game, data, two)));
+	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
 }
 
 static void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
@@ -802,18 +837,97 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 
 static TM_ACTION(AfterMatching) {
 	TM_RunningOnly;
-	EmptyMatching(game, data);
+	DoRemoval(game, data);
 	Gravity(game, data);
 	ProcessFields(game, data);
 	return true;
 }
 
+static TM_ACTION(DispatchAnimations) {
+	TM_RunningOnly;
+	AnimateMatching(game, data);
+	AnimateRemoval(game, data);
+	TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
+	TM_AddAction(data->timeline, AfterMatching, NULL);
+	return true;
+}
+
+static TM_ACTION(DoSpawnParticles) {
+	TM_RunningOnly;
+	struct Field* field = TM_Arg(0);
+	int* count = TM_Arg(1);
+	SpawnParticles(game, data, field->id, *count);
+	free(count);
+	return true;
+}
+
+static TM_ACTION(AnimateSpecial) {
+	TM_RunningOnly;
+	struct Field* field = TM_Arg(0);
+	field->animation.launching = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, LAUNCHING_TIME);
+	return true;
+}
+
+static void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field) {
+	TM_WrapArg(int, count, 64);
+	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(field, count));
+	TM_AddDelay(data->timeline, 10);
+	if (field->type != FIELD_TYPE_FREEFALL) {
+		field->to_remove = true;
+	}
+}
+
+static void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	TM_AddAction(data->timeline, AnimateSpecial, TM_Args(GetField(game, data, id)));
+
+	struct FieldID left = ToLeft(id), right = ToRight(id), top = ToTop(id), bottom = ToBottom(id);
+	while (IsValidID(left) || IsValidID(right) || IsValidID(top) || IsValidID(bottom)) {
+		struct Field* field = GetField(game, data, left);
+		if (field) {
+			HandleSpecialed(game, data, field);
+		}
+		field = GetField(game, data, right);
+		if (field) {
+			HandleSpecialed(game, data, field);
+		}
+		field = GetField(game, data, top);
+		if (field) {
+			HandleSpecialed(game, data, field);
+		}
+		field = GetField(game, data, bottom);
+		if (field) {
+			HandleSpecialed(game, data, field);
+		}
+		left = ToLeft(left);
+		right = ToRight(right);
+		top = ToTop(top);
+		bottom = ToBottom(bottom);
+	}
+	TM_WrapArg(int, count, 64);
+	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(GetField(game, data, id), count));
+}
+
+static bool AnimateSpecials(struct Game* game, struct GamestateResources* data) {
+	bool found = false;
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->fields[i][j].to_remove && !data->fields[i][j].handled) {
+				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL && data->fields[i][j].data.animal.special) {
+					data->fields[i][j].handled = true;
+					LaunchSpecial(game, data, data->fields[i][j].id);
+					found = true;
+				}
+			}
+		}
+	}
+	return found;
+}
+
 static void ProcessFields(struct Game* game, struct GamestateResources* data) {
 	if (MarkMatching(game, data)) {
+		AnimateSpecials(game, data);
 		Collect(game, data);
-		AnimateMatching(game, data);
-		TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
-		TM_AddAction(data->timeline, AfterMatching, NULL);
+		TM_AddAction(data->timeline, DispatchAnimations, NULL);
 	}
 }
 
@@ -1140,7 +1254,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	}
 	data->current = (struct FieldID){-1, -1};
 	while (MarkMatching(game, data)) {
-		EmptyMatching(game, data);
+		DoRemoval(game, data);
 		Gravity(game, data);
 	}
 	StopAnimations(game, data);
