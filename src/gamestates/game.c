@@ -38,7 +38,7 @@
 #define ROWS 8
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
-static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes", "dandelion"};
+static char* SPECIALS[] = {"egg", "berry", "strawberry", "mushroom", "cone", "apple", "chestnut", "special", "eyes", "dandelion"};
 
 static ALLEGRO_COLOR ANIMAL_COLORS[] = {
 	{.r = 0.937, .g = 0.729, .b = 0.353, .a = 1.0}, // bee
@@ -52,6 +52,9 @@ static ALLEGRO_COLOR ANIMAL_COLORS[] = {
 enum SPECIAL_TYPE {
 	SPECIAL_EGG,
 	SPECIAL_BERRY,
+	SPECIAL_STRAWBERRY,
+	SPECIAL_MUSHROOM,
+	SPECIAL_CONE,
 	SPECIAL_APPLE,
 	SPECIAL_CHESTNUT,
 	SPECIAL_SPECIAL,
@@ -81,6 +84,9 @@ static struct {
 } SPECIAL_ACTIONS[] = {
 	{.actions = 2, .names = {"stand", "stand2"}}, // egg
 	{.actions = 1, .names = {"stand"}}, // berry
+	{.actions = 1, .names = {"stand"}}, // strawberry
+	{.actions = 1, .names = {"stand"}}, // mushroom
+	{.actions = 1, .names = {"stand"}}, // cone
 	{.actions = 2, .names = {"stand", "stand2"}}, // apple
 	{.actions = 3, .names = {"stand", "stand2", "stand3"}}, // chestnut
 	{.actions = 6, .names = {"bee", "bird", "cat", "fish", "frog", "ladybug"}}, // special
@@ -101,6 +107,9 @@ enum ANIMAL_TYPE {
 
 enum COLLECTIBLE_TYPE {
 	COLLECTIBLE_TYPE_BERRY,
+	COLLECTIBLE_TYPE_STRAWBERRY,
+	COLLECTIBLE_TYPE_MUSHROOM,
+	COLLECTIBLE_TYPE_CONE,
 	COLLECTIBLE_TYPE_APPLE,
 	COLLECTIBLE_TYPE_CHESTNUT,
 	COLLECTIBLE_TYPES
@@ -179,7 +188,7 @@ struct GamestateResources {
 	bool debug;
 };
 
-int Gamestate_ProgressCount = 60; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 63; // number of loading steps as reported by Gamestate_Load
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data);
 
