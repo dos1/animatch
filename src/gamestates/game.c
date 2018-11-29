@@ -38,7 +38,9 @@
 #define ROWS 8
 
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
-static ALLEGRO_COLOR COLORS[] = {
+static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes", "dandelion"};
+
+static ALLEGRO_COLOR ANIMAL_COLORS[] = {
 	{.r = 0.937, .g = 0.729, .b = 0.353, .a = 1.0}, // bee
 	{.r = 0.694, .g = 0.639, .b = 0.894, .a = 1.0}, // bird
 	{.r = 0.8, .g = 0.396, .b = 0.212, .a = 1.0}, // cat
@@ -46,19 +48,37 @@ static ALLEGRO_COLOR COLORS[] = {
 	{.r = 0.584, .g = 0.757, .b = 0.31, .a = 1.0}, // frog
 	{.r = 0.792, .g = 0.294, .b = 0.314, .a = 1.0} // ladybug
 };
-static char* SPECIALS[] = {"egg", "berry", "apple", "chestnut", "special", "eyes", "dandelion"};
+
+enum SPECIAL_TYPE {
+	SPECIAL_EGG,
+	SPECIAL_BERRY,
+	SPECIAL_APPLE,
+	SPECIAL_CHESTNUT,
+	SPECIAL_SPECIAL,
+	SPECIAL_EYES,
+	SPECIAL_DANDELION,
+
+	SPECIAL_TYPES
+};
+
+#define FIRST_COLLECTIBLE SPECIAL_BERRY
 
 static struct {
 	int actions;
 	char* names[MAX_ACTIONS];
-} ACTIONS[] = {
+} ANIMAL_ACTIONS[] = {
 	{.actions = 3, .names = {"eyeroll", "fly1", "fly2"}}, // bee
 	{.actions = 3, .names = {"eyeroll", "sing1", "sing2"}}, // bird
 	{.actions = 3, .names = {"action1", "action2", "action3"}}, // cat
 	{.actions = 3, .names = {"eyeroll", "swim1", "swim2"}}, // fish
 	{.actions = 5, .names = {"bump1", "bump2", "eyeroll", "tonque1", "tonque2"}}, // frog
-	{.actions = 6, .names = {"bump1", "bump2", "bump3", "eyeroll1", "eyeroll2", "kiss"}}, // ladybug
-	//
+	{.actions = 6, .names = {"bump1", "bump2", "bump3", "eyeroll1", "eyeroll2", "kiss"}} // ladybug
+};
+
+static struct {
+	int actions;
+	char* names[MAX_ACTIONS];
+} SPECIAL_ACTIONS[] = {
 	{.actions = 2, .names = {"stand", "stand2"}}, // egg
 	{.actions = 1, .names = {"stand"}}, // berry
 	{.actions = 2, .names = {"stand", "stand2"}}, // apple
@@ -141,7 +161,8 @@ struct GamestateResources {
 
 	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
 
-	struct Character* archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0]) + sizeof(SPECIALS) / sizeof(SPECIALS[0])];
+	struct Character* animal_archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
+	struct Character* special_archetypes[sizeof(SPECIALS) / sizeof(SPECIALS[0])];
 	struct FieldID current, hovered, swap1, swap2;
 	struct Field fields[COLS][ROWS];
 
@@ -264,7 +285,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 					data->fields[i][j].animation.time_to_action = rand() % 250000 + 500000;
 					data->fields[i][j].animation.action_time = rand() % 2000 + 1000;
 					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-						SelectSpritesheet(game, data->fields[i][j].drawable, ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ACTIONS[data->fields[i][j].data.animal.type].actions]);
+						SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].actions]);
 					}
 				}
 
@@ -554,12 +575,12 @@ static void UpdateOverlay(struct Game* game, struct GamestateResources* data, st
 	if (field->type == FIELD_TYPE_ANIMAL) {
 		if (field->data.animal.special) {
 			name = "eyes";
-			index = ANIMAL_TYPES + 5; // FIXME
+			index = SPECIAL_EYES;
 		}
 	}
 
 	if (name) {
-		struct Character* archetype = data->archetypes[index];
+		struct Character* archetype = data->special_archetypes[index];
 		if (field->overlay->name) {
 			free(field->overlay->name);
 		}
@@ -584,26 +605,35 @@ static void UpdateDrawable(struct Game* game, struct GamestateResources* data, s
 		name = "blink";
 	}
 
+	struct Character* archetype = NULL;
 	int index = 0;
 	if (field->type == FIELD_TYPE_FREEFALL) {
-		index = ANIMAL_TYPES;
-		name = ACTIONS[index].names[field->data.freefall.variant];
+		index = SPECIAL_EGG;
+		name = SPECIAL_ACTIONS[index].names[field->data.freefall.variant];
+
+		archetype = data->special_archetypes[index];
 	} else if (field->type == FIELD_TYPE_COLLECTIBLE) {
-		index = ANIMAL_TYPES + 1 + field->data.collectible.type;
+		index = FIRST_COLLECTIBLE + field->data.collectible.type;
 		int variant = field->data.collectible.variant;
-		if (variant == ACTIONS[index].actions) {
+		if (variant == SPECIAL_ACTIONS[index].actions) {
 			variant--;
 		}
-		name = ACTIONS[index].names[variant];
+		name = SPECIAL_ACTIONS[index].names[variant];
+
+		archetype = data->special_archetypes[index];
 	} else if (field->type == FIELD_TYPE_ANIMAL) {
 		index = field->data.animal.type;
 		if (field->data.animal.special) {
-			index = ANIMAL_TYPES + 4; // FIXME
+			index = SPECIAL_SPECIAL;
 			name = ANIMALS[field->data.animal.type];
+			archetype = data->special_archetypes[index];
+		} else {
+			archetype = data->animal_archetypes[index];
 		}
+	} else {
+		PrintConsole(game, "Incorrect drawable!");
+		return;
 	}
-
-	struct Character* archetype = data->archetypes[index];
 
 	if (field->drawable->name) {
 		free(field->drawable->name);
@@ -724,8 +754,8 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].data.collectible.variant++;
 
-					if (data->fields[i][j].data.collectible.variant >= ACTIONS[ANIMAL_TYPES + 1 + data->fields[i][j].data.collectible.type].actions) {
-						data->fields[i][j].data.collectible.variant = ACTIONS[ANIMAL_TYPES + 1 + data->fields[i][j].data.collectible.type].actions - 1;
+					if (data->fields[i][j].data.collectible.variant >= SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions) {
+						data->fields[i][j].data.collectible.variant = SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions - 1;
 						data->fields[i][j].to_remove = true;
 						PrintConsole(game, "collecting field %d, %d", i, j);
 					} else {
@@ -749,15 +779,15 @@ static void SpawnParticles(struct Game* game, struct GamestateResources* data, s
 	struct Field* field = GetField(game, data, id);
 	ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
 	if (field->type == FIELD_TYPE_ANIMAL) {
-		color = COLORS[field->data.animal.type];
+		color = ANIMAL_COLORS[field->data.animal.type];
 	}
 	for (int p = 0; p < num; p++) {
-		data->archetypes[12]->pos = rand() % data->archetypes[12]->spritesheet->frameCount;
+		data->special_archetypes[SPECIAL_DANDELION]->pos = rand() % data->special_archetypes[SPECIAL_DANDELION]->spritesheet->frameCount;
 		if (rand() % 2) {
-			data->archetypes[12]->pos = 0;
+			data->special_archetypes[SPECIAL_DANDELION]->pos = 0;
 		}
 		float x = GetCharacterX(game, field->drawable) / (double)game->viewport.width, y = GetCharacterY(game, field->drawable) / (double)game->viewport.height;
-		EmitParticle(game, data->particles, data->archetypes[12], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color), free));
+		EmitParticle(game, data->particles, data->special_archetypes[SPECIAL_DANDELION], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color), free));
 	}
 }
 
@@ -766,7 +796,7 @@ static void AnimateMatching(struct Game* game, struct GamestateResources* data) 
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
 				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-					SelectSpritesheet(game, data->fields[i][j].drawable, ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ACTIONS[data->fields[i][j].type].actions]);
+					SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].type].actions]);
 
 					if (data->fields[i][j].matched >= 4 && ((IsSameID(data->swap1, data->fields[i][j].id)) || (IsSameID(data->swap2, data->fields[i][j].id)))) {
 						data->fields[i][j].data.animal.special = true;
@@ -889,7 +919,7 @@ static void AnimateSwapping(struct Game* game, struct GamestateResources* data, 
 static void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
 	if (rand() / (float)RAND_MAX < 0.001) {
 		field->type = FIELD_TYPE_FREEFALL;
-		field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
+		field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_EGG].actions;
 	} else if (rand() / (float)RAND_MAX < 0.01) {
 		field->type = FIELD_TYPE_COLLECTIBLE;
 		field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
@@ -1254,7 +1284,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				}
 				field->type = type;
 				if (field->type == FIELD_TYPE_FREEFALL) {
-					field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
+					field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_EGG].actions;
 				} else {
 					field->data.collectible.variant = 0;
 				}
@@ -1281,21 +1311,20 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	struct GamestateResources* data = calloc(1, sizeof(struct GamestateResources));
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
-		data->archetypes[i] = CreateCharacter(game, ANIMALS[i]);
-		RegisterSpritesheet(game, data->archetypes[i], "stand");
-		RegisterSpritesheet(game, data->archetypes[i], "blink");
-		for (int j = 0; j < ACTIONS[i].actions; j++) {
-			RegisterSpritesheet(game, data->archetypes[i], ACTIONS[i].names[j]);
+		data->animal_archetypes[i] = CreateCharacter(game, ANIMALS[i]);
+		RegisterSpritesheet(game, data->animal_archetypes[i], "stand");
+		RegisterSpritesheet(game, data->animal_archetypes[i], "blink");
+		for (int j = 0; j < ANIMAL_ACTIONS[i].actions; j++) {
+			RegisterSpritesheet(game, data->animal_archetypes[i], ANIMAL_ACTIONS[i].names[j]);
 		}
-		LoadSpritesheets(game, data->archetypes[i], progress);
+		LoadSpritesheets(game, data->animal_archetypes[i], progress);
 	}
 	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
-		int ii = sizeof(ANIMALS) / sizeof(ANIMALS[0]) + i;
-		data->archetypes[ii] = CreateCharacter(game, SPECIALS[i]);
-		for (int j = 0; j < ACTIONS[ii].actions; j++) {
-			RegisterSpritesheet(game, data->archetypes[ii], ACTIONS[ii].names[j]);
+		data->special_archetypes[i] = CreateCharacter(game, SPECIALS[i]);
+		for (int j = 0; j < SPECIAL_ACTIONS[i].actions; j++) {
+			RegisterSpritesheet(game, data->special_archetypes[i], SPECIAL_ACTIONS[i].names[j]);
 		}
-		LoadSpritesheets(game, data->archetypes[ii], progress);
+		LoadSpritesheets(game, data->special_archetypes[i], progress);
 	}
 
 	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.webp"));
@@ -1367,11 +1396,10 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
-		DestroyCharacter(game, data->archetypes[i]);
+		DestroyCharacter(game, data->animal_archetypes[i]);
 	}
 	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
-		int ii = sizeof(ANIMALS) / sizeof(ANIMALS[0]) + i;
-		DestroyCharacter(game, data->archetypes[ii]);
+		DestroyCharacter(game, data->special_archetypes[i]);
 	}
 	for (int i = 0; i < 4; i++) {
 		al_destroy_bitmap(data->field_bgs[i]);
