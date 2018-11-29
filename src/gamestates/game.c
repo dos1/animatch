@@ -154,6 +154,8 @@ struct GamestateResources {
 	bool locked, clicked;
 
 	struct ParticleBucket* particles;
+
+	bool debug;
 };
 
 int Gamestate_ProgressCount = 60; // number of loading steps as reported by Gamestate_Load
@@ -212,6 +214,8 @@ static bool DandelionParticle(struct Game* game, struct ParticleState* particle,
 	}
 	return res;
 }
+
+static int CountMoves(struct Game* game, struct GamestateResources* data);
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -283,6 +287,7 @@ static void DrawScene(struct Game* game, struct GamestateResources* data) {
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
 }
+static struct Field* GetField(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
 static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	DrawScene(game, data);
@@ -311,6 +316,8 @@ static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
 	al_use_shader(NULL);
 }
+
+static bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
@@ -402,6 +409,90 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	al_use_shader(NULL);
+
+#ifdef LIBSUPERDERPY_IMGUI
+
+	if (data->debug) {
+		ImVec4 white = {1.0, 1.0, 1.0, 1.0};
+		ImVec4 red = {1.0, 0.0, 0.0, 1.0};
+		ImVec4 green = {0.0, 1.0, 0.0, 1.0};
+		ImVec4 blue = {0.25, 0.25, 1.0, 1.0};
+		ImVec4 pink = {1.0, 0.75, 0.75, 1.0};
+		ImVec4 gray = {0.5, 0.5, 0.5, 1.0};
+		ImVec4 yellow = {1.0, 1.0, 0.0, 1.0};
+
+		igSetNextWindowSize((ImVec2){1024, 700}, ImGuiCond_FirstUseEver);
+		igBegin("Animatch Debug Toolbox", &data->debug, 0);
+		igSetWindowFontScale(1.5);
+
+		igText("Particles: %d", data->particles->active);
+		igText("Possible moves: %d", CountMoves(game, data));
+		igSeparator();
+		for (int j = 0; j < COLS; j++) {
+			igColumns(COLS, "fields", true);
+			for (int i = 0; i < ROWS; i++) {
+				struct FieldID id = {.i = i, .j = j};
+				struct Field* field = GetField(game, data, id);
+
+				igBeginGroup();
+
+				igTextColored(IsSameID(id, data->hovered) ? green : white, "i = %d", i);
+				igTextColored(IsSameID(id, data->current) ? blue : white, "j = %d", j);
+
+				switch (field->type) {
+					case FIELD_TYPE_ANIMAL:
+						igTextColored(field->data.animal.special ? pink : white, "ANIMAL %d%s", field->data.animal.type, field->data.animal.special ? "S" : "");
+
+						if (field->data.animal.sleeping) {
+							igTextColored((ImVec4){.x = 0.5, .y = 0.2, .z = 0.9, .w = 1.0}, "SLEEPING");
+						} else {
+							igText("");
+						}
+
+						break;
+					case FIELD_TYPE_FREEFALL:
+						igTextColored(yellow, "FREEFALL %d", field->data.freefall.variant);
+						igText("");
+						break;
+					case FIELD_TYPE_EMPTY:
+						igTextColored(gray, "EMPTY");
+						igText("");
+						break;
+					case FIELD_TYPE_DISABLED:
+						igTextColored(gray, "DISABLED");
+						igText("");
+						break;
+					case FIELD_TYPE_COLLECTIBLE:
+						igTextColored(yellow, "COLLECT. %d", field->data.collectible.type);
+						igText("Variant %d", field->data.collectible.variant);
+						break;
+					default:
+						break;
+				}
+
+				if (CanBeMatched(game, data, id)) {
+					igTextColored(red, "MATCHABLE");
+				} else {
+					igText("");
+				}
+
+				igText("%s %s %s", field->handled ? "H" : " ", field->matched ? "M" : " ", field->to_remove ? "R" : " ");
+
+				igEndGroup();
+				if (igIsItemHovered(0)) {
+					data->hovered = (struct FieldID){i, j};
+				}
+				if (igIsItemClicked(0)) {
+					data->current = (struct FieldID){i, j};
+				}
+
+				igNextColumn();
+			}
+			igSeparator();
+		}
+		igEnd();
+	}
+#endif
 }
 
 static struct FieldID ToLeft(struct FieldID id) {
@@ -709,11 +800,11 @@ static void DoRemoval(struct Game* game, struct GamestateResources* data) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animation.fall_levels = 0;
 			data->fields[i][j].animation.level_no = 0;
+			data->fields[i][j].handled = false;
+			data->fields[i][j].matched = false;
 			if (data->fields[i][j].to_remove) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
-				data->fields[i][j].matched = false;
 				data->fields[i][j].to_remove = false;
-				data->fields[i][j].handled = false;
 				data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
 				data->fields[i][j].animation.falling = StaticTween(game, 1.0);
 				data->fields[i][j].animation.shaking = StaticTween(game, 0.0);
@@ -969,23 +1060,47 @@ static bool WillMatch(struct Game* game, struct GamestateResources* data, struct
 	return res;
 }
 
-static bool ShowHint(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			struct FieldID id = {.i = i, .j = j};
-			struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+static bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
 
-			for (int q = 0; q < 4; q++) {
-				if (IsValidMove(id, callbacks[q](id))) {
-					if (WillMatch(game, data, id, callbacks[q](id))) {
-						GetField(game, data, id)->animation.hinting = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, HINT_TIME);
-						return true;
-					}
-				}
+	for (int q = 0; q < 4; q++) {
+		if (IsValidMove(id, callbacks[q](id))) {
+			if (WillMatch(game, data, id, callbacks[q](id))) {
+				return true;
 			}
 		}
 	}
 	return false;
+}
+
+static bool ShowHint(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			struct FieldID id = {.i = i, .j = j};
+			if (CanBeMatched(game, data, id)) {
+				GetField(game, data, id)->animation.hinting = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, HINT_TIME);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static int CountMoves(struct Game* game, struct GamestateResources* data) {
+	int moves = 0;
+	bool marked[COLS][ROWS] = {};
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			struct FieldID id = {.i = i, .j = j};
+			if (CanBeMatched(game, data, id)) {
+				if (!marked[i][j]) {
+					moves++;
+					marked[i][j] = true;
+				}
+			}
+		}
+	}
+	return moves;
 }
 
 static bool AutoMove(struct Game* game, struct GamestateResources* data) {
@@ -1038,12 +1153,14 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		// When there are no active gamestates, the engine will quit.
 	}
 
-	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
-	data->hovered.i = (int)(game->data->mouseX * game->viewport.width / 90);
-	data->hovered.j = (int)((game->data->mouseY * game->viewport.height - offsetY) / 90);
-	if ((data->hovered.i < 0) || (data->hovered.j < 0) || (data->hovered.i >= COLS) || (data->hovered.j >= ROWS) || (game->data->mouseY * game->viewport.height <= offsetY) || (game->data->mouseX == 0.0)) {
-		data->hovered.i = -1;
-		data->hovered.j = -1;
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
+		data->hovered.i = (int)(game->data->mouseX * game->viewport.width / 90);
+		data->hovered.j = (int)((game->data->mouseY * game->viewport.height - offsetY) / 90);
+		if ((data->hovered.i < 0) || (data->hovered.j < 0) || (data->hovered.i >= COLS) || (data->hovered.j >= ROWS) || (game->data->mouseY * game->viewport.height <= offsetY) || (game->data->mouseX == 0.0)) {
+			data->hovered.i = -1;
+			data->hovered.j = -1;
+		}
 	}
 
 	if (data->locked) {
@@ -1065,82 +1182,91 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		data->clicked = false;
 	}
 
-	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
-		if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
-			ShowHint(game, data);
-			return;
-		}
-		if (ev->keyboard.keycode == ALLEGRO_KEY_A) {
-			AutoMove(game, data);
-			return;
-		}
-
-		int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
-
-		struct Field* field = GetField(game, data, data->hovered);
-
-		if (!field) {
-			return;
-		}
-
-		if (ev->keyboard.keycode == ALLEGRO_KEY_S) {
-			if (field->type != FIELD_TYPE_ANIMAL) {
+	if (game->config.debug) {
+		if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
+			if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
+				ShowHint(game, data);
 				return;
 			}
-			field->data.animal.sleeping = !field->data.animal.sleeping;
-			UpdateDrawable(game, data, field->id);
-			PrintConsole(game, "Field %dx%d, sleeping = %d", field->id.i, field->id.j, field->data.animal.sleeping);
-			return;
-		}
-
-		if (ev->keyboard.keycode == ALLEGRO_KEY_D) {
-			if (field->type != FIELD_TYPE_ANIMAL) {
+			if (ev->keyboard.keycode == ALLEGRO_KEY_A) {
+				AutoMove(game, data);
 				return;
 			}
-			field->data.animal.special = !field->data.animal.special;
-			UpdateDrawable(game, data, field->id);
-			PrintConsole(game, "Field %dx%d, special = %d", field->id.i, field->id.j, field->data.animal.special);
-			return;
-		}
+#ifdef LIBSUPERDERPY_IMGUI
+			if (ev->keyboard.keycode == ALLEGRO_KEY_SPACE) {
+				PrintConsole(game, "Debug interface toggled.");
+				data->debug = !data->debug;
+				return;
+			}
+#endif
 
-		if (ev->keyboard.keycode == ALLEGRO_KEY_MINUS) {
-			Gravity(game, data);
-			ProcessFields(game, data);
-		}
+			int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
 
-		if (type == -1) {
-			type = 9;
-		}
-		if (type < 0) {
-			return;
-		}
-		if (type >= ANIMAL_TYPES + FIELD_TYPES) {
-			return;
-		}
-		if (type >= ANIMAL_TYPES) {
-			type -= ANIMAL_TYPES - 1;
-			if (field->type == (enum FIELD_TYPE)type) {
-				field->data.collectible.type++;
-				if (field->data.collectible.type == COLLECTIBLE_TYPES) {
+			struct Field* field = GetField(game, data, data->hovered);
+
+			if (!field) {
+				return;
+			}
+
+			if (ev->keyboard.keycode == ALLEGRO_KEY_S) {
+				if (field->type != FIELD_TYPE_ANIMAL) {
+					return;
+				}
+				field->data.animal.sleeping = !field->data.animal.sleeping;
+				UpdateDrawable(game, data, field->id);
+				PrintConsole(game, "Field %dx%d, sleeping = %d", field->id.i, field->id.j, field->data.animal.sleeping);
+				return;
+			}
+
+			if (ev->keyboard.keycode == ALLEGRO_KEY_D) {
+				if (field->type != FIELD_TYPE_ANIMAL) {
+					return;
+				}
+				field->data.animal.special = !field->data.animal.special;
+				UpdateDrawable(game, data, field->id);
+				PrintConsole(game, "Field %dx%d, special = %d", field->id.i, field->id.j, field->data.animal.special);
+				return;
+			}
+
+			if (ev->keyboard.keycode == ALLEGRO_KEY_MINUS) {
+				Gravity(game, data);
+				ProcessFields(game, data);
+			}
+
+			if (type == -1) {
+				type = 9;
+			}
+			if (type < 0) {
+				return;
+			}
+			if (type >= ANIMAL_TYPES + FIELD_TYPES) {
+				return;
+			}
+			if (type >= ANIMAL_TYPES) {
+				type -= ANIMAL_TYPES - 1;
+				if (field->type == (enum FIELD_TYPE)type) {
+					field->data.collectible.type++;
+					if (field->data.collectible.type == COLLECTIBLE_TYPES) {
+						field->data.collectible.type = 0;
+					}
+				} else {
 					field->data.collectible.type = 0;
 				}
+				field->type = type;
+				if (field->type == FIELD_TYPE_FREEFALL) {
+					field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
+				} else {
+					field->data.collectible.variant = 0;
+				}
+				PrintConsole(game, "Setting field type to %d", type);
 			} else {
-				field->data.collectible.type = 0;
+				field->type = FIELD_TYPE_ANIMAL;
+				field->data.animal.type = type;
+				PrintConsole(game, "Setting animal type to %d", type);
 			}
-			field->type = type;
-			if (field->type == FIELD_TYPE_FREEFALL) {
-				field->data.freefall.variant = rand() % ACTIONS[ANIMAL_TYPES].actions;
-			} else {
-				field->data.collectible.variant = 0;
+			if (IsDrawable(field->type)) {
+				UpdateDrawable(game, data, field->id);
 			}
-			PrintConsole(game, "Setting field type to %d", type);
-		} else {
-			field->type = FIELD_TYPE_ANIMAL;
-			field->data.animal.type = type;
-			PrintConsole(game, "Setting animal type to %d", type);
-		}
-		if (IsDrawable(field->type)) {
-			UpdateDrawable(game, data, field->id);
 		}
 	}
 }
@@ -1212,7 +1338,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	data->timeline = TM_Init(game, data, "timeline");
 
-	data->particles = CreateParticleBucket(game, 8192, true);
+	data->particles = CreateParticleBucket(game, 3072, true);
 
 	return data;
 }
