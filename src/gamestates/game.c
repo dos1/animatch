@@ -37,6 +37,7 @@
 #define COLS 8
 #define ROWS 8
 
+// TODO: some macro magic to keep it always synchronized with enums
 static char* ANIMALS[] = {"bee", "bird", "cat", "fish", "frog", "ladybug"};
 static char* SPECIALS[] = {"egg", "berry", "strawberry", "mushroom", "cone", "apple", "chestnut", "special", "eyes", "dandelion"};
 
@@ -458,9 +459,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		igText("Particles: %d", data->particles->active);
 		igText("Possible moves: %d", CountMoves(game, data));
 		igSeparator();
-		for (int j = 0; j < COLS; j++) {
+		for (int j = 0; j < ROWS; j++) {
 			igColumns(COLS, "fields", true);
-			for (int i = 0; i < ROWS; i++) {
+			for (int i = 0; i < COLS; i++) {
 				struct FieldID id = {.i = i, .j = j};
 				struct Field* field = GetField(game, data, id);
 
