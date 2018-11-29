@@ -531,16 +531,6 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 		return 0;
 	}
 	struct Field* orig = GetField(game, data, id);
-	if (orig->type == FIELD_TYPE_FREEFALL) {
-		if (id.j == ROWS - 1) {
-			return 1;
-		}
-	}
-	if (orig->type == FIELD_TYPE_COLLECTIBLE) {
-		if (orig->data.collectible.variant == ACTIONS[ANIMAL_TYPES + 1 + orig->data.collectible.type].actions) {
-			return 1;
-		}
-	}
 	if (orig->type != FIELD_TYPE_ANIMAL) {
 		return 0;
 	}
@@ -615,6 +605,10 @@ static int IsMatchExtension(struct Game* game, struct GamestateResources* data, 
 */
 
 static int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	if (GetField(game, data, id)->handled) {
+		PrintConsole(game, "Not collecting already handled field %d, %d", id.i, id.j);
+		return false;
+	}
 	return IsMatching(game, data, ToTop(id)) || IsMatching(game, data, ToBottom(id)) || IsMatching(game, data, ToLeft(id)) || IsMatching(game, data, ToRight(id));
 }
 
@@ -622,28 +616,40 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 	int collected = 0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
+			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+				if (j == ROWS - 1) {
+					data->fields[i][j].to_remove = true;
+					data->fields[i][j].handled = true;
+					collected++;
+				}
+			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
 				if (IsSleeping(&data->fields[i][j])) {
 					data->fields[i][j].data.animal.sleeping = false;
 					data->fields[i][j].to_remove = false;
+					data->fields[i][j].handled = true;
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					collected++;
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].data.collectible.variant++;
 
-					if (data->fields[i][j].data.collectible.variant == ACTIONS[ANIMAL_TYPES + 1 + data->fields[i][j].data.collectible.type].actions) {
+					if (data->fields[i][j].data.collectible.variant >= ACTIONS[ANIMAL_TYPES + 1 + data->fields[i][j].data.collectible.type].actions) {
+						data->fields[i][j].data.collectible.variant = ACTIONS[ANIMAL_TYPES + 1 + data->fields[i][j].data.collectible.type].actions - 1;
 						data->fields[i][j].to_remove = true;
+						PrintConsole(game, "collecting field %d, %d", i, j);
 					} else {
 						data->fields[i][j].to_remove = false;
+						PrintConsole(game, "advancing field %d, %d", i, j);
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
+					data->fields[i][j].handled = true;
 					collected++;
 				}
 			}
 		}
 	}
+
 	PrintConsole(game, "collected %d", collected);
 	return collected;
 }
@@ -940,9 +946,12 @@ static bool AnimateSpecials(struct Game* game, struct GamestateResources* data) 
 }
 
 static void ProcessFields(struct Game* game, struct GamestateResources* data) {
-	if (MarkMatching(game, data)) {
-		while (AnimateSpecials(game, data)) {};
-		Collect(game, data);
+	bool matched = MarkMatching(game, data);
+	bool collected = Collect(game, data);
+	if (matched || collected) {
+		while (AnimateSpecials(game, data)) {
+			Collect(game, data);
+		}
 		TM_AddAction(data->timeline, DispatchAnimations, NULL);
 	}
 }
