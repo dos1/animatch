@@ -1232,6 +1232,14 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if (game->config.debug) {
+#ifdef LIBSUPERDERPY_IMGUI
+		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN && ev->keyboard.keycode == ALLEGRO_KEY_SPACE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && ev->mouse.button == 2)) {
+			PrintConsole(game, "Debug interface toggled.");
+			data->debug = !data->debug;
+			return;
+		}
+#endif
+
 		if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
 			if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
 				ShowHint(game, data);
@@ -1241,13 +1249,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				AutoMove(game, data);
 				return;
 			}
-#ifdef LIBSUPERDERPY_IMGUI
-			if (ev->keyboard.keycode == ALLEGRO_KEY_SPACE) {
-				PrintConsole(game, "Debug interface toggled.");
-				data->debug = !data->debug;
-				return;
-			}
-#endif
 
 			int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
 
