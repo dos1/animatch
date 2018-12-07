@@ -7,7 +7,6 @@ set(EXECUTABLE_SRC_LIST "main.c")
 if(MINGW)
     # resource compilation for MinGW
     set(EXECUTABLE_SRC_LIST ${EXECUTABLE_SRC_LIST} ${CMAKE_SOURCE_DIR}/data/icons/icon.rc)
-    set(LINK_FLAGS -Wl,-subsystem,windows)
 endif(MINGW)
 
 if (APPLE)
@@ -16,7 +15,7 @@ if (APPLE)
 endif(APPLE)
 
 add_libsuperderpy_target("${EXECUTABLE_SRC_LIST}")
-target_link_libraries(${EXECUTABLE} libsuperderpy "libsuperderpy-${LIBSUPERDERPY_GAMENAME}")
+target_link_libraries(${EXECUTABLE} "libsuperderpy-${LIBSUPERDERPY_GAMENAME}")
 install(TARGETS ${EXECUTABLE} DESTINATION ${BIN_INSTALL_DIR})
 
 add_library("libsuperderpy-${LIBSUPERDERPY_GAMENAME}" SHARED "common.c")

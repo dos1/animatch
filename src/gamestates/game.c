@@ -242,13 +242,14 @@ static bool DandelionParticle(struct Game* game, struct ParticleState* particle,
 	data->angle += data->dangle * delta;
 	data->scale += data->dscale * delta;
 
-	particle->tint = data->color;
-	particle->angle = data->angle;
-	particle->scaleX = data->scale;
-	particle->scaleY = data->scale;
+	if (particle) {
+		particle->tint = data->color;
+		particle->angle = data->angle;
+		particle->scaleX = data->scale;
+		particle->scaleY = data->scale;
+	}
 	bool res = GravityParticle(game, particle, delta, data->data);
 	if (!res) {
-		free(data->data);
 		free(data);
 	}
 	return res;
@@ -805,7 +806,7 @@ static void SpawnParticles(struct Game* game, struct GamestateResources* data, s
 			data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = 0;
 		}
 		float x = GetCharacterX(game, field->drawable) / (double)game->viewport.width, y = GetCharacterY(game, field->drawable) / (double)game->viewport.height;
-		EmitParticle(game, data->particles, data->special_archetypes[SPECIAL_TYPE_DANDELION], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color), free));
+		EmitParticle(game, data->particles, data->special_archetypes[SPECIAL_TYPE_DANDELION], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color)));
 	}
 }
 
@@ -1212,6 +1213,16 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		}
 	}
 
+	if (game->config.debug) {
+#ifdef LIBSUPERDERPY_IMGUI
+		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN && ev->keyboard.keycode == ALLEGRO_KEY_SPACE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && ev->mouse.button == 2)) {
+			PrintConsole(game, "Debug interface toggled.");
+			data->debug = !data->debug;
+			return;
+		}
+#endif
+	}
+
 	if (data->locked) {
 		return;
 	}
@@ -1232,14 +1243,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if (game->config.debug) {
-#ifdef LIBSUPERDERPY_IMGUI
-		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN && ev->keyboard.keycode == ALLEGRO_KEY_SPACE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && ev->mouse.button == 2)) {
-			PrintConsole(game, "Debug interface toggled.");
-			data->debug = !data->debug;
-			return;
-		}
-#endif
-
 		if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
 			if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
 				ShowHint(game, data);

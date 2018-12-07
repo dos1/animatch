@@ -114,6 +114,17 @@ build:macos:
     - cd utils
     - ./package_osx.sh
 
+build:maemo5:
+  image: docker:dind
+  stage: build
+  retry: 1
+  artifacts: *artifacts
+  script:
+    - dockerd &
+    - sleep 5 # give it some time to launch
+    - cd utils
+    - ./package_maemo5.sh
+
 deploy:linux-steamrt-i686:
   image: dosowisko/butler
   stage: deploy
@@ -149,12 +160,12 @@ deploy:linux-flatpak-amd64:
   stage: deploy
   when: on_success
   retry: 2
-  environment:    
+  environment:
     name: itch-linux-flatpak-amd64
     url: $ITCH_URL
   variables:
     GIT_STRATEGY: none
-  dependencies:   
+  dependencies:
     - build:linux-flatpak-amd64
   script:
     - butler push utils/output/$CI_PROJECT_NAME-linux-amd64.flatpak $BUTLER_TARGET:ci-linux-flatpak-amd64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
@@ -248,3 +259,18 @@ deploy:macos:
     - build:macos
   script:
     - butler push utils/output/$CI_PROJECT_NAME-osx.zip $BUTLER_TARGET:ci-macos --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
+deploy:maemo5:
+  image: dosowisko/butler
+  stage: deploy
+  when: on_success
+  retry: 2
+  environment:
+    name: itch-maemo5
+    url: $ITCH_URL
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build:maemo5
+  script:
+    - butler push utils/output/$CI_PROJECT_NAME-maemo5.tar.gz $BUTLER_TARGET:ci-maemo5 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`

@@ -44,7 +44,7 @@
     "name": "allegro5",
     "buildsystem": "cmake-ninja",
     "build-options": {
-       "config-opts": ["-DALLEGRO_SDL=ON", "-DGL_BUILD_TYPE=gles2+", "-DWANT_DEMO=OFF", "-DWANT_EXAMPLES=OFF", "-DCMAKE_BUILD_TYPE=RelWithDebInfo"]
+       "config-opts": ["-DALLEGRO_SDL=ON", "-DGL_BUILD_TYPE=gles2+", "-DWANT_DEMO=OFF", "-DWANT_EXAMPLES=OFF", "-DWANT_TESTS=no", "-DCMAKE_BUILD_TYPE=RelWithDebInfo"]
     },
     "sources": [
       {

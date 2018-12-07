@@ -53,7 +53,7 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 }
 
 void PostLogic(struct Game* game, double delta) {
-	if (!game->_priv.loading.inProgress && game->data->loading_fade) {
+	if (!game->_priv.loading.shown && game->data->loading_fade) {
 		game->data->loading_fade -= 0.02 * delta / (1 / 60.0);
 		if (game->data->loading_fade <= 0.0) {
 			DisableCompositor(game);
