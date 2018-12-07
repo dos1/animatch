@@ -1004,6 +1004,7 @@ static void Gravity(struct Game* game, struct GamestateResources* data) {
 						upfield->animation.level_no = field->animation.level_no++;
 						upfield->animation.fall_levels++;
 						upfield->animation.falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + upfield->animation.level_no * 0.025));
+						upfield->animation.falling.predelay = upfield->animation.level_no * 0.01;
 						Swap(game, data, id, up);
 					}
 				} else {
