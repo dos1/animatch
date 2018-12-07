@@ -159,9 +159,12 @@ struct Field {
 	int matched;
 	bool to_remove;
 	bool handled;
+	bool to_highlight;
 
 	struct Character *drawable, *overlay;
 	bool overlay_visible;
+
+	float highlight;
 
 	struct {
 		struct Tween hiding, falling, swapping, shaking, hinting, launching, collecting;
@@ -276,6 +279,13 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			UpdateTween(&data->fields[i][j].animation.launching, delta);
 			UpdateTween(&data->fields[i][j].animation.collecting, delta);
 
+			if (data->fields[i][j].to_highlight) {
+				data->fields[i][j].highlight += delta * 8.0;
+			} else {
+				data->fields[i][j].highlight -= delta * 2.0;
+			}
+			data->fields[i][j].highlight = Clamp(0.0, 1.0, data->fields[i][j].highlight);
+
 			if (IsSleeping(&data->fields[i][j])) {
 				continue;
 			}
@@ -377,6 +387,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			if (data->locked || game->data->touch || !hovered) {
 				color = al_map_rgba(180, 180, 180, 180);
 			}
+			color = InterpolateColor(color, al_map_rgba(240, 240, 240, 240), data->fields[i][j].highlight);
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
 				ALLEGRO_BITMAP* bmp = data->field_bgs[(j * ROWS + i + j % 2) % 4];
 				al_draw_tinted_scaled_bitmap(bmp, color, 0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
@@ -720,6 +731,7 @@ static int MarkMatching(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].matched = IsMatching(game, data, (struct FieldID){i, j});
 			if (data->fields[i][j].matched) {
 				data->fields[i][j].to_remove = true;
+				data->fields[i][j].to_highlight = true;
 				matching++;
 			}
 		}
@@ -760,6 +772,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 				if (j == ROWS - 1) {
 					data->fields[i][j].to_remove = true;
 					data->fields[i][j].handled = true;
+					data->fields[i][j].to_highlight = true;
 					collected++;
 				}
 			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
@@ -769,6 +782,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					data->fields[i][j].handled = true;
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
+					data->fields[i][j].to_highlight = true;
 					collected++;
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].data.collectible.variant++;
@@ -784,6 +798,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					data->fields[i][j].handled = true;
+					data->fields[i][j].to_highlight = true;
 					collected++;
 				}
 			}
@@ -851,6 +866,7 @@ static void DoRemoval(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].animation.level_no = 0;
 			data->fields[i][j].handled = false;
 			data->fields[i][j].matched = false;
+			data->fields[i][j].to_highlight = false;
 			if (data->fields[i][j].to_remove) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].to_remove = false;
@@ -886,6 +902,9 @@ static void Swap(struct Game* game, struct GamestateResources* data, struct Fiel
 	data->fields[two.i][two.j] = tmp;
 	data->fields[one.i][one.j].id = (struct FieldID){.i = one.i, .j = one.j};
 	data->fields[two.i][two.j].id = (struct FieldID){.i = two.i, .j = two.j};
+	float highlight = data->fields[one.i][one.j].highlight;
+	data->fields[one.i][one.j].highlight = data->fields[two.i][two.j].highlight;
+	data->fields[two.i][two.j].highlight = highlight;
 }
 
 static TM_ACTION(AfterSwapping) {
@@ -1036,6 +1055,7 @@ static void HandleSpecialed(struct Game* game, struct GamestateResources* data, 
 	TM_AddDelay(data->timeline, 10);
 	if (field->type != FIELD_TYPE_FREEFALL) {
 		field->to_remove = true;
+		field->to_highlight = true;
 	}
 }
 
