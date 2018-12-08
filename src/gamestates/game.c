@@ -1,4 +1,4 @@
-/*! \file empty.c
+/*! \file game.c
  *  \brief Empty gamestate.
  */
 /*
@@ -18,247 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../common.h"
-#include <libsuperderpy.h>
-
-#define MAX_ACTIONS 16
-#define MATCHING_TIME 0.4
-#define MATCHING_DELAY_TIME 0.2
-#define FALLING_TIME 0.5
-#define SWAPPING_TIME 0.15
-#define SHAKING_TIME 0.5
-#define HINT_TIME 1.0
-#define LAUNCHING_TIME 1.5
-#define COLLECTING_TIME 0.6
-
-#define BLUR_DIVIDER 8
-
-#define COLS 8
-#define ROWS 8
-
-#define FOREACH_ANIMAL(ANIMAL) \
-	ANIMAL(BEE)                  \
-	ANIMAL(BIRD)                 \
-	ANIMAL(CAT)                  \
-	ANIMAL(FISH)                 \
-	ANIMAL(FROG)                 \
-	ANIMAL(LADYBUG)
-
-#define FOREACH_COLLECTIBLE(COLLECTIBLE) \
-	COLLECTIBLE(BERRY)                     \
-	COLLECTIBLE(STRAWBERRY)                \
-	COLLECTIBLE(MUSHROOM)                  \
-	COLLECTIBLE(CONE)                      \
-	COLLECTIBLE(APPLE)                     \
-	COLLECTIBLE(CHESTNUT)
-
-#define FOREACH_SPECIAL(SPECIAL) \
-	SPECIAL(EGG)                   \
-	FOREACH_COLLECTIBLE(SPECIAL)   \
-	SPECIAL(SUPER)                 \
-	SPECIAL(EYES)                  \
-	SPECIAL(DANDELION)
-
-#define GENERATE_STRING(VAL) #VAL,
-#define GENERATE_ANIMAL_ENUM(VAL) ANIMAL_TYPE_##VAL,
-#define GENERATE_SPECIAL_ENUM(VAL) SPECIAL_TYPE_##VAL,
-#define GENERATE_COLLECTIBLE_ENUM(VAL) COLLECTIBLE_TYPE_##VAL,
-
-enum ANIMAL_TYPE {
-	FOREACH_ANIMAL(GENERATE_ANIMAL_ENUM)
-	//
-	ANIMAL_TYPES
-};
-
-enum SPECIAL_TYPE {
-	FOREACH_SPECIAL(GENERATE_SPECIAL_ENUM)
-	//
-	SPECIAL_TYPES
-};
-
-enum COLLECTIBLE_TYPE {
-	FOREACH_COLLECTIBLE(GENERATE_COLLECTIBLE_ENUM)
-	//
-	COLLECTIBLE_TYPES
-};
-
-static char* ANIMALS[] = {FOREACH_ANIMAL(GENERATE_STRING)};
-static char* SPECIALS[] = {FOREACH_SPECIAL(GENERATE_STRING)};
-
-#define FIRST_COLLECTIBLE SPECIAL_TYPE_BERRY
-
-static ALLEGRO_COLOR ANIMAL_COLORS[] = {
-	{.r = 0.937, .g = 0.729, .b = 0.353, .a = 1.0}, // bee
-	{.r = 0.694, .g = 0.639, .b = 0.894, .a = 1.0}, // bird
-	{.r = 0.8, .g = 0.396, .b = 0.212, .a = 1.0}, // cat
-	{.r = 0.251, .g = 0.529, .b = 0.91, .a = 1.0}, // fish
-	{.r = 0.584, .g = 0.757, .b = 0.31, .a = 1.0}, // frog
-	{.r = 0.792, .g = 0.294, .b = 0.314, .a = 1.0} // ladybug
-};
-
-static struct {
-	int actions;
-	char* names[MAX_ACTIONS];
-} ANIMAL_ACTIONS[] = {
-	{.actions = 3, .names = {"eyeroll", "fly1", "fly2"}}, // bee
-	{.actions = 3, .names = {"eyeroll", "sing1", "sing2"}}, // bird
-	{.actions = 3, .names = {"action1", "action2", "action3"}}, // cat
-	{.actions = 3, .names = {"eyeroll", "swim1", "swim2"}}, // fish
-	{.actions = 5, .names = {"bump1", "bump2", "eyeroll", "tonque1", "tonque2"}}, // frog
-	{.actions = 6, .names = {"bump1", "bump2", "bump3", "eyeroll1", "eyeroll2", "kiss"}} // ladybug
-};
-
-static struct {
-	int actions;
-	char* names[MAX_ACTIONS];
-} SPECIAL_ACTIONS[] = {
-	{.actions = 2, .names = {"stand", "stand2"}}, // egg
-	{.actions = 1, .names = {"stand"}}, // berry
-	{.actions = 1, .names = {"stand"}}, // strawberry
-	{.actions = 1, .names = {"stand"}}, // mushroom
-	{.actions = 1, .names = {"stand"}}, // cone
-	{.actions = 2, .names = {"stand", "stand2"}}, // apple
-	{.actions = 3, .names = {"stand", "stand2", "stand3"}}, // chestnut
-	{.actions = 6, .names = {"bee", "bird", "cat", "fish", "frog", "ladybug"}}, // special
-	{.actions = 1, .names = {"eyes"}}, // eyes
-	{.actions = 1, .names = {"stand"}} // dandelion
-};
-
-enum FIELD_TYPE {
-	FIELD_TYPE_ANIMAL,
-	FIELD_TYPE_FREEFALL,
-	FIELD_TYPE_COLLECTIBLE,
-	FIELD_TYPE_EMPTY,
-	FIELD_TYPE_DISABLED,
-
-	FIELD_TYPES
-};
-
-struct FieldID {
-	int i;
-	int j;
-};
-
-struct Field {
-	struct FieldID id;
-	enum FIELD_TYPE type;
-	union {
-		struct {
-			enum COLLECTIBLE_TYPE type;
-			int variant;
-		} collectible;
-		struct {
-			enum ANIMAL_TYPE type;
-			bool sleeping;
-			bool super;
-		} animal;
-		struct {
-			int variant;
-		} freefall;
-	} data;
-	int matched;
-	bool to_remove;
-	bool handled;
-	bool to_highlight;
-
-	struct Character *drawable, *overlay;
-	bool overlay_visible;
-
-	float highlight;
-
-	struct {
-		struct Tween hiding, falling, swapping, shaking, hinting, launching, collecting;
-		struct FieldID swapee;
-		int fall_levels, level_no;
-		int time_to_action, action_time;
-		int time_to_blink, blink_time;
-	} animation;
-};
-
-struct GamestateResources {
-	// This struct is for every resource allocated and used by your gamestate.
-	// It gets created on load and then gets passed around to all other function calls.
-	ALLEGRO_BITMAP* bg;
-
-	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
-
-	struct Character* animal_archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
-	struct Character* special_archetypes[sizeof(SPECIALS) / sizeof(SPECIALS[0])];
-	struct FieldID current, hovered, swap1, swap2;
-	struct Field fields[COLS][ROWS];
-
-	struct Timeline* timeline;
-
-	ALLEGRO_BITMAP *field_bgs[4], *field_bgs_bmp;
-
-	ALLEGRO_SHADER *combine_shader, *desaturate_shader;
-
-	bool locked, clicked;
-
-	struct ParticleBucket* particles;
-
-	bool debug;
-};
+#include "game/game.h"
 
 int Gamestate_ProgressCount = 63; // number of loading steps as reported by Gamestate_Load
-
-static void ProcessFields(struct Game* game, struct GamestateResources* data);
-
-static bool IsSleeping(struct Field* field) {
-	return (field->type == FIELD_TYPE_ANIMAL && field->data.animal.sleeping);
-}
-
-static inline bool IsDrawable(enum FIELD_TYPE type) {
-	return (type == FIELD_TYPE_ANIMAL) || (type == FIELD_TYPE_FREEFALL) || (type == FIELD_TYPE_COLLECTIBLE);
-}
-
-static inline bool IsSameID(struct FieldID one, struct FieldID two) {
-	return one.i == two.i && one.j == two.j;
-}
-
-static inline bool IsValidID(struct FieldID id) {
-	return id.i != -1 && id.j != -1;
-}
-
-struct DandelionParticleData {
-	double angle, dangle;
-	double scale, dscale;
-	ALLEGRO_COLOR color;
-	struct GravityParticleData* data;
-};
-
-static struct DandelionParticleData* DandelionParticleData(ALLEGRO_COLOR color) {
-	struct DandelionParticleData* data = calloc(1, sizeof(struct DandelionParticleData));
-	data->data = GravityParticleData((rand() / (double)RAND_MAX - 0.5) / 64.0, (rand() / (double)RAND_MAX - 0.5) / 64.0, 0.000075, 0.000075);
-	data->angle = rand() / (double)RAND_MAX * 2 * ALLEGRO_PI;
-	data->dangle = (rand() / (double)RAND_MAX - 0.5) * ALLEGRO_PI;
-	data->scale = 0.6 + 0.1 * rand() / (double)RAND_MAX;
-	data->dscale = (rand() / (double)RAND_MAX - 0.5) * 0.002;
-	color = InterpolateColor(color, al_map_rgb(255, 255, 255), 1.0 - rand() / (double)RAND_MAX * 0.3);
-	double opacity = 0.9 - rand() / (double)RAND_MAX * 0.1;
-	data->color = al_map_rgba_f(color.r * opacity, color.g * opacity, color.b * opacity, color.a * opacity);
-	return data;
-}
-
-static bool DandelionParticle(struct Game* game, struct ParticleState* particle, double delta, void* d) {
-	struct DandelionParticleData* data = d;
-	data->angle += data->dangle * delta;
-	data->scale += data->dscale * delta;
-
-	if (particle) {
-		particle->tint = data->color;
-		particle->angle = data->angle;
-		particle->scaleX = data->scale;
-		particle->scaleY = data->scale;
-	}
-	bool res = GravityParticle(game, particle, delta, data->data);
-	if (!res) {
-		free(data);
-	}
-	return res;
-}
-
-static int CountMoves(struct Game* game, struct GamestateResources* data);
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -330,6 +92,90 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			}
 		}
 	}
+
+#ifdef LIBSUPERDERPY_IMGUI
+
+	if (data->debug) {
+		ImVec4 white = {1.0, 1.0, 1.0, 1.0};
+		ImVec4 red = {1.0, 0.0, 0.0, 1.0};
+		ImVec4 green = {0.0, 1.0, 0.0, 1.0};
+		ImVec4 blue = {0.25, 0.25, 1.0, 1.0};
+		ImVec4 pink = {1.0, 0.75, 0.75, 1.0};
+		ImVec4 gray = {0.5, 0.5, 0.5, 1.0};
+		ImVec4 yellow = {1.0, 1.0, 0.0, 1.0};
+
+		igSetNextWindowSize((ImVec2){1024, 700}, ImGuiCond_FirstUseEver);
+		igBegin("Animatch Debug Toolbox", &data->debug, 0);
+		igSetWindowFontScale(1.5);
+
+		igText("Particles: %d", data->particles->active);
+		igText("Possible moves: %d", CountMoves(game, data));
+		igSeparator();
+		for (int j = 0; j < ROWS; j++) {
+			igColumns(COLS, "fields", true);
+			for (int i = 0; i < COLS; i++) {
+				struct FieldID id = {.i = i, .j = j};
+				struct Field* field = GetField(game, data, id);
+
+				igBeginGroup();
+
+				igTextColored(IsSameID(id, data->hovered) ? green : white, "i = %d", i);
+				igTextColored(IsSameID(id, data->current) ? blue : white, "j = %d", j);
+
+				switch (field->type) {
+					case FIELD_TYPE_ANIMAL:
+						igTextColored(field->data.animal.super ? pink : white, "ANIMAL %d%s", field->data.animal.type, field->data.animal.super ? "S" : "");
+
+						if (field->data.animal.sleeping) {
+							igTextColored((ImVec4){.x = 0.5, .y = 0.2, .z = 0.9, .w = 1.0}, "SLEEPING");
+						} else {
+							igText("");
+						}
+
+						break;
+					case FIELD_TYPE_FREEFALL:
+						igTextColored(yellow, "FREEFALL %d", field->data.freefall.variant);
+						igText("");
+						break;
+					case FIELD_TYPE_EMPTY:
+						igTextColored(gray, "EMPTY");
+						igText("");
+						break;
+					case FIELD_TYPE_DISABLED:
+						igTextColored(gray, "DISABLED");
+						igText("");
+						break;
+					case FIELD_TYPE_COLLECTIBLE:
+						igTextColored(yellow, "COLLECT. %d", field->data.collectible.type);
+						igText("Variant %d", field->data.collectible.variant);
+						break;
+					default:
+						break;
+				}
+
+				if (CanBeMatched(game, data, id)) {
+					igTextColored(red, "MATCHABLE");
+				} else {
+					igText("");
+				}
+
+				igText("%s %s %s", field->handled ? "H" : " ", field->matched ? "M" : " ", field->to_remove ? "R" : " ");
+
+				igEndGroup();
+				if (igIsItemHovered(0)) {
+					data->hovered = (struct FieldID){i, j};
+				}
+				if (igIsItemClicked(0)) {
+					data->current = (struct FieldID){i, j};
+				}
+
+				igNextColumn();
+			}
+			igSeparator();
+		}
+		igEnd();
+	}
+#endif
 }
 
 static void DrawScene(struct Game* game, struct GamestateResources* data) {
@@ -337,7 +183,6 @@ static void DrawScene(struct Game* game, struct GamestateResources* data) {
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_draw_bitmap(data->bg, 0, 0, 0);
 }
-static struct Field* GetField(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
 static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	DrawScene(game, data);
@@ -366,8 +211,6 @@ static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
 	al_use_shader(NULL);
 }
-
-static bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
@@ -460,760 +303,6 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	al_use_shader(NULL);
-
-#ifdef LIBSUPERDERPY_IMGUI
-
-	if (data->debug) {
-		ImVec4 white = {1.0, 1.0, 1.0, 1.0};
-		ImVec4 red = {1.0, 0.0, 0.0, 1.0};
-		ImVec4 green = {0.0, 1.0, 0.0, 1.0};
-		ImVec4 blue = {0.25, 0.25, 1.0, 1.0};
-		ImVec4 pink = {1.0, 0.75, 0.75, 1.0};
-		ImVec4 gray = {0.5, 0.5, 0.5, 1.0};
-		ImVec4 yellow = {1.0, 1.0, 0.0, 1.0};
-
-		igSetNextWindowSize((ImVec2){1024, 700}, ImGuiCond_FirstUseEver);
-		igBegin("Animatch Debug Toolbox", &data->debug, 0);
-		igSetWindowFontScale(1.5);
-
-		igText("Particles: %d", data->particles->active);
-		igText("Possible moves: %d", CountMoves(game, data));
-		igSeparator();
-		for (int j = 0; j < ROWS; j++) {
-			igColumns(COLS, "fields", true);
-			for (int i = 0; i < COLS; i++) {
-				struct FieldID id = {.i = i, .j = j};
-				struct Field* field = GetField(game, data, id);
-
-				igBeginGroup();
-
-				igTextColored(IsSameID(id, data->hovered) ? green : white, "i = %d", i);
-				igTextColored(IsSameID(id, data->current) ? blue : white, "j = %d", j);
-
-				switch (field->type) {
-					case FIELD_TYPE_ANIMAL:
-						igTextColored(field->data.animal.super ? pink : white, "ANIMAL %d%s", field->data.animal.type, field->data.animal.super ? "S" : "");
-
-						if (field->data.animal.sleeping) {
-							igTextColored((ImVec4){.x = 0.5, .y = 0.2, .z = 0.9, .w = 1.0}, "SLEEPING");
-						} else {
-							igText("");
-						}
-
-						break;
-					case FIELD_TYPE_FREEFALL:
-						igTextColored(yellow, "FREEFALL %d", field->data.freefall.variant);
-						igText("");
-						break;
-					case FIELD_TYPE_EMPTY:
-						igTextColored(gray, "EMPTY");
-						igText("");
-						break;
-					case FIELD_TYPE_DISABLED:
-						igTextColored(gray, "DISABLED");
-						igText("");
-						break;
-					case FIELD_TYPE_COLLECTIBLE:
-						igTextColored(yellow, "COLLECT. %d", field->data.collectible.type);
-						igText("Variant %d", field->data.collectible.variant);
-						break;
-					default:
-						break;
-				}
-
-				if (CanBeMatched(game, data, id)) {
-					igTextColored(red, "MATCHABLE");
-				} else {
-					igText("");
-				}
-
-				igText("%s %s %s", field->handled ? "H" : " ", field->matched ? "M" : " ", field->to_remove ? "R" : " ");
-
-				igEndGroup();
-				if (igIsItemHovered(0)) {
-					data->hovered = (struct FieldID){i, j};
-				}
-				if (igIsItemClicked(0)) {
-					data->current = (struct FieldID){i, j};
-				}
-
-				igNextColumn();
-			}
-			igSeparator();
-		}
-		igEnd();
-	}
-#endif
-}
-
-static struct FieldID ToLeft(struct FieldID id) {
-	id.i--;
-	if (id.i < 0) {
-		return (struct FieldID){-1, -1};
-	}
-	return id;
-}
-
-static struct FieldID ToRight(struct FieldID id) {
-	id.i++;
-	if (id.i >= COLS) {
-		return (struct FieldID){-1, -1};
-	}
-	return id;
-}
-
-static struct FieldID ToTop(struct FieldID id) {
-	id.j--;
-	if (id.j < 0) {
-		return (struct FieldID){-1, -1};
-	}
-	return id;
-}
-
-static struct FieldID ToBottom(struct FieldID id) {
-	id.j++;
-	if (id.j >= ROWS) {
-		return (struct FieldID){-1, -1};
-	}
-	return id;
-}
-
-static bool IsValidMove(struct FieldID one, struct FieldID two) {
-	if (one.i == two.i && abs(one.j - two.j) == 1) {
-		return true;
-	}
-	if (one.j == two.j && abs(one.i - two.i) == 1) {
-		return true;
-	}
-	return false;
-}
-
-static struct Field* GetField(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	if (!IsValidID(id)) {
-		return NULL;
-	}
-	return &data->fields[id.i][id.j];
-}
-
-static void UpdateOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	struct Field* field = GetField(game, data, id);
-	if (!IsDrawable(field->type)) {
-		return;
-	}
-	char* name = NULL;
-	int index = -1;
-	if (field->type == FIELD_TYPE_ANIMAL) {
-		if (field->data.animal.super) {
-			name = "eyes";
-			index = SPECIAL_TYPE_EYES;
-		}
-	}
-
-	if (name) {
-		struct Character* archetype = data->special_archetypes[index];
-		if (field->overlay->name) {
-			free(field->overlay->name);
-		}
-		field->overlay->name = strdup(archetype->name);
-		field->overlay->spritesheets = archetype->spritesheets;
-
-		SelectSpritesheet(game, field->overlay, name);
-		field->overlay_visible = true;
-	} else {
-		field->overlay_visible = false;
-	}
-}
-
-static void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	struct Field* field = GetField(game, data, id);
-	if (!IsDrawable(field->type)) {
-		return;
-	}
-
-	char* name = "stand";
-	if (IsSleeping(field)) {
-		name = "blink";
-	}
-
-	struct Character* archetype = NULL;
-	int index = 0;
-	if (field->type == FIELD_TYPE_FREEFALL) {
-		index = SPECIAL_TYPE_EGG;
-		name = SPECIAL_ACTIONS[index].names[field->data.freefall.variant];
-
-		archetype = data->special_archetypes[index];
-	} else if (field->type == FIELD_TYPE_COLLECTIBLE) {
-		index = FIRST_COLLECTIBLE + field->data.collectible.type;
-		int variant = field->data.collectible.variant;
-		if (variant == SPECIAL_ACTIONS[index].actions) {
-			variant--;
-		}
-		name = SPECIAL_ACTIONS[index].names[variant];
-
-		archetype = data->special_archetypes[index];
-	} else if (field->type == FIELD_TYPE_ANIMAL) {
-		index = field->data.animal.type;
-		if (field->data.animal.super) {
-			index = SPECIAL_TYPE_SUPER;
-			name = StrToLower(game, ANIMALS[field->data.animal.type]);
-			archetype = data->special_archetypes[index];
-		} else {
-			archetype = data->animal_archetypes[index];
-		}
-	} else {
-		PrintConsole(game, "Incorrect drawable!");
-		return;
-	}
-
-	if (field->drawable->name) {
-		free(field->drawable->name);
-	}
-	field->drawable->name = strdup(archetype->name);
-	field->drawable->spritesheets = archetype->spritesheets;
-
-	SelectSpritesheet(game, field->drawable, name);
-
-	UpdateOverlay(game, data, id);
-}
-
-static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	int lchain = 0, tchain = 0;
-	if (!IsValidID(id)) {
-		return 0;
-	}
-	struct Field* orig = GetField(game, data, id);
-	if (orig->type != FIELD_TYPE_ANIMAL) {
-		return 0;
-	}
-	if (IsSleeping(orig)) {
-		return 0;
-	}
-
-	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
-	int* accumulators[] = {&lchain, &lchain, &tchain, &tchain};
-
-	for (int i = 0; i < 4; i++) {
-		struct FieldID pos = (callbacks[i])(id);
-		while (IsValidID(pos)) {
-			struct Field* field = GetField(game, data, pos);
-			if (field->type != FIELD_TYPE_ANIMAL) {
-				break;
-			}
-			if (field->data.animal.type != orig->data.animal.type) {
-				break;
-			}
-			if (IsSleeping(field)) {
-				break;
-			}
-			(*accumulators[i])++;
-			pos = (callbacks[i])(pos);
-		}
-	}
-
-	int chain = 0;
-	if (lchain >= 2) {
-		chain += lchain;
-	}
-	if (tchain >= 2) {
-		chain += tchain;
-	}
-	if (chain) {
-		chain++;
-	}
-	//PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
-	return chain;
-}
-
-static int MarkMatching(struct Game* game, struct GamestateResources* data) {
-	int matching = 0;
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].matched = IsMatching(game, data, (struct FieldID){i, j});
-			if (data->fields[i][j].matched) {
-				data->fields[i][j].to_remove = true;
-				data->fields[i][j].to_highlight = true;
-				matching++;
-			}
-		}
-	}
-	PrintConsole(game, "matched %d", matching);
-	return matching;
-}
-
-/*
-static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
-	for (int i = 0; i < 3; i++) {
-		id = func(id);
-		if (!IsValidID(id) || !GetField(game, data, id)->matched) {
-			return false;
-		}
-	}
-	return true;
-}
-
-static int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	return AreAdjacentMatching(game, data, id, ToTop) || AreAdjacentMatching(game, data, id, ToBottom) || AreAdjacentMatching(game, data, id, ToLeft) || AreAdjacentMatching(game, data, id, ToRight);
-}
-*/
-
-static int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	if (GetField(game, data, id)->handled) {
-		PrintConsole(game, "Not collecting already handled field %d, %d", id.i, id.j);
-		return false;
-	}
-	return IsMatching(game, data, ToTop(id)) || IsMatching(game, data, ToBottom(id)) || IsMatching(game, data, ToLeft(id)) || IsMatching(game, data, ToRight(id));
-}
-
-static int Collect(struct Game* game, struct GamestateResources* data) {
-	int collected = 0;
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
-				if (j == ROWS - 1) {
-					data->fields[i][j].to_remove = true;
-					data->fields[i][j].handled = true;
-					data->fields[i][j].to_highlight = true;
-					collected++;
-				}
-			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
-				if (IsSleeping(&data->fields[i][j])) {
-					data->fields[i][j].data.animal.sleeping = false;
-					data->fields[i][j].to_remove = false;
-					data->fields[i][j].handled = true;
-					UpdateDrawable(game, data, data->fields[i][j].id);
-					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
-					data->fields[i][j].to_highlight = true;
-					collected++;
-				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
-					data->fields[i][j].data.collectible.variant++;
-
-					if (data->fields[i][j].data.collectible.variant >= SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions) {
-						data->fields[i][j].data.collectible.variant = SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions - 1;
-						data->fields[i][j].to_remove = true;
-						PrintConsole(game, "collecting field %d, %d", i, j);
-					} else {
-						data->fields[i][j].to_remove = false;
-						PrintConsole(game, "advancing field %d, %d", i, j);
-					}
-					UpdateDrawable(game, data, data->fields[i][j].id);
-					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
-					data->fields[i][j].handled = true;
-					data->fields[i][j].to_highlight = true;
-					collected++;
-				}
-			}
-		}
-	}
-
-	PrintConsole(game, "collected %d", collected);
-	return collected;
-}
-
-static void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num) {
-	struct Field* field = GetField(game, data, id);
-	ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
-	if (field->type == FIELD_TYPE_ANIMAL) {
-		color = ANIMAL_COLORS[field->data.animal.type];
-	}
-	for (int p = 0; p < num; p++) {
-		data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = rand() % data->special_archetypes[SPECIAL_TYPE_DANDELION]->spritesheet->frameCount;
-		if (rand() % 2) {
-			data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = 0;
-		}
-		float x = GetCharacterX(game, field->drawable) / (double)game->viewport.width, y = GetCharacterY(game, field->drawable) / (double)game->viewport.height;
-		EmitParticle(game, data->particles, data->special_archetypes[SPECIAL_TYPE_DANDELION], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color)));
-	}
-}
-
-static void AnimateMatching(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			if (data->fields[i][j].matched) {
-				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-					SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].type].actions]);
-
-					if (data->fields[i][j].matched >= 4 && ((IsSameID(data->swap1, data->fields[i][j].id)) || (IsSameID(data->swap2, data->fields[i][j].id)))) {
-						data->fields[i][j].data.animal.super = true;
-						data->fields[i][j].to_remove = false;
-						UpdateDrawable(game, data, data->fields[i][j].id);
-						SpawnParticles(game, data, data->fields[i][j].id, 64);
-						continue;
-					}
-				}
-				data->locked = true;
-
-				SpawnParticles(game, data, data->fields[i][j].id, 16);
-			}
-		}
-	}
-}
-
-static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			if (data->fields[i][j].to_remove) {
-				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
-				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
-			}
-		}
-	}
-}
-
-static void DoRemoval(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].animation.fall_levels = 0;
-			data->fields[i][j].animation.level_no = 0;
-			data->fields[i][j].handled = false;
-			data->fields[i][j].matched = false;
-			data->fields[i][j].to_highlight = false;
-			if (data->fields[i][j].to_remove) {
-				data->fields[i][j].type = FIELD_TYPE_EMPTY;
-				data->fields[i][j].to_remove = false;
-				data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
-				data->fields[i][j].animation.falling = StaticTween(game, 1.0);
-				data->fields[i][j].animation.shaking = StaticTween(game, 0.0);
-				data->fields[i][j].animation.hinting = StaticTween(game, 0.0);
-				data->fields[i][j].animation.launching = StaticTween(game, 0.0);
-				data->fields[i][j].animation.collecting = StaticTween(game, 0.0);
-			}
-		}
-	}
-}
-
-static void StopAnimations(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].animation.fall_levels = 0;
-			data->fields[i][j].animation.level_no = 0;
-			data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
-			data->fields[i][j].animation.falling = StaticTween(game, 1.0);
-			data->fields[i][j].animation.shaking = StaticTween(game, 0.0);
-			data->fields[i][j].animation.hinting = StaticTween(game, 0.0);
-			data->fields[i][j].animation.launching = StaticTween(game, 0.0);
-			data->fields[i][j].animation.collecting = StaticTween(game, 0.0);
-		}
-	}
-}
-
-static void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	struct Field tmp = data->fields[one.i][one.j];
-	data->fields[one.i][one.j] = data->fields[two.i][two.j];
-	data->fields[two.i][two.j] = tmp;
-	data->fields[one.i][one.j].id = (struct FieldID){.i = one.i, .j = one.j};
-	data->fields[two.i][two.j].id = (struct FieldID){.i = two.i, .j = two.j};
-	float highlight = data->fields[one.i][one.j].highlight;
-	data->fields[one.i][one.j].highlight = data->fields[two.i][two.j].highlight;
-	data->fields[two.i][two.j].highlight = highlight;
-}
-
-static TM_ACTION(AfterSwapping) {
-	TM_RunningOnly;
-	struct Field* one = TM_GetArg(action->arguments, 0);
-	struct Field* two = TM_GetArg(action->arguments, 1);
-	Swap(game, data, one->id, two->id);
-	one->animation.swapping = StaticTween(game, 0.0);
-	two->animation.swapping = StaticTween(game, 0.0);
-	data->locked = false;
-	ProcessFields(game, data);
-	return true;
-}
-
-static TM_ACTION(StartSwapping) {
-	TM_RunningOnly;
-	struct Field* one = TM_GetArg(action->arguments, 0);
-	struct Field* two = TM_GetArg(action->arguments, 1);
-	data->locked = true;
-	one->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, SWAPPING_TIME);
-	one->animation.swapee = two->id;
-	two->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, SWAPPING_TIME);
-	two->animation.swapee = one->id;
-	return true;
-}
-
-static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	if (!IsValidID(id)) {
-		return false;
-	}
-	struct Field* field = GetField(game, data, id);
-	if (((field->type == FIELD_TYPE_ANIMAL) && (!IsSleeping(field))) || (field->type == FIELD_TYPE_COLLECTIBLE)) {
-		return true;
-	}
-	return false;
-}
-
-static bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	return IsSwappable(game, data, one) && IsSwappable(game, data, two);
-}
-
-static void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	data->swap1 = one;
-	data->swap2 = two;
-	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
-	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-}
-
-static void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	if (rand() / (float)RAND_MAX < 0.001) {
-		field->type = FIELD_TYPE_FREEFALL;
-		field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-	} else if (rand() / (float)RAND_MAX < 0.01) {
-		field->type = FIELD_TYPE_COLLECTIBLE;
-		field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
-		field->data.collectible.variant = 0;
-	} else {
-		field->type = FIELD_TYPE_ANIMAL;
-		field->data.animal.type = rand() % ANIMAL_TYPES;
-		if (rand() / (float)RAND_MAX < 0.005) {
-			field->data.animal.sleeping = true;
-		}
-		field->data.animal.super = false;
-	}
-	field->overlay_visible = false;
-	UpdateDrawable(game, data, field->id);
-}
-
-static void CreateNewField(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	GenerateField(game, data, field);
-	field->animation.fall_levels++;
-	field->animation.falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->animation.level_no * 0.025));
-	field->animation.hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);
-}
-
-static void Gravity(struct Game* game, struct GamestateResources* data) {
-	bool repeat;
-	do {
-		repeat = false;
-		for (int i = 0; i < COLS; i++) {
-			for (int j = ROWS - 1; j >= 0; j--) {
-				struct FieldID id = (struct FieldID){i, j};
-				struct Field* field = GetField(game, data, id);
-				if (field->type != FIELD_TYPE_EMPTY) {
-					continue;
-				}
-				struct FieldID up = ToTop(id);
-				while (IsValidID(up) && (GetField(game, data, up)->type == FIELD_TYPE_DISABLED)) {
-					up = ToTop(up);
-				}
-				if (IsValidID(up)) {
-					struct Field* upfield = GetField(game, data, up);
-					if (upfield->type == FIELD_TYPE_EMPTY) {
-						repeat = true;
-					} else {
-						upfield->animation.level_no = field->animation.level_no++;
-						upfield->animation.fall_levels++;
-						upfield->animation.falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + upfield->animation.level_no * 0.025));
-						upfield->animation.falling.predelay = upfield->animation.level_no * 0.01;
-						Swap(game, data, id, up);
-					}
-				} else {
-					CreateNewField(game, data, field);
-				}
-			}
-		}
-	} while (repeat);
-
-	data->locked = false;
-}
-
-static TM_ACTION(AfterMatching) {
-	TM_RunningOnly;
-	DoRemoval(game, data);
-	Gravity(game, data);
-	ProcessFields(game, data);
-	return true;
-}
-
-static TM_ACTION(DispatchAnimations) {
-	TM_RunningOnly;
-	AnimateMatching(game, data);
-	AnimateRemoval(game, data);
-	TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
-	TM_AddAction(data->timeline, AfterMatching, NULL);
-	return true;
-}
-
-static TM_ACTION(DoSpawnParticles) {
-	TM_RunningOnly;
-	struct Field* field = TM_Arg(0);
-	int* count = TM_Arg(1);
-	SpawnParticles(game, data, field->id, *count);
-	free(count);
-	return true;
-}
-
-static TM_ACTION(AnimateSpecial) {
-	TM_RunningOnly;
-	struct Field* field = TM_Arg(0);
-	field->animation.launching = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, LAUNCHING_TIME);
-	return true;
-}
-
-static void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	TM_WrapArg(int, count, 64);
-	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(field, count));
-	TM_AddDelay(data->timeline, 10);
-	if (field->type != FIELD_TYPE_FREEFALL) {
-		field->to_remove = true;
-		field->to_highlight = true;
-	}
-}
-
-static void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	TM_AddAction(data->timeline, AnimateSpecial, TM_Args(GetField(game, data, id)));
-
-	struct FieldID left = ToLeft(id), right = ToRight(id), top = ToTop(id), bottom = ToBottom(id);
-	while (IsValidID(left) || IsValidID(right) || IsValidID(top) || IsValidID(bottom)) {
-		struct Field* field = GetField(game, data, left);
-		if (field) {
-			HandleSpecialed(game, data, field);
-		}
-		field = GetField(game, data, right);
-		if (field) {
-			HandleSpecialed(game, data, field);
-		}
-		field = GetField(game, data, top);
-		if (field) {
-			HandleSpecialed(game, data, field);
-		}
-		field = GetField(game, data, bottom);
-		if (field) {
-			HandleSpecialed(game, data, field);
-		}
-		left = ToLeft(left);
-		right = ToRight(right);
-		top = ToTop(top);
-		bottom = ToBottom(bottom);
-	}
-	TM_WrapArg(int, count, 64);
-	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(GetField(game, data, id), count));
-}
-
-static bool AnimateSpecials(struct Game* game, struct GamestateResources* data) {
-	bool found = false;
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			if (data->fields[i][j].to_remove && !data->fields[i][j].handled) {
-				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL && data->fields[i][j].data.animal.super) {
-					data->fields[i][j].handled = true;
-					LaunchSpecial(game, data, data->fields[i][j].id);
-					found = true;
-				}
-			}
-		}
-	}
-	return found;
-}
-
-static void ProcessFields(struct Game* game, struct GamestateResources* data) {
-	bool matched = MarkMatching(game, data);
-	bool collected = Collect(game, data);
-	if (matched || collected) {
-		while (AnimateSpecials(game, data)) {
-			Collect(game, data);
-		}
-		TM_AddAction(data->timeline, DispatchAnimations, NULL);
-	}
-	PrintConsole(game, "possible moves: %d", CountMoves(game, data));
-}
-
-static bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	if (!AreSwappable(game, data, one, two)) {
-		return false;
-	}
-	bool res = false;
-	Swap(game, data, one, two);
-	if (IsMatching(game, data, two)) {
-		res = true;
-	}
-	Swap(game, data, one, two);
-	return res;
-}
-
-static bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id) {
-	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
-
-	for (int q = 0; q < 4; q++) {
-		if (IsValidMove(id, callbacks[q](id))) {
-			if (WillMatch(game, data, id, callbacks[q](id))) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-static bool ShowHint(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			struct FieldID id = {.i = i, .j = j};
-			if (CanBeMatched(game, data, id)) {
-				GetField(game, data, id)->animation.hinting = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, HINT_TIME);
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-static int CountMoves(struct Game* game, struct GamestateResources* data) {
-	int moves = 0;
-	bool marked[COLS][ROWS] = {};
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			struct FieldID id = {.i = i, .j = j};
-			if (CanBeMatched(game, data, id)) {
-				if (!marked[i][j]) {
-					moves++;
-					marked[i][j] = true;
-				}
-			}
-		}
-	}
-	return moves;
-}
-
-static bool AutoMove(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			struct FieldID id = {.i = i, .j = j};
-			struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
-
-			for (int q = 0; q < 4; q++) {
-				if (IsValidMove(id, callbacks[q](id))) {
-					if (WillMatch(game, data, id, callbacks[q](id))) {
-						AnimateSwapping(game, data, id, callbacks[q](id));
-						return true;
-					}
-				}
-			}
-		}
-	}
-	return false;
-}
-
-static void Turn(struct Game* game, struct GamestateResources* data) {
-	if (!IsValidMove(data->current, data->hovered)) {
-		return;
-	}
-
-	PrintConsole(game, "swap %dx%d with %dx%d", data->current.i, data->current.j, data->hovered.i, data->hovered.j);
-	data->clicked = false;
-
-	if (!AreSwappable(game, data, data->current, data->hovered)) {
-		GetField(game, data, data->current)->animation.shaking = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_OUT, SHAKING_TIME);
-		return;
-	}
-	data->locked = true;
-
-	AnimateSwapping(game, data, data->current, data->hovered);
-
-	Swap(game, data, data->current, data->hovered);
-	if (!IsMatching(game, data, data->current) && !IsMatching(game, data, data->hovered)) {
-		AnimateSwapping(game, data, data->current, data->hovered);
-	}
-	Swap(game, data, data->current, data->hovered);
 }
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
