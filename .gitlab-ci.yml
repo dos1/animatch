@@ -59,7 +59,7 @@ build:linux-flatpak-amd64:
   script:
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=x86_64 --repo=build-flatpak-repo
     - mkdir -p utils/output
-    - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-amd64.flatpak $BUNDLE_ID --arch=x86_64
+    - flatpak build-bundle build-flatpak-repo utils/output/$PROJECT_NAME-linux-amd64.flatpak $BUNDLE_ID --arch=x86_64
 
 build:linux-flatpak-arm64:
   image: dosowisko/libsuperderpy-flatpak-arm64
@@ -74,7 +74,7 @@ build:linux-flatpak-arm64:
     - update-binfmts --enable qemu-aarch64
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=aarch64 --repo=build-flatpak-repo
     - mkdir -p utils/output
-    - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-arm64.flatpak $BUNDLE_ID --arch=aarch64
+    - flatpak build-bundle build-flatpak-repo utils/output/$PROJECT_NAME-linux-arm64.flatpak $BUNDLE_ID --arch=aarch64
 
 build:linux-flatpak-armv7:
   image: dosowisko/libsuperderpy-flatpak-armv7
@@ -89,7 +89,7 @@ build:linux-flatpak-armv7:
     - update-binfmts --enable qemu-arm
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=arm --repo=build-flatpak-repo
     - mkdir -p utils/output
-    - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-armv7.flatpak $BUNDLE_ID --arch=arm
+    - flatpak build-bundle build-flatpak-repo utils/output/$PROJECT_NAME-linux-armv7.flatpak $BUNDLE_ID --arch=arm
 
 build:linux-flatpak-i686:
   image: dosowisko/libsuperderpy-flatpak-i686
@@ -103,7 +103,7 @@ build:linux-flatpak-i686:
   script:
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=i386 --repo=build-flatpak-repo
     - mkdir -p utils/output
-    - flatpak build-bundle build-flatpak-repo utils/output/$CI_PROJECT_NAME-linux-i686.flatpak $BUNDLE_ID --arch=i386
+    - flatpak build-bundle build-flatpak-repo utils/output/$PROJECT_NAME-linux-i686.flatpak $BUNDLE_ID --arch=i386
 
 build:macos:
   image: dosowisko/libsuperderpy-macos
@@ -138,7 +138,7 @@ deploy:linux-steamrt-i686:
   dependencies:
     - build:linux-steamrt-i686
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-linux-i686.tar.gz $BUTLER_TARGET:ci-linux-steamrt-i686 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-linux-i686.tar.gz $BUTLER_TARGET:ci-linux-steamrt-i686 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:linux-steamrt-amd64:
   image: dosowisko/butler
@@ -153,7 +153,7 @@ deploy:linux-steamrt-amd64:
   dependencies:
     - build:linux-steamrt-amd64
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-linux-amd64.tar.gz $BUTLER_TARGET:ci-linux-steamrt-amd64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-linux-amd64.tar.gz $BUTLER_TARGET:ci-linux-steamrt-amd64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:linux-flatpak-amd64:
   image: dosowisko/butler
@@ -168,7 +168,7 @@ deploy:linux-flatpak-amd64:
   dependencies:
     - build:linux-flatpak-amd64
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-linux-amd64.flatpak $BUTLER_TARGET:ci-linux-flatpak-amd64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-linux-amd64.flatpak $BUTLER_TARGET:ci-linux-flatpak-amd64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:linux-flatpak-arm64:
   image: dosowisko/butler
@@ -183,7 +183,7 @@ deploy:linux-flatpak-arm64:
   dependencies:
     - build:linux-flatpak-arm64
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-linux-arm64.flatpak $BUTLER_TARGET:ci-linux-flatpak-arm64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-linux-arm64.flatpak $BUTLER_TARGET:ci-linux-flatpak-arm64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:linux-flatpak-armv7:
   image: dosowisko/butler
@@ -198,7 +198,7 @@ deploy:linux-flatpak-armv7:
   dependencies:
     - build:linux-flatpak-armv7
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-linux-armv7.flatpak $BUTLER_TARGET:ci-linux-flatpak-armv7 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-linux-armv7.flatpak $BUTLER_TARGET:ci-linux-flatpak-armv7 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:linux-flatpak-i686:
   image: dosowisko/butler
@@ -213,7 +213,7 @@ deploy:linux-flatpak-i686:
   dependencies:
     - build:linux-flatpak-i686
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-linux-i686.flatpak $BUTLER_TARGET:ci-linux-flatpak-i686 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-linux-i686.flatpak $BUTLER_TARGET:ci-linux-flatpak-i686 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:win32:
   image: dosowisko/butler
@@ -228,7 +228,7 @@ deploy:win32:
   dependencies:
     - build:win32
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-win32.zip $BUTLER_TARGET:ci-win32 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-win32.zip $BUTLER_TARGET:ci-win32 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:win64:
   image: dosowisko/butler
@@ -243,7 +243,7 @@ deploy:win64:
   dependencies:
     - build:win64
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-win64.zip $BUTLER_TARGET:ci-win64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-win64.zip $BUTLER_TARGET:ci-win64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:macos:
   image: dosowisko/butler
@@ -258,7 +258,7 @@ deploy:macos:
   dependencies:
     - build:macos
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-osx.zip $BUTLER_TARGET:ci-macos --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-osx.zip $BUTLER_TARGET:ci-macos --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:maemo5:
   image: dosowisko/butler
@@ -273,4 +273,4 @@ deploy:maemo5:
   dependencies:
     - build:maemo5
   script:
-    - butler push utils/output/$CI_PROJECT_NAME-maemo5.tar.gz $BUTLER_TARGET:ci-maemo5 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-maemo5.tar.gz $BUTLER_TARGET:ci-maemo5 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
