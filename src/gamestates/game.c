@@ -191,7 +191,7 @@ struct GamestateResources {
 
 	ALLEGRO_BITMAP *field_bgs[4], *field_bgs_bmp;
 
-	ALLEGRO_SHADER *combine_shader, *desaturate_shader;
+	ALLEGRO_SHADER *board_shader, *desaturate_shader;
 
 	bool locked, clicked;
 
@@ -369,6 +369,14 @@ static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 
 static bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
+static void DisableBlending(struct Game* game) {
+	al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
+}
+
+static void EnableBlending(struct Game* game) {
+	al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+}
+
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
@@ -376,10 +384,17 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
 
-	al_set_target_bitmap(data->board);
-	ClearToColor(game, al_map_rgba(0, 0, 0, 0));
-	al_set_clipping_rectangle(0, offsetY, game->viewport.width, game->viewport.height - offsetY * 2);
-	al_hold_bitmap_drawing(true);
+	SetFramebufferAsTarget(game);
+	ClearToColor(game, al_map_rgb(0, 0, 0));
+	DisableBlending(game);
+	al_draw_bitmap(data->scene, 0, 0, 0);
+	EnableBlending(game);
+
+	al_use_shader(data->board_shader);
+	al_set_shader_sampler("tex_bg", data->lowres_scene_blur, 1);
+
+	//al_set_clipping_rectangle(0, offsetY, game->viewport.width, game->viewport.height - offsetY * 2);
+	//al_hold_bitmap_drawing(true);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			bool hovered = IsSameID(data->hovered, (struct FieldID){i, j});
@@ -395,7 +410,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			}
 		}
 	}
-	al_hold_bitmap_drawing(false);
+	//al_hold_bitmap_drawing(false);
 
 	al_use_shader(data->desaturate_shader);
 	for (int i = 0; i < COLS; i++) {
@@ -431,19 +446,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	al_use_shader(NULL);
-	al_reset_clipping_rectangle();
-
-	SetFramebufferAsTarget(game);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_draw_bitmap(data->scene, 0, 0, 0);
-
-	float size[2] = {al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur)};
-
-	al_use_shader(data->combine_shader);
-	al_set_shader_sampler("tex_bg", data->lowres_scene_blur, 1);
-	al_set_shader_float_vector("size", 2, size, 1);
-	al_draw_bitmap(data->board, 0, 0, 0);
-	al_use_shader(NULL);
+	//al_reset_clipping_rectangle();
 
 	DrawParticles(game, data->particles);
 
@@ -1404,7 +1407,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	progress(game);
 
-	data->combine_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/combine.glsl"));
+	data->board_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/board.glsl"));
 	progress(game);
 	data->desaturate_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/desaturate.glsl"));
 	progress(game);
@@ -1454,7 +1457,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->lowres_scene);
 	al_destroy_bitmap(data->lowres_scene_blur);
 	al_destroy_bitmap(data->board);
-	DestroyShader(game, data->combine_shader);
+	DestroyShader(game, data->board_shader);
 	DestroyShader(game, data->desaturate_shader);
 	TM_Destroy(data->timeline);
 	free(data);
