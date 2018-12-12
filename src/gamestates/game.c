@@ -20,12 +20,22 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 63; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 69; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
 	TM_Process(data->timeline, delta);
 	UpdateParticles(game, data->particles, delta);
+	UpdateTween(&data->acorn_top.tween, delta);
+	UpdateTween(&data->acorn_bottom.tween, delta);
+	AnimateCharacter(game, data->beetle, delta, 1.0);
+	data->snail_blink -= delta;
+
+	if (data->snail_blink < 0) {
+		data->snail_blink = 6.0 + rand() / (float)RAND_MAX * 16.0;
+		data->snail->pos = rand() % data->snail->spritesheet->frameCount;
+		data->snail->frame = &data->snail->spritesheet->frames[data->snail->pos];
+	}
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -179,12 +189,28 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 }
 
 static void DrawScene(struct Game* game, struct GamestateResources* data) {
-	al_set_target_bitmap(data->scene);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
+	al_hold_bitmap_drawing(true);
 	al_draw_bitmap(data->bg, 0, 0, 0);
+
+	for (int i = 0; i < data->leaves->spritesheet->frameCount; i++) {
+		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((game->time * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((game->time * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
+		data->leaves->pos = i;
+		data->leaves->frame = &data->leaves->spritesheet->frames[i];
+		DrawCharacter(game, data->leaves);
+	}
+
+	SetCharacterPosition(game, data->acorn_top.character, 209 + 102 / 2.0, 240 + 105 / 2.0, GetTweenValue(&data->acorn_top.tween));
+	DrawCharacter(game, data->acorn_top.character);
+
+	SetCharacterPosition(game, data->acorn_bottom.character, 261 + 165 / 2.0, 1094 + 145 / 2.0 - (sin(GetTweenValue(&data->acorn_bottom.tween) * ALLEGRO_PI) * 16), sin(GetTweenPosition(&data->acorn_bottom.tween) * 2 * ALLEGRO_PI) / 12.0);
+	DrawCharacter(game, data->acorn_bottom.character);
+
+	al_hold_bitmap_drawing(false);
 }
 
 static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
+	al_set_target_bitmap(data->scene);
+	ClearToColor(game, al_map_rgb(0, 0, 0));
 	DrawScene(game, data);
 
 	float size[2] = {al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene)};
@@ -212,11 +238,15 @@ static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	al_use_shader(NULL);
 }
 
+static void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element) {
+	ui->pos = element;
+	ui->frame = &ui->spritesheet->frames[ui->pos];
+	DrawCharacter(game, ui);
+}
+
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
-	DrawScene(game, data);
-
 	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
 
 	al_set_target_bitmap(data->board);
@@ -278,7 +308,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	SetFramebufferAsTarget(game);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_draw_bitmap(data->scene, 0, 0, 0);
+	DrawScene(game, data);
 
 	float size[2] = {al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur)};
 
@@ -287,6 +317,19 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_draw_bitmap(data->board, 0, 0, 0);
 	al_use_shader(NULL);
+
+	al_hold_bitmap_drawing(true);
+	SetCharacterPosition(game, data->ui, 0, 0, 0);
+	DrawUIElement(game, data->ui, UI_ELEMENT_BALOON_BIG);
+	DrawUIElement(game, data->ui, UI_ELEMENT_BALOON_MINI);
+	DrawUIElement(game, data->ui, UI_ELEMENT_SCORE);
+	al_hold_bitmap_drawing(false);
+
+	SetCharacterPosition(game, data->snail, 460, 130, 0);
+	DrawCharacter(game, data->snail);
+
+	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
+	DrawCharacter(game, data->beetle);
 
 	DrawParticles(game, data->particles);
 
@@ -320,6 +363,15 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		if ((data->hovered.i < 0) || (data->hovered.j < 0) || (data->hovered.i >= COLS) || (data->hovered.j >= ROWS) || (game->data->mouseY * game->viewport.height <= offsetY) || (game->data->mouseX == 0.0)) {
 			data->hovered.i = -1;
 			data->hovered.j = -1;
+		}
+	}
+
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		if (IsOnCharacter(game, data->acorn_top.character, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->acorn_top.tween = Tween(game, fmod(GetTweenValue(&data->acorn_top.tween), 2 * ALLEGRO_PI), ALLEGRO_PI * 8, TWEEN_STYLE_QUADRATIC_OUT, 1.5);
+		}
+		if (IsOnCharacter(game, data->acorn_bottom.character, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->acorn_bottom.tween = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, 0.75);
 		}
 	}
 
@@ -452,6 +504,39 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 		}
 		LoadSpritesheets(game, data->animal_archetypes[i], progress);
 	}
+
+	data->leaves = CreateCharacter(game, "bg");
+	RegisterSpritesheet(game, data->leaves, "bg");
+	LoadSpritesheets(game, data->leaves, progress);
+	SelectSpritesheet(game, data->leaves, "bg");
+
+	data->acorn_top.character = CreateCharacter(game, "bg");
+	RegisterSpritesheet(game, data->acorn_top.character, "top");
+	LoadSpritesheets(game, data->acorn_top.character, progress);
+	SelectSpritesheet(game, data->acorn_top.character, "top");
+	data->acorn_top.tween = StaticTween(game, 0.0);
+
+	data->acorn_bottom.character = CreateCharacter(game, "bg");
+	RegisterSpritesheet(game, data->acorn_bottom.character, "bottom");
+	LoadSpritesheets(game, data->acorn_bottom.character, progress);
+	SelectSpritesheet(game, data->acorn_bottom.character, "bottom");
+	data->acorn_bottom.tween = StaticTween(game, 0.0);
+
+	data->ui = CreateCharacter(game, "ui");
+	RegisterSpritesheet(game, data->ui, "ui");
+	LoadSpritesheets(game, data->ui, progress);
+	SelectSpritesheet(game, data->ui, "ui");
+
+	data->beetle = CreateCharacter(game, "beetle");
+	RegisterSpritesheet(game, data->beetle, "beetle");
+	LoadSpritesheets(game, data->beetle, progress);
+	SelectSpritesheet(game, data->beetle, "beetle");
+
+	data->snail = CreateCharacter(game, "snail");
+	RegisterSpritesheet(game, data->snail, "snail");
+	LoadSpritesheets(game, data->snail, progress);
+	SelectSpritesheet(game, data->snail, "snail");
+
 	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
 		data->special_archetypes[i] = CreateCharacter(game, StrToLower(game, SPECIALS[i]));
 		for (int j = 0; j < SPECIAL_ACTIONS[i].actions; j++) {
@@ -478,13 +563,13 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	}
 	progress(game);
 
-	data->field_bgs[0] = al_load_bitmap(GetDataFilePath(game, "kwadrat1.png"));
+	data->field_bgs[0] = al_load_bitmap(GetDataFilePath(game, "kwadrat1.webp"));
 	progress(game);
-	data->field_bgs[1] = al_load_bitmap(GetDataFilePath(game, "kwadrat2.png"));
+	data->field_bgs[1] = al_load_bitmap(GetDataFilePath(game, "kwadrat2.webp"));
 	progress(game);
-	data->field_bgs[2] = al_load_bitmap(GetDataFilePath(game, "kwadrat3.png"));
+	data->field_bgs[2] = al_load_bitmap(GetDataFilePath(game, "kwadrat3.webp"));
 	progress(game);
-	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.png"));
+	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.webp"));
 	progress(game);
 
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
@@ -522,6 +607,12 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	// Called when the gamestate library is being unloaded.
 	// Good place for freeing all allocated memory and resources.
 	DestroyParticleBucket(game, data->particles);
+	DestroyCharacter(game, data->leaves);
+	DestroyCharacter(game, data->ui);
+	DestroyCharacter(game, data->beetle);
+	DestroyCharacter(game, data->snail);
+	DestroyCharacter(game, data->acorn_top.character);
+	DestroyCharacter(game, data->acorn_bottom.character);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
@@ -554,6 +645,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// playing music etc.
 	data->locked = false;
 	data->clicked = false;
+	data->snail_blink = 0.0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			GenerateField(game, data, &data->fields[i][j]);

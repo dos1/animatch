@@ -196,6 +196,15 @@ struct GamestateResources {
 
 	struct ParticleBucket* particles;
 
+	struct Character *leaves, *ui, *beetle, *snail;
+
+	struct {
+		struct Character* character;
+		struct Tween tween;
+	} acorn_top, acorn_bottom;
+
+	float snail_blink;
+
 	bool debug;
 };
 

@@ -38,7 +38,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_clear_to_color(al_map_rgb(255, 255, 255));
-	al_draw_tinted_scaled_bitmap(data->bg_blur, al_map_rgba(30, 30, 30, 30), 0, 0,
+	al_draw_tinted_scaled_bitmap(data->bg_blur, al_map_rgba(64, 64, 64, 64), 0, 0,
 		al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur),
 		0, 0,
 		game->viewport.width, game->viewport.height, 0);
