@@ -37,20 +37,24 @@ int main(int argc, char** argv) {
 	al_set_org_name("Holy Pangolin");
 	al_set_app_name(LIBSUPERDERPY_GAMENAME_PRETTY);
 
-	struct Game* game = libsuperderpy_init(argc, argv, LIBSUPERDERPY_GAMENAME, (struct Viewport){720, 1440});
+	struct Game* game = libsuperderpy_init(argc, argv, LIBSUPERDERPY_GAMENAME,
+		(struct Params){
+			720,
+			1440,
+			.show_loading_on_launch = true,
+			.handlers = (struct Handlers){
+				.event = GlobalEventHandler,
+				.destroy = DestroyGameData,
+				.postdraw = DrawBuildInfo,
+				.postlogic = PostLogic,
+			},
+		});
+
 	if (!game) { return 1; }
 
-	al_set_window_title(game->display, LIBSUPERDERPY_GAMENAME_PRETTY);
-
-	game->show_loading_on_launch = true;
 	StartGamestate(game, "game");
 
 	game->data = CreateGameData(game);
-
-	game->handlers.event = GlobalEventHandler;
-	game->handlers.destroy = DestroyGameData;
-	game->handlers.postdraw = DrawBuildInfo;
-	game->handlers.postlogic = PostLogic;
 
 	al_show_mouse_cursor(game->display);
 

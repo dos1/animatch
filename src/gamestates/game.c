@@ -375,7 +375,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		}
 	}
 
-	if (game->config.debug) {
+	if (game->config.debug.enabled) {
 #ifdef LIBSUPERDERPY_IMGUI
 		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN && ev->keyboard.keycode == ALLEGRO_KEY_SPACE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && ev->mouse.button == 2)) {
 			PrintConsole(game, "Debug interface toggled.");
@@ -404,7 +404,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		data->clicked = false;
 	}
 
-	if (game->config.debug) {
+	if (game->config.debug.enabled) {
 		if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
 			if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
 				ShowHint(game, data);

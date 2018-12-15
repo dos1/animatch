@@ -54,7 +54,7 @@ struct CommonResources {
 	ALLEGRO_SHADER* kawese_shader;
 };
 
-void Compositor(struct Game* game, struct Gamestate* gamestates);
+void Compositor(struct Game* game, struct Gamestate* gamestates, ALLEGRO_BITMAP* loading_fb);
 void PostLogic(struct Game* game, double delta);
 struct CommonResources* CreateGameData(struct Game* game);
 void DestroyGameData(struct Game* game);

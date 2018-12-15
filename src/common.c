@@ -22,10 +22,10 @@
 #include <libsuperderpy.h>
 #include <stdio.h>
 
-void Compositor(struct Game* game, struct Gamestate* gamestates) {
+void Compositor(struct Game* game, struct Gamestate* gamestates, ALLEGRO_BITMAP* loading_fb) {
 	struct Gamestate* tmp = gamestates;
 	if (game->data->loading_fade) {
-		al_set_target_bitmap(game->loading_fb);
+		al_set_target_bitmap(loading_fb);
 
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
 
@@ -43,17 +43,17 @@ void Compositor(struct Game* game, struct Gamestate* gamestates) {
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	while (tmp) {
 		if ((tmp->loaded) && (tmp->started)) {
-			al_draw_bitmap(tmp->fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
+			al_draw_bitmap(tmp->fb, game->clip_rect.x, game->clip_rect.y, 0);
 		}
 		tmp = tmp->next;
 	}
 	if (game->data->loading_fade) {
-		al_draw_bitmap(game->loading_fb, game->_priv.clip_rect.x, game->_priv.clip_rect.y, 0);
+		al_draw_bitmap(loading_fb, game->clip_rect.x, game->clip_rect.y, 0);
 	}
 }
 
 void PostLogic(struct Game* game, double delta) {
-	if (!game->_priv.loading.shown && game->data->loading_fade) {
+	if (!game->loading.shown && game->data->loading_fade) {
 		game->data->loading_fade -= 0.02 * delta / (1 / 60.0);
 		if (game->data->loading_fade <= 0.0) {
 			DisableCompositor(game);
@@ -63,7 +63,7 @@ void PostLogic(struct Game* game, double delta) {
 }
 
 void DrawBuildInfo(struct Game* game) {
-	if (game->config.debug || game->_priv.showconsole) {
+	if (game->config.debug.enabled || game->_priv.showconsole) {
 		int x, y, w, h;
 		al_get_clipping_rectangle(&x, &y, &w, &h);
 		al_hold_bitmap_drawing(true);
@@ -87,16 +87,16 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 		al_set_display_flag(game->display, ALLEGRO_FRAMELESS, game->config.fullscreen);
 #endif
 		al_set_display_flag(game->display, ALLEGRO_FULLSCREEN_WINDOW, game->config.fullscreen);
-		SetupViewport(game, game->viewport_config);
+		SetupViewport(game);
 		PrintConsole(game, "Fullscreen toggled");
 	}
 	if (ev->type == ALLEGRO_EVENT_MOUSE_AXES) {
-		game->data->mouseX = Clamp(0, 1, (ev->mouse.x - game->_priv.clip_rect.x) / (double)game->_priv.clip_rect.w);
-		game->data->mouseY = Clamp(0, 1, (ev->mouse.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
+		game->data->mouseX = Clamp(0, 1, (ev->mouse.x - game->clip_rect.x) / (double)game->clip_rect.w);
+		game->data->mouseY = Clamp(0, 1, (ev->mouse.y - game->clip_rect.y) / (double)game->clip_rect.h);
 	}
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE)) {
-		game->data->mouseX = Clamp(0, 1, (ev->touch.x - game->_priv.clip_rect.x) / (double)game->_priv.clip_rect.w);
-		game->data->mouseY = Clamp(0, 1, (ev->touch.y - game->_priv.clip_rect.y) / (double)game->_priv.clip_rect.h);
+		game->data->mouseX = Clamp(0, 1, (ev->touch.x - game->clip_rect.x) / (double)game->clip_rect.w);
+		game->data->mouseY = Clamp(0, 1, (ev->touch.y - game->clip_rect.y) / (double)game->clip_rect.h);
 	}
 
 	if (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) {

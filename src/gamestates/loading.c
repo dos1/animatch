@@ -48,7 +48,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->bar1, (game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
 		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
 	al_draw_bitmap_region(data->bar2, 0, 0,
-		al_get_bitmap_width(data->bar2) * game->loading_progress, al_get_bitmap_height(data->bar2),
+		al_get_bitmap_width(data->bar2) * game->loading.progress, al_get_bitmap_height(data->bar2),
 		(game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
 		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
 };
