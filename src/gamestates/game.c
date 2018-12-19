@@ -33,7 +33,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 
 	if (data->snail_blink < 0) {
 		data->snail_blink = 6.0 + rand() / (float)RAND_MAX * 16.0;
-		data->snail->pos = rand() % data->snail->spritesheet->frameCount;
+		data->snail->pos = rand() % data->snail->spritesheet->frame_count;
 		data->snail->frame = &data->snail->spritesheet->frames[data->snail->pos];
 	}
 
@@ -192,7 +192,7 @@ static void DrawScene(struct Game* game, struct GamestateResources* data) {
 	al_hold_bitmap_drawing(true);
 	al_draw_bitmap(data->bg, 0, 0, 0);
 
-	for (int i = 0; i < data->leaves->spritesheet->frameCount; i++) {
+	for (int i = 0; i < data->leaves->spritesheet->frame_count; i++) {
 		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((game->time * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((game->time * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
 		data->leaves->pos = i;
 		data->leaves->frame = &data->leaves->spritesheet->frames[i];

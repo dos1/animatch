@@ -531,7 +531,7 @@ void SpawnParticles(struct Game* game, struct GamestateResources* data, struct F
 		color = ANIMAL_COLORS[field->data.animal.type];
 	}
 	for (int p = 0; p < num; p++) {
-		data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = rand() % data->special_archetypes[SPECIAL_TYPE_DANDELION]->spritesheet->frameCount;
+		data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = rand() % data->special_archetypes[SPECIAL_TYPE_DANDELION]->spritesheet->frame_count;
 		if (rand() % 2) {
 			data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = 0;
 		}
