@@ -179,7 +179,9 @@ struct GamestateResources {
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_BITMAP* bg;
 
-	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board;
+	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *placeholder;
+
+	ALLEGRO_FONT *font, *font_num_small, *font_num_medium, *font_num_big;
 
 	struct Character* animal_archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
 	struct Character* special_archetypes[sizeof(SPECIALS) / sizeof(SPECIALS[0])];
@@ -204,6 +206,8 @@ struct GamestateResources {
 	} acorn_top, acorn_bottom;
 
 	float snail_blink;
+
+	int moves, level;
 
 	bool debug;
 };

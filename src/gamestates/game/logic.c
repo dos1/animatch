@@ -437,7 +437,9 @@ void Turn(struct Game* game, struct GamestateResources* data) {
 	AnimateSwapping(game, data, data->current, data->hovered);
 
 	Swap(game, data, data->current, data->hovered);
-	if (!IsMatching(game, data, data->current) && !IsMatching(game, data, data->hovered)) {
+	if (IsMatching(game, data, data->current) || IsMatching(game, data, data->hovered)) {
+		data->moves++;
+	} else {
 		AnimateSwapping(game, data, data->current, data->hovered);
 	}
 	Swap(game, data, data->current, data->hovered);

@@ -325,11 +325,18 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	DrawUIElement(game, data->ui, UI_ELEMENT_SCORE);
 	al_hold_bitmap_drawing(false);
 
-	SetCharacterPosition(game, data->snail, 460, 130, 0);
+	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 51, ALLEGRO_ALIGN_CENTER, "MOVES");
+	al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 620, 78, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
+	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
+	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 195, ALLEGRO_ALIGN_CENTER, "%d", data->level);
+
+	SetCharacterPosition(game, data->snail, 0, 0, 0);
 	DrawCharacter(game, data->snail);
 
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	DrawCharacter(game, data->beetle);
+
+	al_draw_bitmap(data->placeholder, 240, 45, 0);
 
 	DrawParticles(game, data->particles);
 
@@ -572,6 +579,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.webp"));
 	progress(game);
 
+	data->placeholder = al_load_bitmap(GetDataFilePath(game, "placeholder.png"));
+
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->lowres_scene_blur = al_create_bitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
@@ -582,6 +591,11 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	progress(game);
 	data->desaturate_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/desaturate.glsl"));
 	progress(game);
+
+	data->font = al_load_font(GetDataFilePath(game, "fonts/Caroni.otf"), 35, 0);
+	data->font_num_small = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 42, 0);
+	data->font_num_medium = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 55, 0);
+	data->font_num_big = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 96, 0);
 
 	data->timeline = TM_Init(game, data, "timeline");
 
@@ -628,12 +642,17 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < 4; i++) {
 		al_destroy_bitmap(data->field_bgs[i]);
 	}
+	al_destroy_bitmap(data->placeholder);
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->scene);
 	al_destroy_bitmap(data->lowres_scene);
 	al_destroy_bitmap(data->lowres_scene_blur);
 	al_destroy_bitmap(data->board);
+	al_destroy_font(data->font);
+	al_destroy_font(data->font_num_small);
+	al_destroy_font(data->font_num_medium);
+	al_destroy_font(data->font_num_big);
 	DestroyShader(game, data->combine_shader);
 	DestroyShader(game, data->desaturate_shader);
 	TM_Destroy(data->timeline);
@@ -662,6 +681,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 		Gravity(game, data);
 	}
 	StopAnimations(game, data);
+
+	data->level = 1;
+	data->moves = 0;
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
