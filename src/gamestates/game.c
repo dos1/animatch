@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 69; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 73; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -325,10 +325,10 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	DrawUIElement(game, data->ui, UI_ELEMENT_SCORE);
 	al_hold_bitmap_drawing(false);
 
-	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 51, ALLEGRO_ALIGN_CENTER, "MOVES");
-	al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 620, 78, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
+	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 53, ALLEGRO_ALIGN_CENTER, "MOVES");
+	al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 620, 82, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
-	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 195, ALLEGRO_ALIGN_CENTER, "%d", data->level);
+	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level);
 
 	SetCharacterPosition(game, data->snail, 0, 0, 0);
 	DrawCharacter(game, data->snail);
@@ -593,9 +593,13 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	progress(game);
 
 	data->font = al_load_font(GetDataFilePath(game, "fonts/Caroni.ttf"), 35, 0);
+	progress(game);
 	data->font_num_small = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 42, 0);
+	progress(game);
 	data->font_num_medium = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 55, 0);
-	data->font_num_big = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 96, 0);
+	progress(game);
+	data->font_num_big = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 88, 0);
+	progress(game);
 
 	data->timeline = TM_Init(game, data, "timeline");
 
