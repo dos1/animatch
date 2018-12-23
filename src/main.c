@@ -24,14 +24,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-static _Noreturn void derp(int sig) {
-	ssize_t __attribute__((unused)) n = write(STDERR_FILENO, "Segmentation fault\nI just don't know what went wrong!\n", 54);
-	abort();
-}
-
 int main(int argc, char** argv) {
-	signal(SIGSEGV, derp);
-
 	srand(time(NULL));
 
 	al_set_org_name("Holy Pangolin");
