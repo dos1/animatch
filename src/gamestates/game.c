@@ -592,7 +592,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->desaturate_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/desaturate.glsl"));
 	progress(game);
 
-	data->font = al_load_font(GetDataFilePath(game, "fonts/Caroni.otf"), 35, 0);
+	data->font = al_load_font(GetDataFilePath(game, "fonts/Caroni.ttf"), 35, 0);
 	data->font_num_small = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 42, 0);
 	data->font_num_medium = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 55, 0);
 	data->font_num_big = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 96, 0);
