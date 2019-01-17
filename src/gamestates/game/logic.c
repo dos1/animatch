@@ -1,4 +1,4 @@
-/*! \file board.c
+/*! \file logic.c
  *  \brief Empty gamestate.
  */
 /*

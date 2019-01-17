@@ -15,6 +15,10 @@ build:win64:
   image: dosowisko/libsuperderpy-win64
   stage: build
   retry: 1
+  cache:
+    key: win64-assetcache
+    paths:
+      - .assetcache/
   artifacts: *artifacts
   script:
     - cd utils
@@ -24,15 +28,49 @@ build:win32:
   image: dosowisko/libsuperderpy-win32
   stage: build
   retry: 1
+  cache:
+    key: win32-assetcache
+    paths:
+      - .assetcache/
   artifacts: *artifacts
   script:
     - cd utils
     - ./package_win32.sh
 
+build:html5:
+  image: dosowisko/libsuperderpy-emscripten
+  stage: build
+  retry: 1
+  cache:
+    key: html5-assetcache
+    paths:
+      - .assetcache/
+  artifacts: *artifacts
+  script:
+    - cd utils
+    - ./package_html5.sh
+
+build:wasm:
+  image: dosowisko/libsuperderpy-emscripten
+  stage: build
+  retry: 1
+  cache:
+    key: wasm-assetcache
+    paths:
+      - .assetcache/
+  artifacts: *artifacts
+  script:
+    - cd utils
+    - ./package_wasm.sh
+
 build:linux-steamrt-amd64:
   image: dosowisko/libsuperderpy-linux-amd64
   stage: build
   retry: 1
+  cache:
+    key: linux-steamrt-amd64-assetcache
+    paths:
+      - .assetcache/
   artifacts: *artifacts
   script:
     - cd utils
@@ -42,6 +80,10 @@ build:linux-steamrt-i686:
   image: dosowisko/libsuperderpy-linux-i686
   stage: build
   retry: 1
+  cache:
+    key: linux-steamrt-i686-assetcache
+    paths:
+      - .assetcache/
   artifacts: *artifacts
   script:
     - cd utils
@@ -51,11 +93,12 @@ build:linux-flatpak-amd64:
   image: dosowisko/libsuperderpy-flatpak-amd64
   stage: build
   retry: 1
-  artifacts: *artifacts
   cache:
     key: linux-flatpak-amd64
     paths:
+      - .assetcache/
       - .flatpak-builder/
+  artifacts: *artifacts
   script:
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=x86_64 --repo=build-flatpak-repo
     - mkdir -p utils/output
@@ -65,11 +108,12 @@ build:linux-flatpak-arm64:
   image: dosowisko/libsuperderpy-flatpak-arm64
   stage: build
   retry: 1
-  artifacts: *artifacts
   cache:
     key: linux-flatpak-arm64
     paths:
+      - .assetcache/
       - .flatpak-builder/
+  artifacts: *artifacts
   script:
     - update-binfmts --enable qemu-aarch64
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=aarch64 --repo=build-flatpak-repo
@@ -80,11 +124,12 @@ build:linux-flatpak-armv7:
   image: dosowisko/libsuperderpy-flatpak-armv7
   stage: build
   retry: 1
-  artifacts: *artifacts
   cache:
     key: linux-flatpak-armv7
     paths:
+      - .assetcache/
       - .flatpak-builder/
+  artifacts: *artifacts
   script:
     - update-binfmts --enable qemu-arm
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=arm --repo=build-flatpak-repo
@@ -95,11 +140,12 @@ build:linux-flatpak-i686:
   image: dosowisko/libsuperderpy-flatpak-i686
   stage: build
   retry: 1
-  artifacts: *artifacts
   cache:
     key: linux-flatpak-i686
     paths:
+      - .assetcache/
       - .flatpak-builder/
+  artifacts: *artifacts
   script:
     - flatpak-builder build-flatpak flatpak/$BUNDLE_ID.json --arch=i386 --repo=build-flatpak-repo
     - mkdir -p utils/output
@@ -109,6 +155,10 @@ build:macos:
   image: dosowisko/libsuperderpy-macos
   stage: build
   retry: 1
+  cache:
+    key: macos-assetcache
+    paths:
+      - .assetcache/
   artifacts: *artifacts
   script:
     - cd utils
@@ -118,6 +168,10 @@ build:maemo5:
   image: docker:dind
   stage: build
   retry: 1
+  cache:
+    key: maemo5-assetcache
+    paths:
+      - .assetcache/
   artifacts: *artifacts
   script:
     - dockerd &
@@ -244,6 +298,36 @@ deploy:win64:
     - build:win64
   script:
     - butler push utils/output/$PROJECT_NAME-win64.zip $BUTLER_TARGET:ci-win64 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
+deploy:html5:
+  image: dosowisko/butler
+  stage: deploy
+  when: on_success
+  retry: 2
+  environment:
+    name: itch-html5
+    url: $ITCH_URL
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build:html5
+  script:
+    - butler push utils/output/$PROJECT_NAME-html5.zip $BUTLER_TARGET:ci-html5 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
+deploy:wasm:
+  image: dosowisko/butler
+  stage: deploy
+  when: on_success
+  retry: 2
+  environment:
+    name: itch-wasm
+    url: $ITCH_URL
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build:wasm
+  script:
+    - butler push utils/output/$PROJECT_NAME-wasm.zip $BUTLER_TARGET:ci-wasm --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:macos:
   image: dosowisko/butler

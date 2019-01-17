@@ -1,4 +1,4 @@
-/*! \file board.c
+/*! \file fields.c
  *  \brief Empty gamestate.
  */
 /*
@@ -19,6 +19,10 @@
  */
 
 #include "game.h"
+
+// TODO: there's a lot of struct allocation for passing and returning values
+// which makes everything slow in debug builds. It might be a good idea to refactor
+// this and use pointers as much as possible.
 
 bool IsSameID(struct FieldID one, struct FieldID two) {
 	return one.i == two.i && one.j == two.j;

@@ -263,4 +263,6 @@ TM_ACTION(DoSpawnParticles);
 TM_ACTION(AnimateSpecial);
 void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field);
 
+void DrawDebugInterface(struct Game* game, struct GamestateResources* data);
+
 #endif

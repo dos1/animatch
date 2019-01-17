@@ -63,7 +63,9 @@ void PostLogic(struct Game* game, double delta) {
 }
 
 void DrawBuildInfo(struct Game* game) {
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	if (game->config.debug.enabled || game->_priv.showconsole) {
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 		int x, y, w, h;
 		al_get_clipping_rectangle(&x, &y, &w, &h);
 		al_hold_bitmap_drawing(true);
