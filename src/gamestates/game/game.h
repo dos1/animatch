@@ -19,18 +19,6 @@
 #define COLS 8
 #define ROWS 8
 
-#define STRINGIFY(a) #a
-#if defined(__clang__) || defined(__codemodel__)
-#define SUPPRESS_WARNING(x) _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Wpragmas\"") _Pragma(STRINGIFY(clang diagnostic ignored x))
-#define SUPPRESS_END _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__) && !defined(MAEMO5)
-#define SUPPRESS_WARNING(x) _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wpragmas\"") _Pragma(STRINGIFY(GCC diagnostic ignored x))
-#define SUPPRESS_END _Pragma("GCC diagnostic pop")
-#else
-#define SUPPRESS_WARNING(x)
-#define SUPPRESS_END
-#endif
-
 #define FOREACH_ANIMAL(ANIMAL) \
 	ANIMAL(BEE)                  \
 	ANIMAL(BIRD)                 \
@@ -225,35 +213,18 @@ struct Field* GetField(struct Game* game, struct GamestateResources* data, struc
 
 bool IsSleeping(struct Field* field);
 bool IsDrawable(enum FIELD_TYPE type);
-int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id);
 int MarkMatching(struct Game* game, struct GamestateResources* data);
-//bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func);
-//int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id);
-int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id);
-int Collect(struct Game* game, struct GamestateResources* data);
-bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id);
-bool IsValidMove(struct FieldID one, struct FieldID two);
-bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field);
-void CreateNewField(struct Game* game, struct GamestateResources* data, struct Field* field);
 void Gravity(struct Game* game, struct GamestateResources* data);
-void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct FieldID id);
-bool AnimateSpecials(struct Game* game, struct GamestateResources* data);
 void ProcessFields(struct Game* game, struct GamestateResources* data);
-bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);
 bool ShowHint(struct Game* game, struct GamestateResources* data);
 int CountMoves(struct Game* game, struct GamestateResources* data);
 bool AutoMove(struct Game* game, struct GamestateResources* data);
 void Turn(struct Game* game, struct GamestateResources* data);
 
-void UpdateOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id);
 void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
-void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num);
-void AnimateMatching(struct Game* game, struct GamestateResources* data);
-
-void AnimateRemoval(struct Game* game, struct GamestateResources* data);
 void DoRemoval(struct Game* game, struct GamestateResources* data);
 void StopAnimations(struct Game* game, struct GamestateResources* data);
 void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);

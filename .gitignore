@@ -21,3 +21,4 @@ Thumbs.db
 cmake-build-*
 .flatpak-builder
 imgui.ini
+.assetcache

@@ -66,7 +66,7 @@ inline bool IsDrawable(enum FIELD_TYPE type) {
 	return (type == FIELD_TYPE_ANIMAL) || (type == FIELD_TYPE_FREEFALL) || (type == FIELD_TYPE_COLLECTIBLE);
 }
 
-int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	int lchain = 0, tchain = 0;
 	if (!IsValidID(id)) {
 		return 0;
@@ -131,7 +131,7 @@ int MarkMatching(struct Game* game, struct GamestateResources* data) {
 }
 
 /*
-bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
+static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
 	for (int i = 0; i < 3; i++) {
 		id = func(id);
 		if (!IsValidID(id) || !GetField(game, data, id)->matched) {
@@ -141,12 +141,12 @@ bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, str
 	return true;
 }
 
-int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	return AreAdjacentMatching(game, data, id, ToTop) || AreAdjacentMatching(game, data, id, ToBottom) || AreAdjacentMatching(game, data, id, ToLeft) || AreAdjacentMatching(game, data, id, ToRight);
 }
 */
 
-int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	if (GetField(game, data, id)->handled) {
 		PrintConsole(game, "Not collecting already handled field %d, %d", id.i, id.j);
 		return false;
@@ -154,7 +154,7 @@ int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct
 	return IsMatching(game, data, ToTop(id)) || IsMatching(game, data, ToBottom(id)) || IsMatching(game, data, ToLeft(id)) || IsMatching(game, data, ToRight(id));
 }
 
-int Collect(struct Game* game, struct GamestateResources* data) {
+static int Collect(struct Game* game, struct GamestateResources* data) {
 	int collected = 0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -199,7 +199,7 @@ int Collect(struct Game* game, struct GamestateResources* data) {
 	return collected;
 }
 
-bool IsValidMove(struct FieldID one, struct FieldID two) {
+static bool IsValidMove(struct FieldID one, struct FieldID two) {
 	if (one.i == two.i && abs(one.j - two.j) == 1) {
 		return true;
 	}
@@ -209,7 +209,7 @@ bool IsValidMove(struct FieldID one, struct FieldID two) {
 	return false;
 }
 
-bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	if (!IsValidID(id)) {
 		return false;
 	}
@@ -220,7 +220,7 @@ bool IsSwappable(struct Game* game, struct GamestateResources* data, struct Fiel
 	return false;
 }
 
-bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+static bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
 	return IsSwappable(game, data, one) && IsSwappable(game, data, two);
 }
 
@@ -244,7 +244,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 	UpdateDrawable(game, data, field->id);
 }
 
-void CreateNewField(struct Game* game, struct GamestateResources* data, struct Field* field) {
+static void CreateNewField(struct Game* game, struct GamestateResources* data, struct Field* field) {
 	GenerateField(game, data, field);
 	field->animation.fall_levels++;
 	field->animation.falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->animation.level_no * 0.025));
@@ -287,7 +287,7 @@ void Gravity(struct Game* game, struct GamestateResources* data) {
 	data->locked = false;
 }
 
-void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	TM_AddAction(data->timeline, AnimateSpecial, TM_Args(GetField(game, data, id)));
 
 	struct FieldID left = ToLeft(id), right = ToRight(id), top = ToTop(id), bottom = ToBottom(id);
@@ -317,7 +317,7 @@ void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct Fi
 	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(GetField(game, data, id), count));
 }
 
-bool AnimateSpecials(struct Game* game, struct GamestateResources* data) {
+static bool AnimateSpecials(struct Game* game, struct GamestateResources* data) {
 	bool found = false;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -345,7 +345,7 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 	PrintConsole(game, "possible moves: %d", CountMoves(game, data));
 }
 
-bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+static bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
 	if (!AreSwappable(game, data, one, two)) {
 		return false;
 	}
@@ -445,7 +445,7 @@ void Turn(struct Game* game, struct GamestateResources* data) {
 	Swap(game, data, data->current, data->hovered);
 }
 
-void UpdateOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+static void UpdateOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	struct Field* field = GetField(game, data, id);
 	if (!IsDrawable(field->type)) {
 		return;
@@ -526,7 +526,7 @@ void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct F
 	UpdateOverlay(game, data, id);
 }
 
-void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num) {
+static void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num) {
 	struct Field* field = GetField(game, data, id);
 	ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
 	if (field->type == FIELD_TYPE_ANIMAL) {
@@ -542,7 +542,7 @@ void SpawnParticles(struct Game* game, struct GamestateResources* data, struct F
 	}
 }
 
-void AnimateMatching(struct Game* game, struct GamestateResources* data) {
+static void PerformActions(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].matched) {
@@ -565,7 +565,7 @@ void AnimateMatching(struct Game* game, struct GamestateResources* data) {
 	}
 }
 
-void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
+static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].to_remove) {
@@ -666,7 +666,7 @@ static TM_ACTION(AfterMatching) {
 
 TM_ACTION(DispatchAnimations) {
 	TM_RunningOnly;
-	AnimateMatching(game, data);
+	PerformActions(game, data);
 	AnimateRemoval(game, data);
 	TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
 	TM_AddAction(data->timeline, AfterMatching, NULL);
