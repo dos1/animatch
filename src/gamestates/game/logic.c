@@ -95,6 +95,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 			if (IsSleeping(field)) {
 				break;
 			}
+			field->match_mark = id.j * COLS + id.i;
 			(*accumulators[i])++;
 			pos = (callbacks[i])(pos);
 		}
@@ -109,6 +110,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	}
 	if (chain) {
 		chain++;
+		orig->match_mark = id.j * COLS + id.i;
 	}
 	//PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
 	return chain;
@@ -542,29 +544,6 @@ static void SpawnParticles(struct Game* game, struct GamestateResources* data, s
 	}
 }
 
-static void PerformActions(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			if (data->fields[i][j].matched) {
-				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-					SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].type].actions]);
-
-					if (data->fields[i][j].matched >= 4 && ((IsSameID(data->swap1, data->fields[i][j].id)) || (IsSameID(data->swap2, data->fields[i][j].id)))) {
-						data->fields[i][j].data.animal.super = true;
-						data->fields[i][j].to_remove = false;
-						UpdateDrawable(game, data, data->fields[i][j].id);
-						SpawnParticles(game, data, data->fields[i][j].id, 64);
-						continue;
-					}
-				}
-				data->locked = true;
-
-				SpawnParticles(game, data, data->fields[i][j].id, 16);
-			}
-		}
-	}
-}
-
 static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -576,13 +555,75 @@ static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
 	}
 }
 
+static void TurnFieldToSuper(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct Field* field = GetField(game, data, id);
+	field->data.animal.super = true;
+	field->to_remove = false;
+	UpdateDrawable(game, data, id);
+	SpawnParticles(game, data, id, 64);
+}
+
+static void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark) {
+	struct Field *field1 = GetField(game, data, data->swap1), *field2 = GetField(game, data, data->swap2);
+	if (field1->matched && field1->match_mark == mark) {
+		TurnFieldToSuper(game, data, field1->id);
+	} else if (field2->matched && field2->match_mark == mark) {
+		TurnFieldToSuper(game, data, field2->id);
+	} else {
+		int nr = rand() % matched;
+		for (int i = 0; i < COLS; i++) {
+			for (int j = 0; j < ROWS; j++) {
+				if (data->fields[i][j].matched && data->fields[i][j].match_mark == mark) {
+					nr--;
+					if (nr < 0) {
+						TurnFieldToSuper(game, data, data->fields[i][j].id);
+						break;
+					}
+				}
+			}
+		}
+		if (nr >= 0) {
+			PrintConsole(game, "TurnMatchToSuper failed to select a field!");
+		}
+	}
+
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->fields[i][j].match_mark == mark) {
+				data->fields[i][j].match_mark = 0;
+			}
+		}
+	}
+}
+
+static void PerformActions(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->fields[i][j].matched) {
+				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+					SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].type].actions]);
+
+					if (data->fields[i][j].matched >= 4 && data->fields[i][j].match_mark) {
+						TurnMatchToSuper(game, data, data->fields[i][j].matched, data->fields[i][j].match_mark);
+					}
+				}
+				data->locked = true;
+
+				SpawnParticles(game, data, data->fields[i][j].id, 16);
+			}
+		}
+	}
+	AnimateRemoval(game, data);
+}
+
 void DoRemoval(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animation.fall_levels = 0;
 			data->fields[i][j].animation.level_no = 0;
 			data->fields[i][j].handled = false;
-			data->fields[i][j].matched = false;
+			data->fields[i][j].matched = 0;
+			data->fields[i][j].match_mark = 0;
 			data->fields[i][j].to_highlight = false;
 			if (data->fields[i][j].to_remove) {
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
@@ -667,7 +708,6 @@ static TM_ACTION(AfterMatching) {
 TM_ACTION(DispatchAnimations) {
 	TM_RunningOnly;
 	PerformActions(game, data);
-	AnimateRemoval(game, data);
 	TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
 	TM_AddAction(data->timeline, AfterMatching, NULL);
 	return true;

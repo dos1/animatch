@@ -144,6 +144,7 @@ struct Field {
 		} freefall;
 	} data;
 	int matched;
+	int match_mark;
 	bool to_remove;
 	bool handled;
 	bool to_highlight;
