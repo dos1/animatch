@@ -1,5 +1,5 @@
 /*! \file debug.c
- *  \brief Empty gamestate.
+ *  \brief Debug interface.
  */
 /*
  * Copyright (c) Sebastian Krzyszkowiak <dos@dosowisko.net>

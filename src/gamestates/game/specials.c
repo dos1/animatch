@@ -1,5 +1,5 @@
-/*! \file super.c
- *  \brief Empty gamestate.
+/*! \file specials.c
+ *  \brief Handling of special fields that launch special actions
  */
 /*
  * Copyright (c) Sebastian Krzyszkowiak <dos@dosowisko.net>
@@ -22,7 +22,7 @@
 
 static void TurnFieldToSuper(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	struct Field* field = GetField(game, data, id);
-	if (field->locked) {
+	if (field->locked || !field->match_mark) {
 		return;
 	}
 	field->data.animal.super = true;

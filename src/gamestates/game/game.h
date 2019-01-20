@@ -202,6 +202,10 @@ struct GamestateResources {
 	bool debug;
 };
 
+// actions
+void Turn(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+bool ShowHint(struct Game* game, struct GamestateResources* data);
+
 // fields
 bool IsSameID(struct FieldID one, struct FieldID two);
 bool IsValidID(struct FieldID id);
@@ -210,23 +214,21 @@ struct FieldID ToRight(struct FieldID id);
 struct FieldID ToTop(struct FieldID id);
 struct FieldID ToBottom(struct FieldID id);
 struct Field* GetField(struct Game* game, struct GamestateResources* data, struct FieldID id);
-
-// logic
-
+int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id);
 bool IsSleeping(struct Field* field);
 bool IsDrawable(enum FIELD_TYPE type);
+int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id);
+int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id);
+bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+
+// logic
 int MarkMatching(struct Game* game, struct GamestateResources* data);
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field);
 void Gravity(struct Game* game, struct GamestateResources* data);
 void ProcessFields(struct Game* game, struct GamestateResources* data);
 bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);
-bool ShowHint(struct Game* game, struct GamestateResources* data);
 int CountMoves(struct Game* game, struct GamestateResources* data);
 bool AutoMove(struct Game* game, struct GamestateResources* data);
-void Turn(struct Game* game, struct GamestateResources* data);
-
-void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
-
 void DoRemoval(struct Game* game, struct GamestateResources* data);
 void StopAnimations(struct Game* game, struct GamestateResources* data);
 void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
@@ -240,6 +242,19 @@ bool AnimateSpecials(struct Game* game, struct GamestateResources* data);
 void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark);
 void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field);
 TM_ACTION(AnimateSpecial);
+
+// view
+struct DandelionParticleData* DandelionParticleData(ALLEGRO_COLOR color);
+bool DandelionParticle(struct Game* game, struct ParticleState* particle, double delta, void* d);
+bool IsValidMove(struct FieldID one, struct FieldID two);
+bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id);
+bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
+
+// scene
+void DrawScene(struct Game* game, struct GamestateResources* data);
+void UpdateBlur(struct Game* game, struct GamestateResources* data);
+void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element);
 
 // debug
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data);

@@ -1,5 +1,5 @@
 /*! \file fields.c
- *  \brief Empty gamestate.
+ *  \brief Routines for handling the fields.
  */
 /*
  * Copyright (c) Sebastian Krzyszkowiak <dos@dosowisko.net>
@@ -69,4 +69,143 @@ struct Field* GetField(struct Game* game, struct GamestateResources* data, struc
 		return NULL;
 	}
 	return &data->fields[id.i][id.j];
+}
+
+bool IsSleeping(struct Field* field) {
+	return (field->type == FIELD_TYPE_ANIMAL && field->data.animal.sleeping);
+}
+
+inline bool IsDrawable(enum FIELD_TYPE type) {
+	return (type == FIELD_TYPE_ANIMAL) || (type == FIELD_TYPE_FREEFALL) || (type == FIELD_TYPE_COLLECTIBLE);
+}
+
+int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	int lchain = 0, tchain = 0;
+	if (!IsValidID(id)) {
+		return 0;
+	}
+	struct Field* orig = GetField(game, data, id);
+	if (orig->type != FIELD_TYPE_ANIMAL) {
+		return 0;
+	}
+	if (IsSleeping(orig)) {
+		return 0;
+	}
+
+	struct Field *lfields[COLS] = {}, *tfields[ROWS] = {};
+	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+	int* accumulators[] = {&lchain, &lchain, &tchain, &tchain};
+	struct Field** lists[] = {lfields, lfields, tfields, tfields};
+
+	for (int i = 0; i < 4; i++) {
+		struct FieldID pos = (callbacks[i])(id);
+		while (IsValidID(pos)) {
+			struct Field* field = GetField(game, data, pos);
+			if (field->type != FIELD_TYPE_ANIMAL) {
+				break;
+			}
+			if (field->data.animal.type != orig->data.animal.type) {
+				break;
+			}
+			if (IsSleeping(field)) {
+				break;
+			}
+			lists[i][*accumulators[i]] = field;
+			(*accumulators[i])++;
+			pos = (callbacks[i])(pos);
+		}
+	}
+
+	int chain = 0;
+	if (lchain >= 2) {
+		chain += lchain;
+		for (int i = 0; i < lchain; i++) {
+			lfields[i]->match_mark = id.j * COLS + id.i;
+		}
+	}
+	if (tchain >= 2) {
+		chain += tchain;
+		for (int i = 0; i < tchain; i++) {
+			tfields[i]->match_mark = id.j * COLS + id.i;
+		}
+	}
+	if (chain) {
+		chain++;
+		orig->match_mark = id.j * COLS + id.i;
+	}
+	//PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
+	return chain;
+}
+
+static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
+	for (int i = 0; i < 3; i++) {
+		id = func(id);
+		if (!IsValidID(id) || !GetField(game, data, id)->matched) {
+			return false;
+		}
+	}
+	return true;
+}
+
+int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	return AreAdjacentMatching(game, data, id, ToTop) || AreAdjacentMatching(game, data, id, ToBottom) || AreAdjacentMatching(game, data, id, ToLeft) || AreAdjacentMatching(game, data, id, ToRight);
+}
+
+int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	if (GetField(game, data, id)->handled) {
+		PrintConsole(game, "Not collecting already handled field %d, %d", id.i, id.j);
+		return false;
+	}
+	return IsMatching(game, data, ToTop(id)) || IsMatching(game, data, ToBottom(id)) || IsMatching(game, data, ToLeft(id)) || IsMatching(game, data, ToRight(id));
+}
+
+bool IsValidMove(struct FieldID one, struct FieldID two) {
+	if (one.i == two.i && abs(one.j - two.j) == 1) {
+		return true;
+	}
+	if (one.j == two.j && abs(one.i - two.i) == 1) {
+		return true;
+	}
+	return false;
+}
+
+bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	if (!IsValidID(id)) {
+		return false;
+	}
+	struct Field* field = GetField(game, data, id);
+	if (((field->type == FIELD_TYPE_ANIMAL) && (!IsSleeping(field))) || (field->type == FIELD_TYPE_COLLECTIBLE)) {
+		return true;
+	}
+	return false;
+}
+
+bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	return IsSwappable(game, data, one) && IsSwappable(game, data, two);
+}
+
+bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	if (!AreSwappable(game, data, one, two)) {
+		return false;
+	}
+	bool res = false;
+	Swap(game, data, one, two);
+	if (IsMatching(game, data, two)) {
+		res = true;
+	}
+	Swap(game, data, one, two);
+	return res;
+}
+
+bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+
+	for (int q = 0; q < 4; q++) {
+		if (IsValidMove(id, callbacks[q](id))) {
+			if (WillMatch(game, data, id, callbacks[q](id))) {
+				return true;
+			}
+		}
+	}
+	return false;
 }

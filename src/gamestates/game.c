@@ -106,62 +106,6 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	DrawDebugInterface(game, data);
 }
 
-static void DrawScene(struct Game* game, struct GamestateResources* data) {
-	al_hold_bitmap_drawing(true);
-	al_draw_bitmap(data->bg, 0, 0, 0);
-
-	for (int i = 0; i < data->leaves->spritesheet->frame_count; i++) {
-		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((game->time * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((game->time * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
-		data->leaves->pos = i;
-		data->leaves->frame = &data->leaves->spritesheet->frames[i];
-		DrawCharacter(game, data->leaves);
-	}
-
-	SetCharacterPosition(game, data->acorn_top.character, 209 + 102 / 2.0, 240 + 105 / 2.0, GetTweenValue(&data->acorn_top.tween));
-	DrawCharacter(game, data->acorn_top.character);
-
-	SetCharacterPosition(game, data->acorn_bottom.character, 261 + 165 / 2.0, 1094 + 145 / 2.0 - (sin(GetTweenValue(&data->acorn_bottom.tween) * ALLEGRO_PI) * 16), sin(GetTweenPosition(&data->acorn_bottom.tween) * 2 * ALLEGRO_PI) / 12.0);
-	DrawCharacter(game, data->acorn_bottom.character);
-
-	al_hold_bitmap_drawing(false);
-}
-
-static void UpdateBlur(struct Game* game, struct GamestateResources* data) {
-	al_set_target_bitmap(data->scene);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
-	DrawScene(game, data);
-
-	float size[2] = {al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene)};
-
-	al_set_target_bitmap(data->lowres_scene_blur);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
-		0, 0, al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur), 0);
-
-	al_set_target_bitmap(data->lowres_scene);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_use_shader(game->data->kawese_shader);
-	al_clear_to_color(al_map_rgb(0, 0, 0));
-	al_set_shader_float_vector("size", 2, size, 1);
-	al_set_shader_float("kernel", 0);
-	al_draw_bitmap(data->lowres_scene_blur, 0, 0, 0);
-	al_use_shader(NULL);
-
-	al_set_target_bitmap(data->lowres_scene_blur);
-	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_use_shader(game->data->kawese_shader);
-	al_set_shader_float_vector("size", 2, size, 1);
-	al_set_shader_float("kernel", 0);
-	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
-	al_use_shader(NULL);
-}
-
-static void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element) {
-	ui->pos = element;
-	ui->frame = &ui->spritesheet->frames[ui->pos];
-	DrawCharacter(game, ui);
-}
-
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Called as soon as possible, but no sooner than next Gamestate_Logic call.
 	// Draw everything to the screen here.
@@ -320,9 +264,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if (((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE)) && (data->clicked)) {
-		if (IsValidID(data->current) && IsValidID(data->hovered)) {
-			Turn(game, data);
-		}
+		Turn(game, data, data->current, data->hovered);
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
@@ -484,6 +426,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			data->fields[i][j].id.i = i;
 			data->fields[i][j].id.j = j;
 			data->fields[i][j].matched = false;
+			data->fields[i][j].match_mark = 0;
+			data->fields[i][j].locked = true;
 		}
 	}
 	progress(game);
