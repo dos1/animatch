@@ -205,6 +205,7 @@ struct GamestateResources {
 // actions
 void Turn(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 bool ShowHint(struct Game* game, struct GamestateResources* data);
+bool AutoMove(struct Game* game, struct GamestateResources* data);
 
 // fields
 bool IsSameID(struct FieldID one, struct FieldID two);
@@ -228,7 +229,6 @@ void Gravity(struct Game* game, struct GamestateResources* data);
 void ProcessFields(struct Game* game, struct GamestateResources* data);
 bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);
 int CountMoves(struct Game* game, struct GamestateResources* data);
-bool AutoMove(struct Game* game, struct GamestateResources* data);
 void DoRemoval(struct Game* game, struct GamestateResources* data);
 void StopAnimations(struct Game* game, struct GamestateResources* data);
 void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);

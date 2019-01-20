@@ -61,3 +61,22 @@ bool ShowHint(struct Game* game, struct GamestateResources* data) {
 	}
 	return false;
 }
+
+bool AutoMove(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			struct FieldID id = {.i = i, .j = j};
+			struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
+
+			for (int q = 0; q < 4; q++) {
+				if (IsValidMove(id, callbacks[q](id))) {
+					if (WillMatch(game, data, id, callbacks[q](id))) {
+						AnimateSwapping(game, data, id, callbacks[q](id));
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}

@@ -20,6 +20,31 @@
 
 #include "game.h"
 
+/*
+ * What consists of a typical turn:
+ *  - AnimateSwapping gets called, putting StartSwapping and AfterSwapping to the timeline queue
+ *
+ *  - AfterSwapping does the actual swap in the memory and calls ProcessFields
+ *  - ProcessFields is where the actual magic happens:
+ *    - If there's nothing to do, it does nothing and stops there. Otherwise...
+ *    - MarkMatching finds matches and sets proper field attributes
+ *    - Collect gets called, dealing with collectibles
+ *    - AnimateSpecials triggers and queues animation for the special fields
+ *    - if necessary, Collect and AnimateSpecials are repeated as long as there's something to do for them
+ *    - DispatchAnimations is queued after any previously queued animation
+ *
+ *  - DispatchAnimations does two things:
+ *    - call PerformActions, which triggers animations and turns fields into specials
+ *    - queries AfterMatching
+ *
+ *  - AfterMatching then calls:
+ *    - DoRemoval, which actually removes the fields that we've just animated away
+ *    - Gravity moves the fields to fill up the free space, generating new ones if there's such need
+ *    - and goes back to ProcessFields, which may handle combos now, or may just stop if there are none.
+ *
+ *  (routine naming is hard...)
+ */
+
 int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	int matching = 0;
 	for (int i = 0; i < COLS; i++) {
@@ -178,25 +203,6 @@ int CountMoves(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	return moves;
-}
-
-bool AutoMove(struct Game* game, struct GamestateResources* data) {
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			struct FieldID id = {.i = i, .j = j};
-			struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
-
-			for (int q = 0; q < 4; q++) {
-				if (IsValidMove(id, callbacks[q](id))) {
-					if (WillMatch(game, data, id, callbacks[q](id))) {
-						AnimateSwapping(game, data, id, callbacks[q](id));
-						return true;
-					}
-				}
-			}
-		}
-	}
-	return false;
 }
 
 static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
