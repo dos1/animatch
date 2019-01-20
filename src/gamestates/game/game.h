@@ -231,11 +231,17 @@ void DoRemoval(struct Game* game, struct GamestateResources* data);
 void StopAnimations(struct Game* game, struct GamestateResources* data);
 void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num);
 TM_ACTION(DispatchAnimations);
 TM_ACTION(DoSpawnParticles);
-TM_ACTION(AnimateSpecial);
-void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field);
 
+// specials
+bool AnimateSpecials(struct Game* game, struct GamestateResources* data);
+void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark);
+void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field);
+TM_ACTION(AnimateSpecial);
+
+// debug
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data);
 
 #endif
