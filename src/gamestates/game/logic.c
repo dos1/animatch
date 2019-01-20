@@ -79,8 +79,10 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 		return 0;
 	}
 
+	struct Field *lfields[COLS] = {}, *tfields[ROWS] = {};
 	struct FieldID (*callbacks[])(struct FieldID) = {ToLeft, ToRight, ToTop, ToBottom};
 	int* accumulators[] = {&lchain, &lchain, &tchain, &tchain};
+	struct Field** lists[] = {lfields, lfields, tfields, tfields};
 
 	for (int i = 0; i < 4; i++) {
 		struct FieldID pos = (callbacks[i])(id);
@@ -95,7 +97,7 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 			if (IsSleeping(field)) {
 				break;
 			}
-			field->match_mark = id.j * COLS + id.i;
+			lists[i][*accumulators[i]] = field;
 			(*accumulators[i])++;
 			pos = (callbacks[i])(pos);
 		}
@@ -104,9 +106,15 @@ static int IsMatching(struct Game* game, struct GamestateResources* data, struct
 	int chain = 0;
 	if (lchain >= 2) {
 		chain += lchain;
+		for (int i = 0; i < lchain; i++) {
+			lfields[i]->match_mark = id.j * COLS + id.i;
+		}
 	}
 	if (tchain >= 2) {
 		chain += tchain;
+		for (int i = 0; i < tchain; i++) {
+			tfields[i]->match_mark = id.j * COLS + id.i;
+		}
 	}
 	if (chain) {
 		chain++;
@@ -243,6 +251,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 		field->data.animal.super = false;
 	}
 	field->overlay_visible = false;
+	field->locked = true;
 	UpdateDrawable(game, data, field->id);
 }
 
@@ -285,6 +294,12 @@ void Gravity(struct Game* game, struct GamestateResources* data) {
 			}
 		}
 	} while (repeat);
+
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->fields[i][j].locked = false;
+		}
+	}
 
 	data->locked = false;
 }
@@ -557,10 +572,22 @@ static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
 
 static void TurnFieldToSuper(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	struct Field* field = GetField(game, data, id);
+	if (field->locked) {
+		return;
+	}
 	field->data.animal.super = true;
 	field->to_remove = false;
 	UpdateDrawable(game, data, id);
 	SpawnParticles(game, data, id, 64);
+
+	int mark = field->match_mark;
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->fields[i][j].match_mark == mark) {
+				data->fields[i][j].match_mark = 0;
+			}
+		}
+	}
 }
 
 static void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark) {

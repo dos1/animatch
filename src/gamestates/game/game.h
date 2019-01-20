@@ -148,6 +148,7 @@ struct Field {
 	bool to_remove;
 	bool handled;
 	bool to_highlight;
+	bool locked;
 
 	struct Character *drawable, *overlay;
 	bool overlay_visible;
