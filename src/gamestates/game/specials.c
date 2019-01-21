@@ -29,23 +29,15 @@ static void TurnFieldToSuper(struct Game* game, struct GamestateResources* data,
 	field->to_remove = false;
 	UpdateDrawable(game, data, id);
 	SpawnParticles(game, data, id, 64);
-
-	int mark = field->match_mark;
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			if (data->fields[i][j].match_mark == mark) {
-				data->fields[i][j].match_mark = 0;
-			}
-		}
-	}
 }
 
 void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark) {
 	struct Field *field1 = GetField(game, data, data->swap1), *field2 = GetField(game, data, data->swap2);
+	struct FieldID super;
 	if (field1->matched && field1->match_mark == mark) {
-		TurnFieldToSuper(game, data, field1->id);
+		super = field1->id;
 	} else if (field2->matched && field2->match_mark == mark) {
-		TurnFieldToSuper(game, data, field2->id);
+		super = field2->id;
 	} else {
 		int nr = rand() % matched;
 		for (int i = 0; i < COLS; i++) {
@@ -53,7 +45,7 @@ void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int ma
 				if (data->fields[i][j].matched && data->fields[i][j].match_mark == mark) {
 					nr--;
 					if (nr < 0) {
-						TurnFieldToSuper(game, data, data->fields[i][j].id);
+						super = data->fields[i][j].id;
 						break;
 					}
 				}
@@ -61,13 +53,17 @@ void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int ma
 		}
 		if (nr >= 0) {
 			PrintConsole(game, "TurnMatchToSuper failed to select a field!");
+			return;
 		}
 	}
+
+	TurnFieldToSuper(game, data, super);
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].match_mark == mark) {
 				data->fields[i][j].match_mark = 0;
+				data->fields[i][j].animation.super = super;
 			}
 		}
 	}

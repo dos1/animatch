@@ -143,15 +143,21 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			float tween = Interpolate(GetTweenPosition(&data->fields[i][j].animation.falling), TWEEN_STYLE_EXPONENTIAL_OUT) * (0.5 - level_no * 0.1) +
 				sqrt(Interpolate(GetTweenPosition(&data->fields[i][j].animation.falling), TWEEN_STYLE_BOUNCE_OUT)) * (0.5 + level_no * 0.1);
 
-			//			tween = Interpolate(GetTweenPosition(&data->fields[i][j].falling), TWEEN_STYLE_ELASTIC_OUT);
 			int levelDiff = (int)(levels * 90 * (1.0 - tween));
 
 			int x = i * 90 + 45, y = j * 90 + 45 + offsetY - levelDiff;
-			int swapeeX = data->fields[i][j].animation.swapee.i * 90 + 45, swapeeY = data->fields[i][j].animation.swapee.j * 90 + 45 + offsetY;
-
 			y -= (int)(sin(GetTweenValue(&data->fields[i][j].animation.collecting) * ALLEGRO_PI) * 10);
+			if (IsValidID(data->fields[i][j].animation.super)) {
+				int superX = data->fields[i][j].animation.super.i * 90 + 45, superY = data->fields[i][j].animation.super.j * 90 + 45 + offsetY;
 
-			SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].animation.swapping)), 0);
+				double val = Interpolate(Clamp(0.0, 1.0, GetTweenValue(&data->fields[i][j].animation.hiding) * 1.5 - 0.5), TWEEN_STYLE_QUARTIC_IN);
+
+				SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, superX, val), Lerp(y, superY, val), 0);
+			} else {
+				int swapeeX = data->fields[i][j].animation.swapee.i * 90 + 45, swapeeY = data->fields[i][j].animation.swapee.j * 90 + 45 + offsetY;
+
+				SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].animation.swapping)), 0);
+			}
 
 			if (IsDrawable(data->fields[i][j].type)) {
 				al_set_shader_bool("enabled", IsSleeping(&data->fields[i][j]));
@@ -432,6 +438,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			data->fields[i][j].matched = false;
 			data->fields[i][j].match_mark = 0;
 			data->fields[i][j].locked = true;
+			data->fields[i][j].animation.super = (struct FieldID){-1, -1};
 		}
 	}
 	progress(game);

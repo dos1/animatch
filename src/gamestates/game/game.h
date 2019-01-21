@@ -157,7 +157,7 @@ struct Field {
 
 	struct {
 		struct Tween hiding, falling, swapping, shaking, hinting, launching, collecting;
-		struct FieldID swapee;
+		struct FieldID swapee, super;
 		int fall_levels, level_no;
 		int time_to_action, action_time;
 		int time_to_blink, blink_time;

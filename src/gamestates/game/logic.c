@@ -241,6 +241,7 @@ void DoRemoval(struct Game* game, struct GamestateResources* data) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animation.fall_levels = 0;
 			data->fields[i][j].animation.level_no = 0;
+			data->fields[i][j].animation.super = (struct FieldID){-1, -1};
 			data->fields[i][j].handled = false;
 			data->fields[i][j].matched = 0;
 			data->fields[i][j].match_mark = 0;
@@ -270,6 +271,7 @@ void StopAnimations(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].animation.hinting = StaticTween(game, 0.0);
 			data->fields[i][j].animation.launching = StaticTween(game, 0.0);
 			data->fields[i][j].animation.collecting = StaticTween(game, 0.0);
+			data->fields[i][j].animation.super = (struct FieldID){-1, -1};
 		}
 	}
 }
