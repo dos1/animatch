@@ -199,7 +199,7 @@ struct GamestateResources {
 
 	int moves, level;
 
-	bool debug;
+	bool debug, paused;
 };
 
 // actions

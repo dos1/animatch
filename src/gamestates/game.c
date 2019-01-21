@@ -215,6 +215,10 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	al_use_shader(NULL);
+
+	if (data->paused) {
+		DrawDebugInterface(game, data);
+	}
 }
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
@@ -530,6 +534,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// playing music etc.
 	data->locked = false;
 	data->clicked = false;
+	data->paused = false;
 	data->snail_blink = 0.0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -559,10 +564,12 @@ void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Pause(struct Game* game, struct GamestateResources* data) {
 	// Called when gamestate gets paused (so only Draw is being called, no Logic nor ProcessEvent)
 	// Pause your timers and/or sounds here.
+	data->paused = true;
 }
 
 void Gamestate_Resume(struct Game* game, struct GamestateResources* data) {
 	// Called when gamestate gets resumed. Resume your timers and/or sounds here.
+	data->paused = false;
 }
 
 void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {

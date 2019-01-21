@@ -114,6 +114,15 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 	}
 #endif
 
+	if (game->config.debug.enabled) {
+		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_TAB)) {
+			PauseAllGamestates(game);
+		}
+		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_CAPSLOCK)) {
+			ResumeAllGamestates(game);
+		}
+	}
+
 	return false;
 }
 

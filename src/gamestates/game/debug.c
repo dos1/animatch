@@ -31,6 +31,8 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		ImVec4 pink = {1.0, 0.75, 0.75, 1.0};
 		ImVec4 gray = {0.5, 0.5, 0.5, 1.0};
 		ImVec4 yellow = {1.0, 1.0, 0.0, 1.0};
+		ImVec4 purple = {0.5, 0.0, 0.5, 1.0};
+		ImVec4 violet = {0.5, 0.25, 1.0, 1.0};
 
 		igSetNextWindowSize((ImVec2){1024, 700}, ImGuiCond_FirstUseEver);
 		igBegin("Animatch Debug Toolbox", &data->debug, 0);
@@ -55,7 +57,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 						igTextColored(field->data.animal.super ? pink : white, "ANIMAL %d%s", field->data.animal.type, field->data.animal.super ? "S" : "");
 
 						if (field->data.animal.sleeping) {
-							igTextColored((ImVec4){.x = 0.5, .y = 0.2, .z = 0.9, .w = 1.0}, "SLEEPING");
+							igTextColored(violet, "SLEEPING");
 						} else {
 							igText("");
 						}
@@ -81,7 +83,9 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 						break;
 				}
 
-				if (CanBeMatched(game, data, id)) {
+				if (field->matched) {
+					igTextColored(purple, "MATCHED %d", field->match_mark);
+				} else if (CanBeMatched(game, data, id)) {
 					igTextColored(red, "MATCHABLE");
 				} else {
 					igText("");
