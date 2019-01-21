@@ -119,19 +119,29 @@ int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldI
 	int chain = 0;
 	if (lchain >= 2) {
 		chain += lchain;
-		for (int i = 0; i < lchain; i++) {
-			lfields[i]->match_mark = id.j * COLS + id.i;
-		}
 	}
 	if (tchain >= 2) {
 		chain += tchain;
-		for (int i = 0; i < tchain; i++) {
-			tfields[i]->match_mark = id.j * COLS + id.i;
-		}
 	}
 	if (chain) {
 		chain++;
-		orig->match_mark = id.j * COLS + id.i;
+		if (!orig->match_mark) {
+			orig->match_mark = id.j * COLS + id.i;
+		}
+		if (lchain >= 2) {
+			for (int i = 0; i < lchain; i++) {
+				if (lfields[i]->match_mark < orig->match_mark) {
+					lfields[i]->match_mark = orig->match_mark;
+				}
+			}
+		}
+		if (tchain >= 2) {
+			for (int i = 0; i < tchain; i++) {
+				if (tfields[i]->match_mark < orig->match_mark) {
+					tfields[i]->match_mark = orig->match_mark;
+				}
+			}
+		}
 	}
 	//PrintConsole(game, "field %dx%d %s lchain %d tchain %d chain %d", id.i, id.j, ANIMALS[orig->type], lchain, tchain, chain);
 	return chain;
