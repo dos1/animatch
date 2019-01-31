@@ -384,7 +384,7 @@ deploy:android-armv7:
   dependencies:
     - build:android-armv7
   script:
-    - butler push utils/output/$PROJECT_NAME-android-armv7.apk $BUTLER_TARGET:ci-android-armv7 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+    - butler push utils/output/$PROJECT_NAME-android.apk $BUTLER_TARGET:ci-android-armv7 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:steamlink:
   image: dosowisko/butler

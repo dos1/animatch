@@ -33,7 +33,7 @@ static void TurnFieldToSuper(struct Game* game, struct GamestateResources* data,
 
 void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark) {
 	struct Field *field1 = GetField(game, data, data->swap1), *field2 = GetField(game, data, data->swap2);
-	struct FieldID super;
+	struct FieldID super = {-1, -1};
 	if (field1->matched && field1->match_mark == mark) {
 		super = field1->id;
 	} else if (field2->matched && field2->match_mark == mark) {
