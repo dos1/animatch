@@ -1,6 +1,9 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
+services:
+  - docker:dind
+
 stages:
   - build
   - deploy
@@ -74,7 +77,7 @@ build:linux-steamrt-amd64:
   artifacts: *artifacts
   script:
     - cd utils
-    - NO_STEAM_RUNTIME=1 ./package_linux_amd64.sh
+    - ./package_linux_amd64.sh
 
 build:linux-steamrt-i686:
   image: dosowisko/libsuperderpy-linux-i686
@@ -87,7 +90,7 @@ build:linux-steamrt-i686:
   artifacts: *artifacts
   script:
     - cd utils
-    - NO_STEAM_RUNTIME=1 ./package_linux_i686.sh
+    - ./package_linux_i686.sh
 
 build:linux-flatpak-amd64:
   image: dosowisko/libsuperderpy-flatpak-amd64
@@ -164,8 +167,34 @@ build:macos:
     - cd utils
     - ./package_osx.sh
 
+build:android-armv7:
+  image: dosowisko/libsuperderpy-android-armv7
+  stage: build
+  retry: 1
+  cache:
+    key: android-armv7-assetcache
+    paths:
+      - .assetcache/
+  artifacts: *artifacts
+  script:
+    - cd utils
+    - ./release_android.sh git
+
+build:steamlink:
+  image: dosowisko/libsuperderpy-steamlink
+  stage: build
+  retry: 1
+  cache:
+    key: steamlink-assetcache
+    paths:
+      - .assetcache/
+  artifacts: *artifacts
+  script:
+    - cd utils
+    - ./package_steamlink.sh
+
 build:maemo5:
-  image: docker:dind
+  image: docker
   stage: build
   retry: 1
   cache:
@@ -174,8 +203,6 @@ build:maemo5:
       - .assetcache/
   artifacts: *artifacts
   script:
-    - dockerd &
-    - sleep 5 # give it some time to launch
     - cd utils
     - ./package_maemo5.sh
 
@@ -343,6 +370,36 @@ deploy:macos:
     - build:macos
   script:
     - butler push utils/output/$PROJECT_NAME-osx.zip $BUTLER_TARGET:ci-macos --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
+deploy:android-armv7:
+  image: dosowisko/butler
+  stage: deploy
+  when: on_success
+  retry: 2
+  environment:
+    name: itch-android-armv7
+    url: $ITCH_URL
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build:android-armv7
+  script:
+    - butler push utils/output/$PROJECT_NAME-android-armv7.apk $BUTLER_TARGET:ci-android-armv7 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
+deploy:steamlink:
+  image: dosowisko/butler
+  stage: deploy
+  when: on_success
+  retry: 2
+  environment:
+    name: itch-steamlink
+    url: $ITCH_URL
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build:steamlink
+  script:
+    - butler push utils/output/$PROJECT_NAME-steamlink.zip $BUTLER_TARGET:ci-steamlink --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
 
 deploy:maemo5:
   image: dosowisko/butler
