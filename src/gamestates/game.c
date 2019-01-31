@@ -205,7 +205,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_hold_bitmap_drawing(false);
 
 	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 53, ALLEGRO_ALIGN_CENTER, "MOVES");
-	al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 620, 82, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
+	al_draw_textf(data->moves >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, data->moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
 	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
 
