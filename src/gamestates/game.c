@@ -563,6 +563,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 			data->level.fields[i][j].sleeping = false;
 		}
 	}
+	data->level.sleeping = true;
+	data->level.supers = true;
+	data->level.specials[SPECIAL_TYPE_EGG] = false;
 
 	data->locked = false;
 	data->clicked = false;

@@ -135,7 +135,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 				}
 			}
 			if (rand() / (float)RAND_MAX < 0.005) {
-				field->data.animal.sleeping = true;
+				field->data.animal.sleeping = data->level.sleeping;
 			}
 			field->data.animal.super = false;
 			if (data->level.fields[FIELD_TYPE_ANIMAL]) {
