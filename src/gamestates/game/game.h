@@ -263,6 +263,7 @@ bool IsValidMove(struct FieldID one, struct FieldID two);
 bool IsSwappable(struct Game* game, struct GamestateResources* data, struct FieldID id);
 bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
+void DrawField(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
 // scene
 void DrawScene(struct Game* game, struct GamestateResources* data);

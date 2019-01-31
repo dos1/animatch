@@ -163,3 +163,50 @@ void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct F
 
 	UpdateOverlay(game, data, id);
 }
+
+void DrawField(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct Field* field = GetField(game, data, id);
+
+	int offsetY = (int)((game->viewport.height - (ROWS * 90)) / 2.0);
+
+	float tint = 1.0 - GetTweenValue(&field->animation.hiding);
+	if (IsDrawable(field->type)) {
+		field->drawable->tint = al_map_rgba_f(tint, tint, tint, tint);
+	}
+
+	int levels = field->animation.fall_levels;
+	int level_no = field->animation.level_no;
+	float tween = Interpolate(GetTweenPosition(&field->animation.falling), TWEEN_STYLE_EXPONENTIAL_OUT) * (0.5 - level_no * 0.1) +
+		sqrt(Interpolate(GetTweenPosition(&field->animation.falling), TWEEN_STYLE_BOUNCE_OUT)) * (0.5 + level_no * 0.1);
+
+	int levelDiff = (int)(levels * 90 * (1.0 - tween));
+
+	int x = field->id.i * 90 + 45, y = field->id.j * 90 + 45 + offsetY - levelDiff;
+	y -= (int)(sin(GetTweenValue(&field->animation.collecting) * ALLEGRO_PI) * 10);
+	if (IsValidID(field->animation.super)) {
+		int superX = field->animation.super.i * 90 + 45, superY = field->animation.super.j * 90 + 45 + offsetY;
+
+		double val = Interpolate(Clamp(0.0, 1.0, GetTweenValue(&field->animation.hiding) * 1.5 - 0.5), TWEEN_STYLE_QUARTIC_IN);
+
+		if (IsDrawable(field->type)) {
+			SetCharacterPosition(game, field->drawable, Lerp(x, superX, val), Lerp(y, superY, val), 0);
+		}
+	} else {
+		int swapeeX = field->animation.swapee.i * 90 + 45, swapeeY = field->animation.swapee.j * 90 + 45 + offsetY;
+
+		if (IsDrawable(field->type)) {
+			SetCharacterPosition(game, field->drawable, Lerp(x, swapeeX, GetTweenValue(&field->animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&field->animation.swapping)), 0);
+		}
+	}
+
+	if (IsDrawable(field->type)) {
+		al_set_shader_bool("enabled", IsSleeping(field));
+		field->drawable->angle = sin(GetTweenValue(&field->animation.shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&field->animation.hinting) * 5 * ALLEGRO_PI) / 6.0 + sin(GetTweenPosition(&field->animation.collecting) * 2 * ALLEGRO_PI) / 12.0 + sin(GetTweenValue(&field->animation.launching) * 5 * ALLEGRO_PI) / 6.0;
+		field->drawable->scaleX = 1.0 + sin(GetTweenValue(&field->animation.hinting) * ALLEGRO_PI) / 3.0 + sin(GetTweenValue(&field->animation.launching) * ALLEGRO_PI) / 3.0;
+		field->drawable->scaleY = field->drawable->scaleX;
+		DrawCharacter(game, field->drawable);
+		if (field->overlay_visible) {
+			DrawCharacter(game, field->overlay);
+		}
+	}
+}

@@ -140,46 +140,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_use_shader(data->desaturate_shader);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			float tint = 1.0 - GetTweenValue(&data->fields[i][j].animation.hiding);
-			if (IsDrawable(data->fields[i][j].type)) {
-				data->fields[i][j].drawable->tint = al_map_rgba_f(tint, tint, tint, tint);
-			}
-
-			int levels = data->fields[i][j].animation.fall_levels;
-			int level_no = data->fields[i][j].animation.level_no;
-			float tween = Interpolate(GetTweenPosition(&data->fields[i][j].animation.falling), TWEEN_STYLE_EXPONENTIAL_OUT) * (0.5 - level_no * 0.1) +
-				sqrt(Interpolate(GetTweenPosition(&data->fields[i][j].animation.falling), TWEEN_STYLE_BOUNCE_OUT)) * (0.5 + level_no * 0.1);
-
-			int levelDiff = (int)(levels * 90 * (1.0 - tween));
-
-			int x = i * 90 + 45, y = j * 90 + 45 + offsetY - levelDiff;
-			y -= (int)(sin(GetTweenValue(&data->fields[i][j].animation.collecting) * ALLEGRO_PI) * 10);
-			if (IsValidID(data->fields[i][j].animation.super)) {
-				int superX = data->fields[i][j].animation.super.i * 90 + 45, superY = data->fields[i][j].animation.super.j * 90 + 45 + offsetY;
-
-				double val = Interpolate(Clamp(0.0, 1.0, GetTweenValue(&data->fields[i][j].animation.hiding) * 1.5 - 0.5), TWEEN_STYLE_QUARTIC_IN);
-
-				if (IsDrawable(data->fields[i][j].type)) {
-					SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, superX, val), Lerp(y, superY, val), 0);
-				}
-			} else {
-				int swapeeX = data->fields[i][j].animation.swapee.i * 90 + 45, swapeeY = data->fields[i][j].animation.swapee.j * 90 + 45 + offsetY;
-
-				if (IsDrawable(data->fields[i][j].type)) {
-					SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].animation.swapping)), 0);
-				}
-			}
-
-			if (IsDrawable(data->fields[i][j].type)) {
-				al_set_shader_bool("enabled", IsSleeping(&data->fields[i][j]));
-				data->fields[i][j].drawable->angle = sin(GetTweenValue(&data->fields[i][j].animation.shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * 5 * ALLEGRO_PI) / 6.0 + sin(GetTweenPosition(&data->fields[i][j].animation.collecting) * 2 * ALLEGRO_PI) / 12.0 + sin(GetTweenValue(&data->fields[i][j].animation.launching) * 5 * ALLEGRO_PI) / 6.0;
-				data->fields[i][j].drawable->scaleX = 1.0 + sin(GetTweenValue(&data->fields[i][j].animation.hinting) * ALLEGRO_PI) / 3.0 + sin(GetTweenValue(&data->fields[i][j].animation.launching) * ALLEGRO_PI) / 3.0;
-				data->fields[i][j].drawable->scaleY = data->fields[i][j].drawable->scaleX;
-				DrawCharacter(game, data->fields[i][j].drawable);
-				if (data->fields[i][j].overlay_visible) {
-					DrawCharacter(game, data->fields[i][j].overlay);
-				}
-			}
+			DrawField(game, data, data->fields[i][j].id);
 		}
 	}
 	al_use_shader(NULL);
