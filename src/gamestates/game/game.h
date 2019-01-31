@@ -197,7 +197,18 @@ struct GamestateResources {
 
 	float snail_blink;
 
-	int moves, level;
+	int moves;
+
+	struct {
+		bool animals[ANIMAL_TYPES];
+		bool specials[SPECIAL_TYPES];
+		struct {
+			enum FIELD_TYPE field_type;
+			enum COLLECTIBLE_TYPE collectible_type;
+			bool sleeping;
+		} fields[COLS][ROWS];
+		int id;
+	} level;
 
 	bool debug, paused;
 };

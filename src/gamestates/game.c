@@ -39,7 +39,9 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
+			if (IsDrawable(data->fields[i][j].type)) {
+				AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
+			}
 			if (data->fields[i][j].overlay_visible) {
 				AnimateCharacter(game, data->fields[i][j].overlay, delta, 1.0);
 			}
@@ -59,6 +61,9 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 			data->fields[i][j].highlight = Clamp(0.0, 1.0, data->fields[i][j].highlight);
 
 			if (IsSleeping(&data->fields[i][j])) {
+				continue;
+			}
+			if (!IsDrawable(data->fields[i][j].type)) {
 				continue;
 			}
 
@@ -136,7 +141,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			float tint = 1.0 - GetTweenValue(&data->fields[i][j].animation.hiding);
-			data->fields[i][j].drawable->tint = al_map_rgba_f(tint, tint, tint, tint);
+			if (IsDrawable(data->fields[i][j].type)) {
+				data->fields[i][j].drawable->tint = al_map_rgba_f(tint, tint, tint, tint);
+			}
 
 			int levels = data->fields[i][j].animation.fall_levels;
 			int level_no = data->fields[i][j].animation.level_no;
@@ -152,11 +159,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 				double val = Interpolate(Clamp(0.0, 1.0, GetTweenValue(&data->fields[i][j].animation.hiding) * 1.5 - 0.5), TWEEN_STYLE_QUARTIC_IN);
 
-				SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, superX, val), Lerp(y, superY, val), 0);
+				if (IsDrawable(data->fields[i][j].type)) {
+					SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, superX, val), Lerp(y, superY, val), 0);
+				}
 			} else {
 				int swapeeX = data->fields[i][j].animation.swapee.i * 90 + 45, swapeeY = data->fields[i][j].animation.swapee.j * 90 + 45 + offsetY;
 
-				SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].animation.swapping)), 0);
+				if (IsDrawable(data->fields[i][j].type)) {
+					SetCharacterPosition(game, data->fields[i][j].drawable, Lerp(x, swapeeX, GetTweenValue(&data->fields[i][j].animation.swapping)), Lerp(y, swapeeY, GetTweenValue(&data->fields[i][j].animation.swapping)), 0);
+				}
 			}
 
 			if (IsDrawable(data->fields[i][j].type)) {
@@ -196,7 +207,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 53, ALLEGRO_ALIGN_CENTER, "MOVES");
 	al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 620, 82, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
-	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level);
+	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
 
 	SetCharacterPosition(game, data->snail, 0, 0, 0);
 	DrawCharacter(game, data->snail);
@@ -539,13 +550,35 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
+	data->level.id = 1;
+	for (int i = 0; i < ANIMAL_TYPES; i++) {
+		data->level.animals[i] = true;
+	}
+	for (int i = 0; i < SPECIAL_TYPES; i++) {
+		data->level.specials[i] = true;
+	}
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
+			data->level.fields[i][j].sleeping = false;
+		}
+	}
+
 	data->locked = false;
 	data->clicked = false;
 	data->paused = false;
 	data->snail_blink = 0.0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			GenerateField(game, data, &data->fields[i][j]);
+			if (data->level.fields[i][j].field_type == FIELD_TYPE_EMPTY) {
+				GenerateField(game, data, &data->fields[i][j]);
+			} else {
+				data->fields[i][j].type = data->level.fields[i][j].field_type;
+				if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
+					data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
+				}
+				UpdateDrawable(game, data, data->fields[i][j].id);
+			}
 			data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
 			data->fields[i][j].animation.falling = StaticTween(game, 1.0);
 
@@ -560,7 +593,6 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	}
 	StopAnimations(game, data);
 
-	data->level = 1;
 	data->moves = 0;
 }
 

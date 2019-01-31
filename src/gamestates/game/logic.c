@@ -107,20 +107,41 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 }
 
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	if (rand() / (float)RAND_MAX < 0.001) {
-		field->type = FIELD_TYPE_FREEFALL;
-		field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-	} else if (rand() / (float)RAND_MAX < 0.01) {
-		field->type = FIELD_TYPE_COLLECTIBLE;
-		field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
-		field->data.collectible.variant = 0;
-	} else {
-		field->type = FIELD_TYPE_ANIMAL;
-		field->data.animal.type = rand() % ANIMAL_TYPES;
-		if (rand() / (float)RAND_MAX < 0.005) {
-			field->data.animal.sleeping = true;
+	while (true) {
+		if (rand() / (float)RAND_MAX < 0.001) {
+			field->type = FIELD_TYPE_FREEFALL;
+			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
+			if (data->level.specials[SPECIAL_TYPE_EGG]) {
+				break;
+			}
+		} else if (rand() / (float)RAND_MAX < 0.01) {
+			field->type = FIELD_TYPE_COLLECTIBLE;
+			while (data->level.fields[FIELD_TYPE_COLLECTIBLE]) {
+				field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
+				if (data->level.specials[FIRST_COLLECTIBLE + field->data.collectible.type]) {
+					break;
+				}
+			}
+			field->data.collectible.variant = 0;
+			if (data->level.fields[FIELD_TYPE_COLLECTIBLE]) {
+				break;
+			}
+		} else {
+			field->type = FIELD_TYPE_ANIMAL;
+			while (data->level.fields[FIELD_TYPE_ANIMAL]) {
+				field->data.animal.type = rand() % ANIMAL_TYPES;
+				if (data->level.animals[field->data.animal.type]) {
+					break;
+				}
+			}
+			if (rand() / (float)RAND_MAX < 0.005) {
+				field->data.animal.sleeping = true;
+			}
+			field->data.animal.super = false;
+			if (data->level.fields[FIELD_TYPE_ANIMAL]) {
+				break;
+			}
 		}
-		field->data.animal.super = false;
 	}
 	field->overlay_visible = false;
 	field->locked = true;
