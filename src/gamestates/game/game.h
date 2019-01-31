@@ -207,7 +207,7 @@ struct GamestateResources {
 			enum COLLECTIBLE_TYPE collectible_type;
 			bool sleeping;
 		} fields[COLS][ROWS];
-		bool supers, sleeping;
+		bool supers, sleeping, infinite;
 
 		int id;
 	} level;

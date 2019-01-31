@@ -168,7 +168,11 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 53, ALLEGRO_ALIGN_CENTER, "MOVES");
 	al_draw_textf(data->moves >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, data->moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
-	al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
+	if (data->level.infinite) {
+		al_draw_text(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "∞");
+	} else {
+		al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
+	}
 
 	SetCharacterPosition(game, data->snail, 0, 0, 0);
 	DrawCharacter(game, data->snail);
@@ -527,6 +531,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->level.sleeping = true;
 	data->level.supers = true;
 	data->level.specials[SPECIAL_TYPE_EGG] = false;
+	data->level.infinite = true;
 
 	data->locked = false;
 	data->clicked = false;
