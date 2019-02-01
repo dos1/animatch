@@ -213,7 +213,7 @@ struct GamestateResources {
 		int id;
 	} level;
 
-	bool debug, paused;
+	bool debug, paused, menu;
 };
 
 // actions
@@ -270,6 +270,7 @@ void DrawField(struct Game* game, struct GamestateResources* data, struct FieldI
 void DrawScene(struct Game* game, struct GamestateResources* data);
 void UpdateBlur(struct Game* game, struct GamestateResources* data);
 void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element);
+bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y);
 
 // debug
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data);

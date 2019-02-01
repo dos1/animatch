@@ -212,6 +212,21 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	}
 	al_use_shader(NULL);
 
+	if (data->menu) {
+		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 96));
+		int i = 12;
+		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((game->time * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((game->time * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
+		data->leaves->pos = i;
+		data->leaves->frame = &data->leaves->spritesheet->frames[i];
+		DrawCharacter(game, data->leaves);
+
+		DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : UI_ELEMENT_NOTE);
+		DrawUIElement(game, data->ui, UI_ELEMENT_HINT);
+		DrawUIElement(game, data->ui, UI_ELEMENT_HOME);
+
+		DrawCharacter(game, data->beetle);
+	}
+
 	if (data->paused) {
 		DrawDebugInterface(game, data);
 	}
@@ -223,6 +238,36 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) {
 		UnloadCurrentGamestate(game); // mark this gamestate to be stopped and unloaded
 		// When there are no active gamestates, the engine will quit.
+	}
+
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		if (IsOnCharacter(game, data->beetle, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->menu = !data->menu;
+			return;
+		}
+		if (data->menu) {
+			if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+				game->config.mute = !game->config.mute;
+				al_set_mixer_gain(game->audio.mixer, game->config.mute ? 0.0 : 1.0);
+				SetConfigOption(game, "SuperDerpy", "mute", game->config.mute ? "1" : "0");
+				PrintConsole(game, "Mute: %d", game->config.mute);
+				return;
+			}
+
+			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HINT, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+				data->menu = false;
+				ShowHint(game, data);
+				return;
+			}
+
+			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HOME, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+				UnloadCurrentGamestate(game);
+				return;
+			}
+
+			data->menu = false;
+			return;
+		}
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
@@ -550,6 +595,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->locked = false;
 	data->clicked = false;
 	data->paused = false;
+	data->menu = false;
 	data->snail_blink = 0.0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
