@@ -28,6 +28,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	UpdateParticles(game, data->particles, delta);
 	UpdateTween(&data->acorn_top.tween, delta);
 	UpdateTween(&data->acorn_bottom.tween, delta);
+	UpdateTween(&data->scoring, delta);
 	AnimateCharacter(game, data->beetle, delta, 1.0);
 	data->snail_blink -= delta;
 
@@ -160,7 +161,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_hold_bitmap_drawing(true);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
-	DrawUIElement(game, data->ui, UI_ELEMENT_BALOON_BIG);
+	DrawUIElement(game, data->ui, data->level.infinite ? UI_ELEMENT_BALOON_MEDIUM : UI_ELEMENT_BALOON_BIG);
 	DrawUIElement(game, data->ui, UI_ELEMENT_BALOON_MINI);
 	DrawUIElement(game, data->ui, UI_ELEMENT_SCORE);
 	al_hold_bitmap_drawing(false);
@@ -180,7 +181,20 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	DrawCharacter(game, data->beetle);
 
-	al_draw_bitmap(data->placeholder, 240, 45, 0);
+	if (data->level.infinite) {
+		al_draw_text(data->font, al_map_rgb(64, 72, 5), 322 + 70, 48, ALLEGRO_ALIGN_CENTER, "SCORE");
+
+		ALLEGRO_TRANSFORM transform, orig = *al_get_current_transform();
+		al_identity_transform(&transform);
+		al_compose_transform(&transform, &orig);
+		al_scale_transform(&transform, 1.0 + GetTweenValue(&data->scoring) / 4.0, 1.0 + GetTweenValue(&data->scoring) / 4.0);
+		al_translate_transform(&transform, 322 + 70, 35 + 105 / 2 + 30);
+		al_use_transform(&transform);
+		al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 0, -30, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+		al_use_transform(&orig);
+	} else {
+		al_draw_bitmap(data->placeholder, 240, 45, 0);
+	}
 
 	DrawParticles(game, data->particles);
 
@@ -563,6 +577,8 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	StopAnimations(game, data);
 
 	data->moves = 0;
+	data->score = 0;
+	data->scoring = StaticTween(game, 0.0);
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

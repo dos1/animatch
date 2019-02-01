@@ -70,6 +70,8 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					data->fields[i][j].to_remove = true;
 					data->fields[i][j].handled = true;
 					data->fields[i][j].to_highlight = true;
+					data->score += 100;
+					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					collected++;
 				}
 			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
@@ -80,6 +82,8 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					data->fields[i][j].to_highlight = true;
+					data->score += 10;
+					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					collected++;
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].data.collectible.variant++;
@@ -96,6 +100,8 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					data->fields[i][j].handled = true;
 					data->fields[i][j].to_highlight = true;
+					data->score += 50;
+					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					collected++;
 				}
 			}
@@ -250,6 +256,8 @@ static void PerformActions(struct Game* game, struct GamestateResources* data) {
 				}
 				data->locked = true;
 
+				data->score += 10;
+				data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 				SpawnParticles(game, data, data->fields[i][j].id, 16);
 			}
 		}

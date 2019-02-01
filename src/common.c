@@ -68,7 +68,7 @@ void DrawBuildInfo(struct Game* game) {
 		int x, y, w, h;
 		al_get_clipping_rectangle(&x, &y, &w, &h);
 		al_hold_bitmap_drawing(true);
-		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch PREALPHA");
+		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.935, ALLEGRO_ALIGN_RIGHT, "Animatch");
 		char revs[255];
 		snprintf(revs, 255, "%s-%s", LIBSUPERDERPY_GAME_GIT_REV, LIBSUPERDERPY_GIT_REV);
 		DrawTextWithShadow(game->_priv.font_console, al_map_rgb(255, 255, 255), w - 10, h * 0.965, ALLEGRO_ALIGN_RIGHT, revs);

@@ -197,7 +197,8 @@ struct GamestateResources {
 
 	float snail_blink;
 
-	int moves;
+	int moves, score;
+	struct Tween scoring;
 
 	struct {
 		bool animals[ANIMAL_TYPES];
