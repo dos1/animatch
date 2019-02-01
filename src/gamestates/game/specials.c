@@ -131,7 +131,7 @@ void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct 
 	TM_WrapArg(int, count, 64);
 	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(field, count));
 	TM_AddDelay(data->timeline, 10);
-	if (field->type != FIELD_TYPE_FREEFALL) {
+	if (field->type != FIELD_TYPE_FREEFALL && field->type != FIELD_TYPE_DISABLED) {
 		field->to_remove = true;
 		field->to_highlight = true;
 	}
