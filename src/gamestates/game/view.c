@@ -74,17 +74,6 @@ void SpawnParticles(struct Game* game, struct GamestateResources* data, struct F
 	}
 }
 
-TM_ACTION(DoSpawnParticles) {
-	TM_RunningOnly;
-	struct Field* field = TM_Arg(0);
-	int* count = TM_Arg(1);
-	SpawnParticles(game, data, field->id, *count);
-	data->score += 10;
-	data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
-	free(count);
-	return true;
-}
-
 static void UpdateOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id) {
 	struct Field* field = GetField(game, data, id);
 	if (!IsDrawable(field->type)) {

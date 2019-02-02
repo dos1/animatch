@@ -249,7 +249,6 @@ void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one
 void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num);
 TM_ACTION(DispatchAnimations);
-TM_ACTION(DoSpawnParticles);
 
 // specials
 bool AnimateSpecials(struct Game* game, struct GamestateResources* data);

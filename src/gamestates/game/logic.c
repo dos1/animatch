@@ -92,16 +92,18 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 						data->fields[i][j].data.collectible.variant = SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions - 1;
 						data->fields[i][j].to_remove = true;
 						PrintConsole(game, "collecting field %d, %d", i, j);
+						data->score += 50;
+						data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					} else {
 						data->fields[i][j].to_remove = false;
 						PrintConsole(game, "advancing field %d, %d", i, j);
+						data->score += 20;
+						data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					data->fields[i][j].handled = true;
 					data->fields[i][j].to_highlight = true;
-					data->score += 50;
-					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					collected++;
 				}
 			}
