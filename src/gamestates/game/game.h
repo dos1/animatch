@@ -214,6 +214,7 @@ struct GamestateResources {
 	} level;
 
 	bool debug, paused, menu;
+	float counter, counter_speed, counter_strength;
 };
 
 // actions

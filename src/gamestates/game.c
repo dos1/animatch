@@ -24,6 +24,14 @@ int Gamestate_ProgressCount = 73; // number of loading steps as reported by Game
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
+	data->counter += delta * sqrt(1.0 + data->counter_speed * data->counter_strength);
+	data->counter_speed -= delta;
+	data->counter_strength -= delta * 8;
+	if (data->counter_speed <= 0.0 || data->counter_strength <= 0.0) {
+		data->counter_speed = 0.0;
+		data->counter_strength = 0.0;
+	}
+
 	TM_Process(data->timeline, delta);
 	UpdateParticles(game, data->particles, delta);
 	UpdateTween(&data->acorn_top.tween, delta);
@@ -574,6 +582,9 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
+	data->counter = 0.0;
+	data->counter_speed = 0.0;
+	data->counter_strength = 0.0;
 	data->level.id = 1;
 	for (int i = 0; i < ANIMAL_TYPES; i++) {
 		data->level.animals[i] = true;
