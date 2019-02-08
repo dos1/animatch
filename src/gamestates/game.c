@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 73; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 75; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -152,8 +152,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			DrawField(game, data, data->fields[i][j].id);
 		}
 	}
-	al_use_shader(NULL);
 	al_reset_clipping_rectangle();
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			DrawOverlay(game, data, data->fields[i][j].id);
+		}
+	}
+	al_use_shader(NULL);
 
 	SetFramebufferAsTarget(game);
 	ClearToColor(game, al_map_rgb(0, 0, 0));

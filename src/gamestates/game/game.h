@@ -40,7 +40,8 @@
 	FOREACH_COLLECTIBLE(SPECIAL)   \
 	SPECIAL(SUPER)                 \
 	SPECIAL(EYES)                  \
-	SPECIAL(DANDELION)
+	SPECIAL(DANDELION)             \
+	SPECIAL(CLOUD)
 
 #define GENERATE_STRING(VAL) #VAL,
 #define GENERATE_ANIMAL_ENUM(VAL) ANIMAL_TYPE_##VAL,
@@ -106,7 +107,8 @@ static struct {
 	{.actions = 3, .names = {"stand", "stand2", "stand3"}}, // chestnut
 	{.actions = 6, .names = {"bee", "bird", "cat", "fish", "frog", "ladybug"}}, // special
 	{.actions = 1, .names = {"eyes"}}, // eyes
-	{.actions = 1, .names = {"stand"}} // dandelion
+	{.actions = 1, .names = {"stand"}}, // dandelion
+	{.actions = 2, .names = {"anim", "anim2"}}, // cloud
 };
 
 SUPPRESS_END
@@ -265,6 +267,7 @@ bool IsSwappable(struct Game* game, struct GamestateResources* data, struct Fiel
 bool AreSwappable(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
 void DrawField(struct Game* game, struct GamestateResources* data, struct FieldID id);
+void DrawOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id);
 
 // scene
 void DrawScene(struct Game* game, struct GamestateResources* data);

@@ -81,12 +81,18 @@ static void UpdateOverlay(struct Game* game, struct GamestateResources* data, st
 	if (!IsDrawable(field->type)) {
 		return;
 	}
-	char* name = NULL;
+	char *name = NULL, *anim = NULL;
 	int index = -1;
 	if (field->type == FIELD_TYPE_ANIMAL) {
 		if (field->data.animal.super) {
 			name = "eyes";
+			anim = "eyes";
 			index = SPECIAL_TYPE_EYES;
+		}
+		if (field->data.animal.sleeping) {
+			name = "cloud";
+			anim = field->data.animal.type == ANIMAL_TYPE_BIRD ? "anim2" : "anim";
+			index = SPECIAL_TYPE_CLOUD;
 		}
 	}
 
@@ -98,7 +104,7 @@ static void UpdateOverlay(struct Game* game, struct GamestateResources* data, st
 		field->overlay->name = strdup(archetype->name);
 		field->overlay->spritesheets = archetype->spritesheets;
 
-		SelectSpritesheet(game, field->overlay, name);
+		SelectSpritesheet(game, field->overlay, anim);
 		field->overlay_visible = true;
 	} else {
 		field->overlay_visible = false;
@@ -198,6 +204,12 @@ void DrawField(struct Game* game, struct GamestateResources* data, struct FieldI
 		field->drawable->scaleX = 1.0 + sin(GetTweenValue(&field->animation.hinting) * ALLEGRO_PI) / 3.0 + sin(GetTweenValue(&field->animation.launching) * ALLEGRO_PI) / 3.0;
 		field->drawable->scaleY = field->drawable->scaleX;
 		DrawCharacter(game, field->drawable);
+	}
+}
+
+void DrawOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id) {
+	struct Field* field = GetField(game, data, id);
+	if (IsDrawable(field->type)) {
 		if (field->overlay_visible) {
 			DrawCharacter(game, field->overlay);
 		}
