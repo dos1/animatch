@@ -228,7 +228,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	if (data->menu) {
 		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 96));
 		int i = 12;
-		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((game->time * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((game->time * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
+		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((data->counter * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((data->counter * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
 		data->leaves->pos = i;
 		data->leaves->frame = &data->leaves->spritesheet->frames[i];
 		DrawCharacter(game, data->leaves);
