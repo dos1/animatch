@@ -69,15 +69,3 @@ void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
 	al_use_shader(NULL);
 }
-
-void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element) {
-	ui->pos = element;
-	ui->frame = &ui->spritesheet->frames[ui->pos];
-	DrawCharacter(game, ui);
-}
-
-bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y) {
-	ui->pos = element;
-	ui->frame = &ui->spritesheet->frames[ui->pos];
-	return IsOnCharacter(game, ui, x, y, true);
-}

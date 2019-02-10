@@ -72,3 +72,5 @@ struct CommonResources* CreateGameData(struct Game* game);
 void DestroyGameData(struct Game* game);
 bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev);
 void DrawBuildInfo(struct Game* game);
+void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element);
+bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y);

@@ -169,7 +169,7 @@ struct Field {
 struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
-	ALLEGRO_BITMAP* bg;
+	ALLEGRO_BITMAP *bg, *leaf;
 
 	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *placeholder;
 
@@ -272,8 +272,6 @@ void DrawOverlay(struct Game* game, struct GamestateResources* data, struct Fiel
 // scene
 void DrawScene(struct Game* game, struct GamestateResources* data);
 void UpdateBlur(struct Game* game, struct GamestateResources* data);
-void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element);
-bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y);
 
 // debug
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data);

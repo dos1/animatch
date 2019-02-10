@@ -133,11 +133,24 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 	return false;
 }
 
+void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element) {
+	ui->pos = element;
+	ui->frame = &ui->spritesheet->frames[ui->pos];
+	DrawCharacter(game, ui);
+}
+
+bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y) {
+	ui->pos = element;
+	ui->frame = &ui->spritesheet->frames[ui->pos];
+	return IsOnCharacter(game, ui, x, y, true);
+}
+
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
 	char* names[] = {"silhouette/frog.webp", "silhouette/bee.webp", "silhouette/ladybug.webp", "silhouette/cat.webp", "silhouette/fish.webp"};
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
+
 	return data;
 }
 

@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 75; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 76; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -191,6 +191,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->snail, 0, 0, 0);
 	DrawCharacter(game, data->snail);
 
+	al_draw_bitmap(data->leaf, -32, 1083, 0);
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	DrawCharacter(game, data->beetle);
 
@@ -227,11 +228,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	if (data->menu) {
 		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 96));
-		int i = 12;
-		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((data->counter * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((data->counter * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
-		data->leaves->pos = i;
-		data->leaves->frame = &data->leaves->spritesheet->frames[i];
-		DrawCharacter(game, data->leaves);
+		al_draw_bitmap_region(data->bg, 0, 1400, 80, 40, 0, 1400, 0);
+
+		al_draw_bitmap(data->leaf, -32, 1083, 0);
 
 		DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : UI_ELEMENT_NOTE);
 		DrawUIElement(game, data->ui, UI_ELEMENT_HINT);
@@ -249,8 +248,8 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	// Called for each event in Allegro event queue.
 	// Here you can handle user input, expiring timers etc.
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) {
-		UnloadCurrentGamestate(game); // mark this gamestate to be stopped and unloaded
-		// When there are no active gamestates, the engine will quit.
+		StopCurrentGamestate(game);
+		StartGamestate(game, "menu");
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
@@ -473,6 +472,9 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.webp"));
 	progress(game);
 
+	data->leaf = al_load_bitmap(GetDataFilePath(game, "leaf.webp"));
+	progress(game);
+
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].drawable = CreateCharacter(game, NULL);
@@ -570,6 +572,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->placeholder);
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
+	al_destroy_bitmap(data->leaf);
 	al_destroy_bitmap(data->scene);
 	al_destroy_bitmap(data->lowres_scene);
 	al_destroy_bitmap(data->lowres_scene_blur);
