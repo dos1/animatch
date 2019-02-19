@@ -1,7 +1,7 @@
-From 639c3d991968faf2db901fc5c0afdb09d2e385b3 Mon Sep 17 00:00:00 2001
+From 4a4afbbd11ba1b397b0b3450dfd408d5be2f7a76 Mon Sep 17 00:00:00 2001
 From: Sebastian Krzyszkowiak <dos@dosowisko.net>
 Date: Wed, 7 Nov 2018 00:33:40 +0100
-Subject: [PATCH] wayland: fix resizing and fullscreen toggling
+Subject: [PATCH 3/5] wayland: fix resizing and fullscreen toggling
 
 For starters, we need to correctly respond to 0,0 configure after unsetting
 fullscreen. Also, turns out that there should be no drawing calls at all
@@ -330,5 +330,5 @@ index c46540fc2..298ae2615 100644
  
  extern void Wayland_ShowWindow(_THIS, SDL_Window *window);
 -- 
-2.19.1
+2.20.1
 

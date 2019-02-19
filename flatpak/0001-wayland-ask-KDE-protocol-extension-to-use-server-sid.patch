@@ -1,7 +1,7 @@
-From 25e38e5a3e9e59c46705d6df8162ee877e15d69c Mon Sep 17 00:00:00 2001
+From 4f4928b9d8ecb0456d26199253cce0506a72c9a8 Mon Sep 17 00:00:00 2001
 From: "Ryan C. Gordon" <icculus@icculus.org>
 Date: Mon, 29 Oct 2018 10:14:59 -0400
-Subject: [PATCH] wayland: ask KDE protocol extension to use server-side
+Subject: [PATCH 1/5] wayland: ask KDE protocol extension to use server-side
  decorations if possible.
 
 --HG--
@@ -16,7 +16,7 @@ branch : SDL-ryan-batching-renderer
  create mode 100644 wayland-protocols/org-kde-kwin-server-decoration-manager.xml
 
 diff --git a/src/video/wayland/SDL_waylandvideo.c b/src/video/wayland/SDL_waylandvideo.c
-index 06230277f..acea440d6 100644
+index b6155e76d..0759719d3 100644
 --- a/src/video/wayland/SDL_waylandvideo.c
 +++ b/src/video/wayland/SDL_waylandvideo.c
 @@ -47,6 +47,7 @@
@@ -66,7 +66,7 @@ index c16c0bdd4..4d6658fca 100644
      EGLDisplay edpy;
      EGLContext context;
 diff --git a/src/video/wayland/SDL_waylandwindow.c b/src/video/wayland/SDL_waylandwindow.c
-index 7055336d6..cbd85088c 100644
+index aa7299181..828d69c3a 100644
 --- a/src/video/wayland/SDL_waylandwindow.c
 +++ b/src/video/wayland/SDL_waylandwindow.c
 @@ -35,6 +35,7 @@
@@ -77,7 +77,7 @@ index 7055336d6..cbd85088c 100644
  
  /* On modern desktops, we probably will use the xdg-shell protocol instead
     of wl_shell, but wl_shell might be useful on older Wayland installs that
-@@ -459,6 +460,17 @@ Wayland_RestoreWindow(_THIS, SDL_Window * window)
+@@ -451,6 +452,17 @@ Wayland_RestoreWindow(_THIS, SDL_Window * window)
      WAYLAND_wl_display_flush( ((SDL_VideoData*)_this->driverdata)->display );
  }
  
@@ -95,7 +95,7 @@ index 7055336d6..cbd85088c 100644
  void
  Wayland_MaximizeWindow(_THIS, SDL_Window * window)
  {
-@@ -570,6 +582,15 @@ int Wayland_CreateWindow(_THIS, SDL_Window *window)
+@@ -562,6 +574,15 @@ int Wayland_CreateWindow(_THIS, SDL_Window *window)
      }
  #endif /* SDL_VIDEO_DRIVER_WAYLAND_QT_TOUCH */
  
@@ -111,7 +111,7 @@ index 7055336d6..cbd85088c 100644
      region = wl_compositor_create_region(c->compositor);
      wl_region_add(region, 0, 0, window->w, window->h);
      wl_surface_set_opaque_region(data->surface, region);
-@@ -644,6 +665,10 @@ void Wayland_DestroyWindow(_THIS, SDL_Window *window)
+@@ -636,6 +657,10 @@ void Wayland_DestroyWindow(_THIS, SDL_Window *window)
          SDL_EGL_DestroySurface(_this, wind->egl_surface);
          WAYLAND_wl_egl_window_destroy(wind->egl_window);
  
@@ -243,5 +243,5 @@ index 000000000..8bc106c7c
 +  </interface>
 +</protocol>
 -- 
-2.19.1
+2.20.1
 
