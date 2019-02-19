@@ -62,8 +62,12 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->bar2 = al_load_bitmap(GetDataFilePath(game, "bar2.webp"));
 
 	data->bg_lowres = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
-	data->bg_blur = al_create_bitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->bg_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 
+	return data;
+}
+
+void Gamestate_PostLoad(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->bg_blur);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_draw_scaled_bitmap(data->bg, 0, 0, al_get_bitmap_width(data->bg), al_get_bitmap_height(data->bg),
@@ -87,8 +91,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	al_set_shader_float("kernel", 0);
 	al_draw_bitmap(data->bg_lowres, 0, 0, 0);
 	al_use_shader(NULL);
-
-	return data;
 }
 
 void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
@@ -108,7 +110,10 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {}
 
-void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {}
+void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
+	data->bg_lowres = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+	data->bg_blur = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+}
 
 void Gamestate_Pause(struct Game* game, struct GamestateResources* data) {}
 void Gamestate_Resume(struct Game* game, struct GamestateResources* data) {}
