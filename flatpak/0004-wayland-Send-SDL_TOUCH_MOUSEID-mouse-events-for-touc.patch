@@ -1,7 +1,7 @@
 From fc290782507b0e9ba56fdf4d2381c84af1f95604 Mon Sep 17 00:00:00 2001
 From: "Ryan C. Gordon" <icculus@icculus.org>
 Date: Wed, 5 Dec 2018 16:49:38 -0500
-Subject: [PATCH 4/5] wayland: Send SDL_TOUCH_MOUSEID mouse events for touches.
+Subject: [PATCH 4/6] wayland: Send SDL_TOUCH_MOUSEID mouse events for touches.
 
 --HG--
 extra : rebase_source : 0f9b11680aa7e0d40485137b09ade272dc9de2d1

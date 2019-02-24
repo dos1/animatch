@@ -1,7 +1,7 @@
 From dbf5818ca86bc2712bb6f585d8d7e3d693eb5bc2 Mon Sep 17 00:00:00 2001
 From: Sebastian Krzyszkowiak <dos@dosowisko.net>
 Date: Sun, 4 Nov 2018 04:48:18 +0100
-Subject: [PATCH 2/5] wayland: ask xdg-decoration protocol extension to use
+Subject: [PATCH 2/6] wayland: ask xdg-decoration protocol extension to use
  server-side decorations if possible.
 
 ---

@@ -1,7 +1,7 @@
 From 4a4afbbd11ba1b397b0b3450dfd408d5be2f7a76 Mon Sep 17 00:00:00 2001
 From: Sebastian Krzyszkowiak <dos@dosowisko.net>
 Date: Wed, 7 Nov 2018 00:33:40 +0100
-Subject: [PATCH 3/5] wayland: fix resizing and fullscreen toggling
+Subject: [PATCH 3/6] wayland: fix resizing and fullscreen toggling
 
 For starters, we need to correctly respond to 0,0 configure after unsetting
 fullscreen. Also, turns out that there should be no drawing calls at all

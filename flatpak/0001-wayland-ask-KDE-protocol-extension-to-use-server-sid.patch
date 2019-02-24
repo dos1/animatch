@@ -1,7 +1,7 @@
 From 4f4928b9d8ecb0456d26199253cce0506a72c9a8 Mon Sep 17 00:00:00 2001
 From: "Ryan C. Gordon" <icculus@icculus.org>
 Date: Mon, 29 Oct 2018 10:14:59 -0400
-Subject: [PATCH 1/5] wayland: ask KDE protocol extension to use server-side
+Subject: [PATCH 1/6] wayland: ask KDE protocol extension to use server-side
  decorations if possible.
 
 --HG--

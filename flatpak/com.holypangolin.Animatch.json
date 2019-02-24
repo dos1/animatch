@@ -44,7 +44,11 @@
       },
       {
         "type": "patch",
-        "path": "0005-WIP-HiDPI-support-on-Wayland.patch"
+        "path": "0005-wayland-add-dummy-remove-handler-to-wl_registry_list.patch"
+      },
+      {
+        "type": "patch",
+        "path": "0006-wayland-HiDPI-support.patch"
       }
     ]
   },
