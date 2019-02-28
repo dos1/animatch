@@ -273,7 +273,8 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			}
 
 			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HOME, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
-				UnloadCurrentGamestate(game);
+				StopCurrentGamestate(game);
+				StartGamestate(game, "menu");
 				return;
 			}
 

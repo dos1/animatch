@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 	LoadGamestate(game, "menu");
 	LoadGamestate(game, "game");
 
-	StartGamestate(game, "game");
+	StartGamestate(game, "menu");
 
 	game->data = CreateGameData(game);
 

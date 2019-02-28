@@ -24,15 +24,40 @@
 struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
-	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf;
+	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2;
+	ALLEGRO_FONT* font;
 	struct Character *beetle, *ui;
+
+	double menu_pos;
+	double menu_speed;
+	double menu_offset;
+	bool menu_pressed, menu_triggered;
+	double menu_lasttime;
+	double menu_lasty;
 };
 
-int Gamestate_ProgressCount = 7; // number of loading steps as reported by Gamestate_Load; 0 when missing
+int Gamestate_ProgressCount = 10; // number of loading steps as reported by Gamestate_Load; 0 when missing
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
 	AnimateCharacter(game, data->beetle, delta, 1.0);
+}
+void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
+	if (!data->menu_pressed) {
+		data->menu_speed *= 0.95;
+		data->menu_pos += data->menu_speed * game->viewport.height;
+
+		if (data->menu_pos < 0) {
+			data->menu_pos *= 0.75;
+			data->menu_speed *= 0.2;
+		}
+		if (data->menu_pos > 5800 - 621) {
+			double diff = data->menu_pos - (5800 - 621);
+			diff *= 0.25;
+			data->menu_pos -= diff;
+			data->menu_speed *= 0.2;
+		}
+	}
 }
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
@@ -40,7 +65,31 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->bg, 0, 0, 0);
 	al_draw_bitmap(data->logo, 54, 35, 0);
 
-	al_draw_bitmap(data->framebg, 0, 0, 0);
+	al_draw_bitmap(data->framebg, 90, 412, 0);
+
+	SetClippingRectangle(90, 412, 536, 621);
+
+	ALLEGRO_TRANSFORM transform;
+	al_identity_transform(&transform);
+	al_translate_transform(&transform, 90, 412 - data->menu_pos);
+	PushTransform(game, &transform);
+
+	for (int i = 0; i < 99; i++) {
+		al_draw_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
+		al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+	}
+
+	/*
+	DrawVerticalGradientRect(0, 0, 536, 621 * 8, al_map_rgb(0, 0, 255), al_map_rgb(255, 0, 0));
+
+	al_draw_text(game->_priv.font_console, al_map_rgb(255, 255, 255), 100, 500, ALLEGRO_ALIGN_LEFT, "yaba");
+	al_draw_text(game->_priv.font_console, al_map_rgb(255, 255, 255), 100, 1000, ALLEGRO_ALIGN_LEFT, "daba");
+	al_draw_text(game->_priv.font_console, al_map_rgb(255, 255, 255), 100, 1500, ALLEGRO_ALIGN_LEFT, "dooo");
+  */
+
+	PopTransform(game);
+	ResetClippingRectangle();
+
 	al_draw_bitmap(data->frame, 0, 0, 0);
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
@@ -57,9 +106,65 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		UnloadAllGamestates(game); // mark this gamestate to be stopped and unloaded
 		// When there are no active gamestates, the engine will quit.
 	}
+
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)) {
-		StopCurrentGamestate(game);
-		StartGamestate(game, "game");
+		data->menu_offset = 0;
+		data->menu_speed = 0;
+		data->menu_pressed = true;
+	}
+	if ((ev->type == ALLEGRO_EVENT_TOUCH_END) || (ev->type == ALLEGRO_EVENT_TOUCH_CANCEL) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)) {
+		if (data->menu_pressed && !data->menu_triggered) {
+			PrintConsole(game, "click");
+			StopCurrentGamestate(game);
+			StartGamestate(game, "game");
+		}
+
+		data->menu_pressed = false;
+		data->menu_triggered = false;
+		if (fabs(data->menu_speed) < 0.0015) {
+			data->menu_speed = 0;
+		}
+	}
+	if ((ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_AXES)) {
+		if (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) {
+			data->menu_offset += ev->touch.dy / (float)game->viewport.height;
+		} else {
+			data->menu_offset += ev->mouse.dy / (float)game->viewport.height;
+		}
+		if (data->menu_pressed && !data->menu_triggered && fabs(data->menu_offset) > 0.01) {
+			double timestamp;
+			if (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) {
+				timestamp = ev->touch.timestamp;
+			} else {
+				timestamp = ev->mouse.timestamp;
+			}
+			data->menu_triggered = true;
+			data->menu_lasty = game->data->mouseY;
+			data->menu_lasttime = timestamp;
+		}
+
+		if (data->menu_triggered) {
+			double timestamp;
+			if (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) {
+				timestamp = ev->touch.timestamp;
+			} else {
+				timestamp = ev->mouse.timestamp;
+			}
+
+			if (timestamp - data->menu_lasttime) {
+				data->menu_speed = (data->menu_lasty - game->data->mouseY) / ((timestamp - data->menu_lasttime) * 1000) * 16.666;
+			}
+
+			PrintConsole(game, "speed %f timestamp %f", data->menu_speed, timestamp);
+
+			data->menu_pos += (data->menu_lasty - game->data->mouseY) * game->viewport.height;
+
+			data->menu_lasty = game->data->mouseY;
+			data->menu_lasttime = timestamp;
+		}
+	}
+	if (ev->type == ALLEGRO_EVENT_MOUSE_AXES) {
+		data->menu_pos -= ev->mouse.dz * 16;
 	}
 }
 
@@ -86,6 +191,15 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->leaf = al_load_bitmap(GetDataFilePath(game, "leaf.webp"));
 	progress(game);
 
+	data->leaf1 = al_load_bitmap(GetDataFilePath(game, "leaf1.webp"));
+	progress(game);
+
+	data->leaf2 = al_load_bitmap(GetDataFilePath(game, "leaf2.webp"));
+	progress(game);
+
+	data->font = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 88, 0);
+	progress(game);
+
 	data->ui = CreateCharacter(game, "ui");
 	RegisterSpritesheet(game, data->ui, "ui");
 	LoadSpritesheets(game, data->ui, progress);
@@ -96,6 +210,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	LoadSpritesheets(game, data->beetle, progress);
 	SelectSpritesheet(game, data->beetle, "beetle");
 
+	data->menu_pos = 0;
 	return data;
 }
 
@@ -114,6 +229,10 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// playing music etc.
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
+
+	data->menu_speed = 0;
+	data->menu_pressed = false;
+	data->menu_triggered = false;
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
