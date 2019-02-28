@@ -19,8 +19,6 @@
  */
 
 #include "common.h"
-#include <libsuperderpy.h>
-#include <stdio.h>
 
 void Compositor(struct Game* game, struct Gamestate* gamestates, ALLEGRO_BITMAP* loading_fb) {
 	struct Gamestate* tmp = gamestates;

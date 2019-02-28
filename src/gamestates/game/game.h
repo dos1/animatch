@@ -2,7 +2,6 @@
 #define ANIMATCH_GAMESTATE_GAME_H
 
 #include "../../common.h"
-#include <libsuperderpy.h>
 
 #define MAX_ACTIONS 16
 #define MATCHING_TIME 0.4

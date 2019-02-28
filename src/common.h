@@ -14,6 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef ANIMATCH_COMMON_H
+#define ANIMATCH_COMMON_H
 
 #define LIBSUPERDERPY_DATA_TYPE struct CommonResources
 #include <defines.h>
@@ -74,3 +76,7 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev);
 void DrawBuildInfo(struct Game* game);
 void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element);
 bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y);
+
+#include "scrollingviewport.h"
+
+#endif

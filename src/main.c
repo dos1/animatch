@@ -19,10 +19,6 @@
  */
 
 #include "common.h"
-#include "defines.h"
-#include <libsuperderpy.h>
-#include <signal.h>
-#include <stdio.h>
 
 int main(int argc, char** argv) {
 	srand(time(NULL));
