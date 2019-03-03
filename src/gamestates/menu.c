@@ -24,14 +24,16 @@
 struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
-	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2;
+	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2, *leaf1b, *leaf2b;
 	ALLEGRO_FONT* font;
 	struct Character *beetle, *ui;
+
+	int unlocked;
 
 	struct ScrollingViewport menu;
 };
 
-int Gamestate_ProgressCount = 10; // number of loading steps as reported by Gamestate_Load; 0 when missing
+int Gamestate_ProgressCount = 12; // number of loading steps as reported by Gamestate_Load; 0 when missing
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
@@ -51,8 +53,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	SetScrollingViewportAsTarget(game, &data->menu);
 
 	for (int i = 0; i < 99; i++) {
-		al_draw_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
-		al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+		if (i > data->unlocked) {
+			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
+			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+		} else {
+			al_draw_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
+			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+		}
 	}
 
 	SetScrollingViewportAsTarget(game, NULL);
@@ -114,6 +121,12 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->leaf2 = al_load_bitmap(GetDataFilePath(game, "leaf2.webp"));
 	progress(game);
 
+	data->leaf1b = al_load_bitmap(GetDataFilePath(game, "listek1_bw.webp"));
+	progress(game);
+
+	data->leaf2b = al_load_bitmap(GetDataFilePath(game, "listek2_bw2.webp"));
+	progress(game);
+
 	data->font = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 88, 0);
 	progress(game);
 
@@ -136,6 +149,14 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	// Good place for freeing all allocated memory and resources.
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->logo);
+	al_destroy_bitmap(data->frame);
+	al_destroy_bitmap(data->framebg);
+	al_destroy_bitmap(data->leaf);
+	al_destroy_bitmap(data->leaf1);
+	al_destroy_bitmap(data->leaf2);
+	al_destroy_bitmap(data->leaf1b);
+	al_destroy_bitmap(data->leaf2b);
+	al_destroy_font(data->font);
 	DestroyCharacter(game, data->ui);
 	DestroyCharacter(game, data->beetle);
 	free(data);
@@ -151,6 +172,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->menu.speed = 0;
 	data->menu.pressed = false;
 	data->menu.triggered = false;
+	data->unlocked = 0;
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
