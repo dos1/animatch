@@ -20,42 +20,43 @@
 
 #include "common.h"
 
-void Compositor(struct Game* game, struct Gamestate* gamestates, ALLEGRO_BITMAP* loading_fb) {
-	struct Gamestate* tmp = gamestates;
-	if (game->data->loading_fade) {
-		al_set_target_bitmap(loading_fb);
+void Compositor(struct Game* game) {
+	struct Gamestate* tmp = GetNextGamestate(game, NULL);
+	if (game->data->transition.progress) {
+		al_set_target_bitmap(GetGamestateFramebuffer(game, game->data->transition.gamestate));
 
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
 
-		double scale = Interpolate((1.0 - game->data->loading_fade) * 0.7 + 0.3, TWEEN_STYLE_QUINTIC_IN) * 6.0;
+		double scale = Interpolate((1.0 - game->data->transition.progress) * 0.7 + 0.3, TWEEN_STYLE_QUINTIC_IN) * 6.0;
 		al_draw_scaled_rotated_bitmap(game->data->silhouette,
 			al_get_bitmap_width(game->data->silhouette) / 2.0,
 			al_get_bitmap_height(game->data->silhouette) / 2.0,
-			game->viewport.width / 2.0, game->viewport.height / 2.0,
+			game->viewport.width * game->data->transition.x, game->viewport.height * game->data->transition.y,
 			scale, scale, 0.0, 0);
 
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
 
 		al_set_target_backbuffer(game->display);
 	}
+
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	while (tmp) {
-		if ((tmp->loaded) && (tmp->started)) {
-			al_draw_bitmap(tmp->fb, game->clip_rect.x, game->clip_rect.y, 0);
+		if (IsGamestateVisible(game, tmp)) {
+			al_draw_bitmap(GetGamestateFramebuffer(game, tmp), game->clip_rect.x, game->clip_rect.y, 0);
 		}
-		tmp = tmp->next;
+		tmp = GetNextGamestate(game, tmp);
 	}
-	if (game->data->loading_fade) {
-		al_draw_bitmap(loading_fb, game->clip_rect.x, game->clip_rect.y, 0);
+	if (game->data->transition.progress) {
+		al_draw_bitmap(GetGamestateFramebuffer(game, game->data->transition.gamestate), game->clip_rect.x, game->clip_rect.y, 0);
 	}
 }
 
 void PostLogic(struct Game* game, double delta) {
-	if (!game->loading.shown && game->data->loading_fade) {
-		game->data->loading_fade -= 0.02 * delta / (1 / 60.0);
-		if (game->data->loading_fade <= 0.0) {
+	if (!game->loading.shown && game->data->transition.progress) {
+		game->data->transition.progress -= 0.025 * delta / (1 / 60.0);
+		if (game->data->transition.progress <= 0.0) {
 			DisableCompositor(game);
-			game->data->loading_fade = 0.0;
+			game->data->transition.progress = 0.0;
 		}
 	}
 }
@@ -77,26 +78,13 @@ void DrawBuildInfo(struct Game* game) {
 
 bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev) {
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_M)) {
-		game->config.mute = !game->config.mute;
-		al_set_mixer_gain(game->audio.mixer, game->config.mute ? 0.0 : 1.0);
-		SetConfigOption(game, "SuperDerpy", "mute", game->config.mute ? "1" : "0");
-		PrintConsole(game, "Mute: %d", game->config.mute);
+		ToggleMute(game);
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_F)) {
-		game->config.fullscreen = !game->config.fullscreen;
-		if (game->config.fullscreen) {
-			SetConfigOption(game, "SuperDerpy", "fullscreen", "1");
-		} else {
-			SetConfigOption(game, "SuperDerpy", "fullscreen", "0");
-		}
-#ifdef ALLEGRO_ANDROID
-		al_set_display_flag(game->display, ALLEGRO_FRAMELESS, game->config.fullscreen);
-#endif
-		al_set_display_flag(game->display, ALLEGRO_FULLSCREEN_WINDOW, game->config.fullscreen);
-		SetupViewport(game);
-		PrintConsole(game, "Fullscreen toggled");
+		ToggleFullscreen(game);
 	}
+
 	if (ev->type == ALLEGRO_EVENT_MOUSE_AXES) {
 		game->data->mouseX = Clamp(0, 1, (ev->mouse.x - game->clip_rect.x) / (double)game->clip_rect.w);
 		game->data->mouseY = Clamp(0, 1, (ev->mouse.y - game->clip_rect.y) / (double)game->clip_rect.h);
@@ -141,6 +129,14 @@ bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 	ui->pos = element;
 	ui->frame = &ui->spritesheet->frames[ui->pos];
 	return IsOnCharacter(game, ui, x, y, true);
+}
+
+void StartTransition(struct Game* game, float x, float y) {
+	game->data->transition.progress = 1.0;
+	game->data->transition.gamestate = GetCurrentGamestate(game);
+	game->data->transition.x = x;
+	game->data->transition.y = y;
+	EnableCompositor(game, Compositor);
 }
 
 struct CommonResources* CreateGameData(struct Game* game) {

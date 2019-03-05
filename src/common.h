@@ -63,12 +63,17 @@ struct CommonResources {
 	// Fill in with common data accessible from all gamestates.
 	double mouseX, mouseY;
 	bool touch;
-	float loading_fade;
 	ALLEGRO_BITMAP* silhouette;
 	ALLEGRO_SHADER* kawese_shader;
+
+	struct {
+		float progress;
+		struct Gamestate* gamestate;
+		float x, y;
+	} transition;
 };
 
-void Compositor(struct Game* game, struct Gamestate* gamestates, ALLEGRO_BITMAP* loading_fb);
+void Compositor(struct Game* game);
 void PostLogic(struct Game* game, double delta);
 struct CommonResources* CreateGameData(struct Game* game);
 void DestroyGameData(struct Game* game);
@@ -76,6 +81,7 @@ bool GlobalEventHandler(struct Game* game, ALLEGRO_EVENT* ev);
 void DrawBuildInfo(struct Game* game);
 void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element);
 bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y);
+void StartTransition(struct Game* game, float x, float y);
 
 #include "scrollingviewport.h"
 

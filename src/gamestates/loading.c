@@ -105,7 +105,10 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	EnableCompositor(game, Compositor);
-	game->data->loading_fade = 1.0;
+	game->data->transition.progress = 1.0;
+	game->data->transition.gamestate = GetGamestate(game, NULL);
+	game->data->transition.x = 0.5;
+	game->data->transition.y = 0.5;
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {}

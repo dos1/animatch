@@ -39,6 +39,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	// Here you should do all your game logic as if <delta> seconds have passed.
 	AnimateCharacter(game, data->beetle, delta, 1.0);
 }
+
 void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
 	UpdateScrollingViewport(game, &data->menu);
 }
@@ -84,6 +85,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_END) || (ev->type == ALLEGRO_EVENT_TOUCH_CANCEL) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)) {
 		if (data->menu.pressed && !data->menu.triggered) {
 			PrintConsole(game, "click");
+			StartTransition(game, game->data->mouseX, game->data->mouseY);
 			StopCurrentGamestate(game);
 			StartGamestate(game, "game");
 		}

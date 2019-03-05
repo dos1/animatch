@@ -248,6 +248,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	// Called for each event in Allegro event queue.
 	// Here you can handle user input, expiring timers etc.
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) {
+		StartTransition(game, 0.5, 0.5);
 		StopCurrentGamestate(game);
 		StartGamestate(game, "menu");
 	}
@@ -273,6 +274,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			}
 
 			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HOME, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+				StartTransition(game, 0.5, 0.5);
 				StopCurrentGamestate(game);
 				StartGamestate(game, "menu");
 				return;
