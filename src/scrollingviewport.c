@@ -111,6 +111,8 @@ void ProcessScrollingViewportEvent(struct Game* game, ALLEGRO_EVENT* ev, struct 
 		}
 	}
 	if (ev->type == ALLEGRO_EVENT_MOUSE_AXES) {
-		viewport->pos -= ev->mouse.dz * 16;
+		if ((game->data->mouseX * game->viewport.width >= viewport->x) && (game->data->mouseX * game->viewport.width <= viewport->x + viewport->w) && (game->data->mouseY * game->viewport.height >= viewport->y) && (game->data->mouseY * game->viewport.height <= viewport->y + viewport->h)) {
+			viewport->pos -= ev->mouse.dz * 16;
+		}
 	}
 }
