@@ -22,7 +22,7 @@
 struct ScrollingViewport {
 	double pos;
 	double speed;
-	double offset;
+	double offsetX, offsetY;
 	bool pressed, triggered;
 	double lasttime;
 	double lasty;

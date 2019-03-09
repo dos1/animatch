@@ -29,6 +29,7 @@ struct GamestateResources {
 	struct Character *beetle, *ui;
 
 	int unlocked;
+	int highlight;
 
 	struct ScrollingViewport menu;
 };
@@ -58,7 +59,11 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
 			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		} else {
-			al_draw_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
+			ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
+			if (data->highlight == i) {
+				color = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
+			}
+			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, color, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
 			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		}
 	}
@@ -74,6 +79,41 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	DrawUIElement(game, data->ui, UI_ELEMENT_ABOUT);
 }
 
+static int WhichLevel(struct Game* game, struct GamestateResources* data) {
+	int x = game->data->mouseX * game->viewport.width - data->menu.x;
+	int y = game->data->mouseY * game->viewport.height - data->menu.y;
+
+	if (data->menu.triggered || !data->menu.pressed) {
+		return -1;
+	}
+
+	if ((x < 0) || (y < 0) || (x > data->menu.w) || (y > data->menu.h)) {
+		return -1;
+	}
+
+	y += data->menu.pos;
+
+	if (y > data->menu.content) {
+		return -1;
+	}
+
+	x -= 50;
+	y -= 25;
+
+	if ((x < 0) || (y < 0)) {
+		return -1;
+	}
+
+	x /= 150;
+	y /= 175;
+
+	if (x > 2) {
+		return -1;
+	}
+
+	return y * 3 + x;
+}
+
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
 	// Called for each event in Allegro event queue.
 	// Here you can handle user input, expiring timers etc.
@@ -85,13 +125,17 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_END) || (ev->type == ALLEGRO_EVENT_TOUCH_CANCEL) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)) {
 		if (data->menu.pressed && !data->menu.triggered) {
 			PrintConsole(game, "click");
-			StartTransition(game, game->data->mouseX, game->data->mouseY);
-			StopCurrentGamestate(game);
-			StartGamestate(game, "game");
+			game->data->level = WhichLevel(game, data);
+			if (game->data->level >= 0 && game->data->level <= data->unlocked) {
+				StartTransition(game, (data->menu.x + 50 + game->data->level % 3 * 150 + 150 / 2) / (float)game->viewport.width, (data->menu.y + 25 + game->data->level / 3 * 175 + 175 / 2 - data->menu.pos - 10) / (float)game->viewport.height);
+				StopCurrentGamestate(game);
+				StartGamestate(game, "game");
+			}
 		}
 	}
 
 	ProcessScrollingViewportEvent(game, ev, &data->menu);
+	data->highlight = WhichLevel(game, data);
 }
 
 void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
@@ -175,6 +219,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->menu.pressed = false;
 	data->menu.triggered = false;
 	data->unlocked = 0;
+	data->highlight = -1;
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

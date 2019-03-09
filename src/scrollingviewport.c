@@ -62,7 +62,8 @@ void UpdateScrollingViewport(struct Game* game, struct ScrollingViewport* viewpo
 void ProcessScrollingViewportEvent(struct Game* game, ALLEGRO_EVENT* ev, struct ScrollingViewport* viewport) {
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)) {
 		if ((game->data->mouseX * game->viewport.width >= viewport->x) && (game->data->mouseX * game->viewport.width <= viewport->x + viewport->w) && (game->data->mouseY * game->viewport.height >= viewport->y) && (game->data->mouseY * game->viewport.height <= viewport->y + viewport->h)) {
-			viewport->offset = 0;
+			viewport->offsetX = 0;
+			viewport->offsetY = 0;
 			viewport->speed = 0;
 			viewport->pressed = true;
 		}
@@ -76,11 +77,13 @@ void ProcessScrollingViewportEvent(struct Game* game, ALLEGRO_EVENT* ev, struct 
 	}
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_AXES)) {
 		if (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) {
-			viewport->offset += ev->touch.dy / (float)game->viewport.height;
+			viewport->offsetX += ev->touch.dx / (float)game->viewport.width;
+			viewport->offsetY += ev->touch.dy / (float)game->viewport.height;
 		} else {
-			viewport->offset += ev->mouse.dy / (float)game->viewport.height;
+			viewport->offsetX += ev->mouse.dx / (float)game->viewport.width;
+			viewport->offsetY += ev->mouse.dy / (float)game->viewport.height;
 		}
-		if (viewport->pressed && !viewport->triggered && fabs(viewport->offset) > 0.01) {
+		if (viewport->pressed && !viewport->triggered && ((fabs(viewport->offsetX) > 0.01) || (fabs(viewport->offsetY) > 0.01))) {
 			double timestamp;
 			if (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) {
 				timestamp = ev->touch.timestamp;

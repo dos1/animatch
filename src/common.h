@@ -65,6 +65,7 @@ struct CommonResources {
 	bool touch;
 	ALLEGRO_BITMAP* silhouette;
 	ALLEGRO_SHADER* kawese_shader;
+	int level;
 
 	struct {
 		float progress;

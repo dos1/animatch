@@ -145,6 +145,8 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	char* names[] = {"silhouette/frog.webp", "silhouette/bee.webp", "silhouette/ladybug.webp", "silhouette/cat.webp", "silhouette/fish.webp"};
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
 
+	data->level = 0;
+
 	return data;
 }
 
