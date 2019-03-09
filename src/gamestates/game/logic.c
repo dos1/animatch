@@ -214,7 +214,24 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 		}
 		TM_AddAction(data->timeline, DispatchAnimations, NULL);
 	}
-	PrintConsole(game, "possible moves: %d", CountMoves(game, data));
+
+	// deadlock handling
+	int moves = CountMoves(game, data);
+	PrintConsole(game, "possible moves: %d", moves);
+	if (moves == 0 && !data->locked) {
+		data->locked = true;
+		int J = ROWS / 2;
+		for (int i = 0; i < COLS; i++) {
+			for (int j = -1; j <= 1; j++) {
+				if (data->fields[i][J + j].type == FIELD_TYPE_ANIMAL) {
+					data->fields[i][J + j].to_remove = true;
+				}
+			}
+		}
+		if (!matched && !collected) {
+			TM_AddAction(data->timeline, DispatchAnimations, NULL);
+		}
+	}
 }
 
 int CountMoves(struct Game* game, struct GamestateResources* data) {
