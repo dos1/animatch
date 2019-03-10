@@ -26,19 +26,23 @@ struct GamestateResources {
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2, *leaf1b, *leaf2b;
 	ALLEGRO_FONT* font;
-	struct Character *beetle, *ui;
+	struct Character *beetle, *ui, *snail;
 
 	int unlocked;
 	int highlight;
+	bool scrolling;
 
 	struct ScrollingViewport menu;
 };
 
-int Gamestate_ProgressCount = 12; // number of loading steps as reported by Gamestate_Load; 0 when missing
+int Gamestate_ProgressCount = 13; // number of loading steps as reported by Gamestate_Load; 0 when missing
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
 	AnimateCharacter(game, data->beetle, delta, 1.0);
+	if (data->scrolling) {
+		AnimateCharacter(game, data->snail, delta, 1.0);
+	}
 }
 
 void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
@@ -71,6 +75,10 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	SetScrollingViewportAsTarget(game, NULL);
 
 	al_draw_bitmap(data->frame, 0, 0, 0);
+
+	float pos = Clamp(0.0, 1.0, data->menu.pos / (float)(data->menu.content - data->menu.h));
+	SetCharacterPosition(game, data->snail, data->menu.x + data->menu.w, data->menu.y + data->menu.h * pos, ALLEGRO_PI / 2.0);
+	DrawCharacter(game, data->snail);
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
 	DrawCharacter(game, data->beetle);
@@ -122,7 +130,21 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		// When there are no active gamestates, the engine will quit.
 	}
 
+	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)) {
+		if (IsOnCharacter(game, data->snail, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->scrolling = true;
+		}
+	}
+
+	if (data->scrolling) {
+		float pos = ((game->data->mouseY * game->viewport.height) - data->menu.y) / (float)data->menu.h;
+		pos = Clamp(0.0, 1.0, pos);
+		data->menu.pos = pos * (data->menu.content - data->menu.h);
+		data->menu.speed = 0.0;
+	}
+
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_END) || (ev->type == ALLEGRO_EVENT_TOUCH_CANCEL) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)) {
+		data->scrolling = false;
 		if (data->menu.pressed && !data->menu.triggered) {
 			PrintConsole(game, "click");
 			game->data->level = WhichLevel(game, data);
@@ -186,6 +208,13 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	LoadSpritesheets(game, data->beetle, progress);
 	SelectSpritesheet(game, data->beetle, "beetle");
 
+	data->snail = CreateCharacter(game, "snail");
+	RegisterSpritesheet(game, data->snail, "scroll");
+	LoadSpritesheets(game, data->snail, progress);
+	SelectSpritesheet(game, data->snail, "scroll");
+	data->snail->scaleX = 0.5;
+	data->snail->scaleY = 0.5;
+
 	data->menu.pos = 0;
 	return data;
 }
@@ -205,6 +234,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_font(data->font);
 	DestroyCharacter(game, data->ui);
 	DestroyCharacter(game, data->beetle);
+	DestroyCharacter(game, data->snail);
 	free(data);
 }
 

@@ -188,7 +188,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
 	}
 
-	SetCharacterPosition(game, data->snail, 0, 0, 0);
+	SetCharacterPosition(game, data->snail, 476, 178, 0);
 	DrawCharacter(game, data->snail);
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
