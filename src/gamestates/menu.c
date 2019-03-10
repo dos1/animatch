@@ -32,6 +32,8 @@ struct GamestateResources {
 	int highlight;
 	bool scrolling;
 
+	int snail_offset[621];
+
 	struct ScrollingViewport menu;
 };
 
@@ -77,7 +79,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->frame, 0, 0, 0);
 
 	float pos = Clamp(0.0, 1.0, data->menu.pos / (float)(data->menu.content - data->menu.h));
-	SetCharacterPosition(game, data->snail, data->menu.x + data->menu.w, data->menu.y + data->menu.h * pos, ALLEGRO_PI / 2.0);
+	int off = ((int)(620 * pos) / 8) * 8;
+	SetCharacterPosition(game, data->snail, data->snail_offset[off] - 14 + data->menu.x + data->menu.w, data->menu.y + data->menu.h * pos, ALLEGRO_PI / 2.0);
 	DrawCharacter(game, data->snail);
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
@@ -175,6 +178,17 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	progress(game);
 
 	data->frame = al_load_bitmap(GetDataFilePath(game, "frame.webp"));
+
+	for (int i = 0; i < 621; i++) {
+		int offset = -1;
+		ALLEGRO_COLOR color;
+		do {
+			offset++;
+			color = al_get_pixel(data->frame, 614 + offset, 412 + i);
+		} while (color.a < 0.9);
+		data->snail_offset[i] = offset;
+	}
+
 	progress(game);
 
 	data->framebg = al_load_bitmap(GetDataFilePath(game, "frame_bg.webp"));
