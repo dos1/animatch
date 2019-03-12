@@ -42,9 +42,7 @@ int Gamestate_ProgressCount = 13; // number of loading steps as reported by Game
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
 	AnimateCharacter(game, data->beetle, delta, 1.0);
-	if (data->scrolling) {
-		AnimateCharacter(game, data->snail, delta, 1.0);
-	}
+	AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->menu.speed))), 1.0);
 }
 
 void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
@@ -78,7 +76,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_draw_bitmap(data->frame, 0, 0, 0);
 
-	float pos = Clamp(0.0, 1.0, data->menu.pos / (float)(data->menu.content - data->menu.h));
+	float pos = Clamp(0.12, 0.88, 0.12 + 0.76 * data->menu.pos / (float)(data->menu.content - data->menu.h));
 	int off = ((int)(620 * pos) / 8) * 8;
 	SetCharacterPosition(game, data->snail, data->snail_offset[off] - 14 + data->menu.x + data->menu.w, data->menu.y + data->menu.h * pos, ALLEGRO_PI / 2.0);
 	DrawCharacter(game, data->snail);
@@ -140,7 +138,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if (data->scrolling) {
-		float pos = ((game->data->mouseY * game->viewport.height) - data->menu.y) / (float)data->menu.h;
+		float pos = ((game->data->mouseY * game->viewport.height) - data->menu.y - 80) / (float)(data->menu.h - 140);
 		pos = Clamp(0.0, 1.0, pos);
 		data->menu.pos = pos * (data->menu.content - data->menu.h);
 		data->menu.speed = 0.0;
@@ -259,11 +257,14 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
 	SetScrollingViewportPosition(game, &data->menu, 90, 412, 536, 621, 5800);
 
+	data->unlocked = 0;
+	data->highlight = -1;
+
 	data->menu.speed = 0;
 	data->menu.pressed = false;
 	data->menu.triggered = false;
-	data->unlocked = 0;
-	data->highlight = -1;
+
+	data->menu.pos = 0;
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
