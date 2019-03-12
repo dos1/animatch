@@ -264,7 +264,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->menu.pressed = false;
 	data->menu.triggered = false;
 
-	data->menu.pos = 0;
+	data->menu.pos = Clamp(0, data->menu.content - data->menu.h, 175 * (data->unlocked / 3 - 1));
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
