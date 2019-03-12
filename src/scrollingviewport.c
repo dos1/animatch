@@ -71,7 +71,7 @@ void ProcessScrollingViewportEvent(struct Game* game, ALLEGRO_EVENT* ev, struct 
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_END) || (ev->type == ALLEGRO_EVENT_TOUCH_CANCEL) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)) {
 		viewport->pressed = false;
 		viewport->triggered = false;
-		if (fabs(viewport->speed) < 0.0015) {
+		if (fabs(viewport->speed) < 0.001) {
 			viewport->speed = 0;
 		}
 	}
@@ -83,7 +83,7 @@ void ProcessScrollingViewportEvent(struct Game* game, ALLEGRO_EVENT* ev, struct 
 			viewport->offsetX += ev->mouse.dx / (float)game->viewport.width;
 			viewport->offsetY += ev->mouse.dy / (float)game->viewport.height;
 		}
-		if (viewport->pressed && !viewport->triggered && ((fabs(viewport->offsetX) > 0.01) || (fabs(viewport->offsetY) > 0.01))) {
+		if (viewport->pressed && !viewport->triggered && ((fabs(viewport->offsetX) > 0.02) || (fabs(viewport->offsetY) > 0.02))) {
 			double timestamp;
 			if (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) {
 				timestamp = ev->touch.timestamp;
