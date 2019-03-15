@@ -234,6 +234,7 @@ struct FieldID ToRight(struct FieldID id);
 struct FieldID ToTop(struct FieldID id);
 struct FieldID ToBottom(struct FieldID id);
 struct Field* GetField(struct Game* game, struct GamestateResources* data, struct FieldID id);
+bool WillMatchAfterSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldID id);
 bool IsSleeping(struct Field* field);
 bool IsDrawable(enum FIELD_TYPE type);
@@ -253,6 +254,7 @@ void DoRemoval(struct Game* game, struct GamestateResources* data);
 void StopAnimations(struct Game* game, struct GamestateResources* data);
 void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+void AnimateBadSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num);
 TM_ACTION(DispatchAnimations);
 

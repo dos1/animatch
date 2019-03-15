@@ -38,15 +38,12 @@ void Turn(struct Game* game, struct GamestateResources* data, struct FieldID one
 	}
 	data->locked = true;
 
-	AnimateSwapping(game, data, one, two);
-
-	Swap(game, data, one, two);
-	if (IsMatching(game, data, one) || IsMatching(game, data, two)) {
+	if (WillMatchAfterSwapping(game, data, one, two)) {
+		AnimateSwapping(game, data, one, two);
 		data->moves++;
 	} else {
-		AnimateSwapping(game, data, one, two);
+		AnimateBadSwapping(game, data, one, two);
 	}
-	Swap(game, data, one, two);
 }
 
 bool ShowHint(struct Game* game, struct GamestateResources* data) {

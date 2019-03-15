@@ -147,6 +147,13 @@ int IsMatching(struct Game* game, struct GamestateResources* data, struct FieldI
 	return chain;
 }
 
+bool WillMatchAfterSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	Swap(game, data, one, two);
+	bool result = IsMatching(game, data, one) || IsMatching(game, data, two);
+	Swap(game, data, one, two);
+	return result;
+}
+
 static bool AreAdjacentMatching(struct Game* game, struct GamestateResources* data, struct FieldID id, struct FieldID (*func)(struct FieldID)) {
 	for (int i = 0; i < 3; i++) {
 		id = func(id);

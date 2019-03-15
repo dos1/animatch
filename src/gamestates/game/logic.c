@@ -212,8 +212,19 @@ void Gravity(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].locked = false;
 		}
 	}
+}
 
-	data->locked = false;
+static void HandleDeadlock(struct Game* game, struct GamestateResources* data) {
+	// TODO: randomly swapping all animals around is probably a better idea?
+	int J = ROWS / 2;
+	for (int i = 0; i < COLS; i++) {
+		for (int j = -1; j <= 1; j++) {
+			if (data->fields[i][J + j].type == FIELD_TYPE_ANIMAL) {
+				data->fields[i][J + j].to_remove = true;
+			}
+		}
+	}
+	TM_AddAction(data->timeline, DispatchAnimations, NULL);
 }
 
 void ProcessFields(struct Game* game, struct GamestateResources* data) {
@@ -224,23 +235,14 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 			Collect(game, data);
 		}
 		TM_AddAction(data->timeline, DispatchAnimations, NULL);
-	}
-
-	// deadlock handling
-	int moves = CountMoves(game, data);
-	PrintConsole(game, "possible moves: %d", moves);
-	if (moves == 0 && !data->locked) {
-		data->locked = true;
-		int J = ROWS / 2;
-		for (int i = 0; i < COLS; i++) {
-			for (int j = -1; j <= 1; j++) {
-				if (data->fields[i][J + j].type == FIELD_TYPE_ANIMAL) {
-					data->fields[i][J + j].to_remove = true;
-				}
-			}
-		}
-		if (!matched && !collected) {
-			TM_AddAction(data->timeline, DispatchAnimations, NULL);
+	} else {
+		// deadlock handling
+		int moves = CountMoves(game, data);
+		PrintConsole(game, "possible moves: %d", moves);
+		if (moves == 0) {
+			HandleDeadlock(game, data);
+		} else {
+			data->locked = false;
 		}
 	}
 }
@@ -353,7 +355,11 @@ static TM_ACTION(AfterSwapping) {
 	Swap(game, data, one->id, two->id);
 	one->animation.swapping = StaticTween(game, 0.0);
 	two->animation.swapping = StaticTween(game, 0.0);
-	data->locked = false;
+	return true;
+}
+
+static TM_ACTION(StartProcessing) {
+	TM_RunningOnly;
 	ProcessFields(game, data);
 	return true;
 }
@@ -378,6 +384,18 @@ void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct 
 	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
 	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
 	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
+	TM_AddAction(data->timeline, StartProcessing, NULL);
+}
+
+void AnimateBadSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
+	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
+	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
+	// go back
+	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
+	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
+	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
+	TM_AddAction(data->timeline, StartProcessing, NULL);
 }
 
 static TM_ACTION(AfterMatching) {
