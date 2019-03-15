@@ -114,7 +114,28 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 	return collected;
 }
 
-void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
+void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
+	field->type = FIELD_TYPE_ANIMAL;
+	while (data->level.fields[FIELD_TYPE_ANIMAL]) {
+		field->data.animal.type = rand() % ANIMAL_TYPES;
+		if (!allow_matches && IsMatching(game, data, field->id)) {
+			continue;
+		}
+		if (data->level.animals[field->data.animal.type]) {
+			break;
+		}
+	}
+	if (rand() / (float)RAND_MAX < 0.005) {
+		field->data.animal.sleeping = data->level.sleeping;
+	}
+	field->data.animal.super = false;
+
+	field->overlay_visible = false;
+	field->locked = true;
+	UpdateDrawable(game, data, field->id);
+}
+
+void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
 	while (true) {
 		if (rand() / (float)RAND_MAX < 0.001) {
 			field->type = FIELD_TYPE_FREEFALL;
@@ -135,17 +156,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 				break;
 			}
 		} else {
-			field->type = FIELD_TYPE_ANIMAL;
-			while (data->level.fields[FIELD_TYPE_ANIMAL]) {
-				field->data.animal.type = rand() % ANIMAL_TYPES;
-				if (data->level.animals[field->data.animal.type]) {
-					break;
-				}
-			}
-			if (rand() / (float)RAND_MAX < 0.005) {
-				field->data.animal.sleeping = data->level.sleeping;
-			}
-			field->data.animal.super = false;
+			GenerateAnimal(game, data, field, allow_matches);
 			if (data->level.fields[FIELD_TYPE_ANIMAL]) {
 				break;
 			}
@@ -157,7 +168,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 }
 
 static void CreateNewField(struct Game* game, struct GamestateResources* data, struct Field* field) {
-	GenerateField(game, data, field);
+	GenerateField(game, data, field, true);
 	field->animation.fall_levels++;
 	field->animation.falling = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, FALLING_TIME * (1.0 + field->animation.level_no * 0.025));
 	field->animation.hiding = Tween(game, 1.0, 0.0, TWEEN_STYLE_LINEAR, 0.25);

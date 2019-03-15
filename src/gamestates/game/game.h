@@ -207,7 +207,10 @@ struct GamestateResources {
 		struct {
 			enum FIELD_TYPE field_type;
 			enum COLLECTIBLE_TYPE collectible_type;
+			enum ANIMAL_TYPE animal_type;
+			bool random_animal;
 			bool sleeping;
+			bool super;
 		} fields[COLS][ROWS];
 		bool supers, sleeping, infinite;
 
@@ -240,7 +243,8 @@ bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldI
 
 // logic
 int MarkMatching(struct Game* game, struct GamestateResources* data);
-void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field);
+void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches);
+void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches);
 void Gravity(struct Game* game, struct GamestateResources* data);
 void ProcessFields(struct Game* game, struct GamestateResources* data);
 bool CanBeMatched(struct Game* game, struct GamestateResources* data, struct FieldID id);

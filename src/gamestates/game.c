@@ -596,40 +596,25 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->counter = 0.0;
 	data->counter_speed = 0.0;
 	data->counter_strength = 0.0;
-	data->level.id = 1;
+	data->locked = false;
+	data->clicked = false;
+	data->paused = false;
+	data->menu = false;
+	data->snail_blink = 0.0;
+
 	for (int i = 0; i < ANIMAL_TYPES; i++) {
 		data->level.animals[i] = true;
 	}
 	for (int i = 0; i < SPECIAL_TYPES; i++) {
 		data->level.specials[i] = true;
 	}
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
-			data->level.fields[i][j].sleeping = false;
-		}
-	}
 	data->level.sleeping = true;
 	data->level.supers = true;
 	data->level.specials[SPECIAL_TYPE_EGG] = false;
 	data->level.infinite = true;
 
-	data->locked = false;
-	data->clicked = false;
-	data->paused = false;
-	data->menu = false;
-	data->snail_blink = 0.0;
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
-			if (data->level.fields[i][j].field_type == FIELD_TYPE_EMPTY) {
-				GenerateField(game, data, &data->fields[i][j]);
-			} else {
-				data->fields[i][j].type = data->level.fields[i][j].field_type;
-				if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
-					data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
-				}
-				UpdateDrawable(game, data, data->fields[i][j].id);
-			}
 			data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
 			data->fields[i][j].animation.falling = StaticTween(game, 1.0);
 
@@ -637,20 +622,72 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].animation.time_to_blink = (int)((rand() % 100000 + 200000) * (rand() / (double)RAND_MAX));
 		}
 	}
+
+	// temporary
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
+			data->level.fields[i][j].animal_type = (j * COLS + i) % ANIMAL_TYPES;
+			data->level.fields[i][j].random_animal = true;
+			data->level.fields[i][j].sleeping = false;
+			data->level.fields[i][j].super = false;
+		}
+	}
+
+	data->level.fields[4][4].field_type = FIELD_TYPE_FREEFALL;
+
+	PrintConsole(game, "level: %d", game->data->level);
+	if (game->data->level >= 0) {
+		data->level.id = game->data->level;
+
+		for (int i = 0; i < COLS; i++) {
+			for (int j = 0; j < ROWS; j++) {
+				if (data->level.fields[i][j].field_type == FIELD_TYPE_EMPTY) {
+					GenerateField(game, data, &data->fields[i][j], false);
+				} else {
+					data->fields[i][j].type = data->level.fields[i][j].field_type;
+
+					switch (data->level.fields[i][j].field_type) {
+						case FIELD_TYPE_COLLECTIBLE:
+							data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
+							break;
+						case FIELD_TYPE_FREEFALL:
+							data->fields[i][j].data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
+							break;
+						case FIELD_TYPE_ANIMAL:
+							if (data->level.fields[i][j].random_animal) {
+								GenerateAnimal(game, data, &data->fields[i][j], false);
+							} else {
+								data->fields[i][j].data.animal.type = data->level.fields[i][j].animal_type;
+							}
+							data->fields[i][j].data.animal.sleeping = data->level.fields[i][j].sleeping;
+							data->fields[i][j].data.animal.super = data->level.fields[i][j].super;
+							break;
+						default:
+							break;
+					}
+					UpdateDrawable(game, data, data->fields[i][j].id);
+				}
+			}
+		}
+		data->moves = 0;
+		data->score = 0;
+	}
+
 	data->current = (struct FieldID){-1, -1};
-	while (MarkMatching(game, data)) {
+	do {
 		DoRemoval(game, data);
 		Gravity(game, data);
-	}
+	} while (MarkMatching(game, data));
 	StopAnimations(game, data);
 
-	data->moves = 0;
-	data->score = 0;
 	data->scoring = StaticTween(game, 0.0);
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
 	// Called when gamestate gets stopped. Stop timers, music etc. here.
+	TM_CleanQueue(data->timeline);
+	TM_CleanBackgroundQueue(data->timeline);
 }
 
 void Gamestate_Pause(struct Game* game, struct GamestateResources* data) {
