@@ -36,13 +36,12 @@ void Turn(struct Game* game, struct GamestateResources* data, struct FieldID one
 		GetField(game, data, one)->animation.shaking = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_OUT, SHAKING_TIME);
 		return;
 	}
-	data->locked = true;
 
 	if (WillMatchAfterSwapping(game, data, one, two)) {
-		AnimateSwapping(game, data, one, two);
 		data->moves++;
+		StartSwapping(game, data, one, two);
 	} else {
-		AnimateBadSwapping(game, data, one, two);
+		StartBadSwapping(game, data, one, two);
 	}
 }
 
@@ -68,7 +67,7 @@ bool AutoMove(struct Game* game, struct GamestateResources* data) {
 			for (int q = 0; q < 4; q++) {
 				if (IsValidMove(id, callbacks[q](id))) {
 					if (WillMatch(game, data, id, callbacks[q](id))) {
-						AnimateSwapping(game, data, id, callbacks[q](id));
+						StartSwapping(game, data, id, callbacks[q](id));
 						return true;
 					}
 				}

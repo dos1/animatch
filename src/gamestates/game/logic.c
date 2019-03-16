@@ -22,16 +22,21 @@
 
 /*
  * What consists of a typical turn:
- *  - AnimateSwapping gets called, putting StartSwapping and AfterSwapping to the timeline queue
+ *  - StartSwapping gets called, putting AnimateSwapping and TriggerProcessing to the timeline queue
  *
- *  - AfterSwapping does the actual swap in the memory and calls ProcessFields
+ *  - AnimateSwapping locks the controls, waits for animation and finishes with the actual swap in the memory
+ *  - TriggerProcessing simply calls ProcessFields
+ *
  *  - ProcessFields is where the actual magic happens:
- *    - If there's nothing to do, it does nothing and stops there. Otherwise...
  *    - MarkMatching finds matches and sets proper field attributes
  *    - Collect gets called, dealing with collectibles
  *    - AnimateSpecials triggers and queues animation for the special fields
  *    - if necessary, Collect and AnimateSpecials are repeated as long as there's something to do for them
- *    - DispatchAnimations is queued after any previously queued animation
+ *    - now:
+ *      - if something happened earlier, DispatchAnimations is queued after any previously queued animation
+ *      - if nothing happened and there are no possible moves left, HandleDeadlock is called which is supposed
+ *        to shuffle the board in order to get out of deadlock; DispatchAnimations is then queued
+ *      - otherwise, the controls are unlocked and the execution flow stops there.
  *
  *  - DispatchAnimations does two things:
  *    - call PerformActions, which triggers animations and turns fields into specials
@@ -224,7 +229,6 @@ static void HandleDeadlock(struct Game* game, struct GamestateResources* data) {
 			}
 		}
 	}
-	TM_AddAction(data->timeline, DispatchAnimations, NULL);
 }
 
 void ProcessFields(struct Game* game, struct GamestateResources* data) {
@@ -241,6 +245,7 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 		PrintConsole(game, "possible moves: %d", moves);
 		if (moves == 0) {
 			HandleDeadlock(game, data);
+			TM_AddAction(data->timeline, DispatchAnimations, NULL);
 		} else {
 			data->locked = false;
 		}
@@ -286,7 +291,6 @@ static void PerformActions(struct Game* game, struct GamestateResources* data) {
 						TurnMatchToSuper(game, data, data->fields[i][j].matched, data->fields[i][j].match_mark);
 					}
 				}
-				data->locked = true;
 
 				data->score += 10;
 				data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
@@ -348,54 +352,69 @@ void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one
 	data->fields[two.i][two.j].highlight = highlight;
 }
 
-static TM_ACTION(AfterSwapping) {
-	TM_RunningOnly;
-	struct Field* one = TM_GetArg(action->arguments, 0);
-	struct Field* two = TM_GetArg(action->arguments, 1);
-	Swap(game, data, one->id, two->id);
-	one->animation.swapping = StaticTween(game, 0.0);
-	two->animation.swapping = StaticTween(game, 0.0);
-	return true;
-}
-
-static TM_ACTION(StartProcessing) {
+static TM_ACTION(TriggerProcessing) {
 	TM_RunningOnly;
 	ProcessFields(game, data);
 	return true;
 }
 
-static TM_ACTION(StartSwapping) {
-	TM_RunningOnly;
-	struct Field* one = TM_GetArg(action->arguments, 0);
-	struct Field* two = TM_GetArg(action->arguments, 1);
-	data->locked = true;
-	one->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, SWAPPING_TIME);
-	one->animation.swapee = two->id;
-	two->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, SWAPPING_TIME);
-	two->animation.swapee = one->id;
-	return true;
+static TM_ACTION(AnimateSwapping) {
+	switch (action->state) {
+		case TM_ACTIONSTATE_START: {
+			struct Field* one = TM_GetArg(action->arguments, 0);
+			struct Field* two = TM_GetArg(action->arguments, 1);
+			double* timeout = TM_GetArg(action->arguments, 2);
+			data->locked = true;
+			one->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, *timeout);
+			one->animation.swapee = two->id;
+			two->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, *timeout);
+			two->animation.swapee = one->id;
+			return false;
+		}
+		case TM_ACTIONSTATE_RUNNING: {
+			double* timeout = TM_GetArg(action->arguments, 2);
+			double t = *timeout;
+			*timeout -= action->delta;
+			if (*timeout < 0) {
+				action->delta -= t;
+				return true;
+			}
+			return false;
+		}
+		case TM_ACTIONSTATE_STOP: {
+			struct Field* one = TM_GetArg(action->arguments, 0);
+			struct Field* two = TM_GetArg(action->arguments, 1);
+			Swap(game, data, one->id, two->id);
+			one->animation.swapping = StaticTween(game, 0.0);
+			two->animation.swapping = StaticTween(game, 0.0);
+			return true;
+		}
+		default:
+			return true;
+	}
 }
 
-void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+void StartSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
 	// TODO: used only for turning into a special, maybe could be done better
 	data->swap1 = one;
 	data->swap2 = two;
 
-	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
-	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	TM_AddAction(data->timeline, StartProcessing, NULL);
+	TM_WrapArg(double, duration, SWAPPING_TIME);
+	TM_AddAction(data->timeline, AnimateSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two), duration));
+	TM_AddAction(data->timeline, TriggerProcessing, NULL);
 }
 
-void AnimateBadSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
-	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
-	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	// go back
-	TM_AddAction(data->timeline, StartSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	TM_AddDelay(data->timeline, SWAPPING_TIME * 1000);
-	TM_AddAction(data->timeline, AfterSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two)));
-	TM_AddAction(data->timeline, StartProcessing, NULL);
+void StartBadSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two) {
+	{
+		TM_WrapArg(double, duration, SWAPPING_TIME);
+		TM_AddAction(data->timeline, AnimateSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two), duration));
+	}
+	{
+		// go back
+		TM_WrapArg(double, duration, SWAPPING_TIME);
+		TM_AddAction(data->timeline, AnimateSwapping, TM_Args(GetField(game, data, one), GetField(game, data, two), duration));
+	}
+	TM_AddAction(data->timeline, TriggerProcessing, NULL);
 }
 
 static TM_ACTION(AfterMatching) {

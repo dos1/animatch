@@ -253,8 +253,8 @@ int CountMoves(struct Game* game, struct GamestateResources* data);
 void DoRemoval(struct Game* game, struct GamestateResources* data);
 void StopAnimations(struct Game* game, struct GamestateResources* data);
 void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
-void AnimateSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
-void AnimateBadSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+void StartSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+void StartBadSwapping(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 void SpawnParticles(struct Game* game, struct GamestateResources* data, struct FieldID id, int num);
 TM_ACTION(DispatchAnimations);
 
