@@ -428,7 +428,7 @@ static TM_ACTION(AfterMatching) {
 TM_ACTION(DispatchAnimations) {
 	TM_RunningOnly;
 	PerformActions(game, data);
-	TM_AddDelay(data->timeline, (int)((MATCHING_TIME + MATCHING_DELAY_TIME) * 1000));
+	TM_AddDelay(data->timeline, MATCHING_TIME + MATCHING_DELAY_TIME);
 	TM_AddAction(data->timeline, AfterMatching, NULL);
 	return true;
 }
