@@ -634,8 +634,6 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 
-	data->level.fields[4][4].field_type = FIELD_TYPE_FREEFALL;
-
 	PrintConsole(game, "level: %d", game->data->level);
 	if (game->data->level >= 0) {
 		data->level.id = game->data->level;
