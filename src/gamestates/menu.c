@@ -61,14 +61,14 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < 99; i++) {
 		if (i > data->unlocked) {
 			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
-			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		} else {
 			ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
 			if (data->highlight == i) {
 				color = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
 			}
 			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, color, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
-			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		}
 	}
 
@@ -89,8 +89,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 }
 
 static int WhichLevel(struct Game* game, struct GamestateResources* data) {
-	int x = game->data->mouseX * game->viewport.width - data->menu.x;
-	int y = game->data->mouseY * game->viewport.height - data->menu.y;
+	int x = (int)(game->data->mouseX * game->viewport.width - data->menu.x);
+	int y = (int)(game->data->mouseY * game->viewport.height - data->menu.y);
 
 	if (data->menu.triggered || !data->menu.pressed) {
 		return -1;
@@ -100,7 +100,7 @@ static int WhichLevel(struct Game* game, struct GamestateResources* data) {
 		return -1;
 	}
 
-	y += data->menu.pos;
+	y += (int)data->menu.pos;
 
 	if (y > data->menu.content) {
 		return -1;
@@ -150,7 +150,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			PrintConsole(game, "click");
 			game->data->level = WhichLevel(game, data);
 			if (game->data->level >= 0 && game->data->level <= data->unlocked) {
-				StartTransition(game, (data->menu.x + 50 + game->data->level % 3 * 150 + 150 / 2) / (float)game->viewport.width, (data->menu.y + 25 + game->data->level / 3 * 175 + 175 / 2 - data->menu.pos - 10) / (float)game->viewport.height);
+				StartTransition(game, (data->menu.x + 50 + game->data->level % 3 * 150 + 150 / 2.0) / (float)game->viewport.width, (data->menu.y + 25 + game->data->level / 3.0 * 175 + 175 / 2.0 - data->menu.pos - 10) / (float)game->viewport.height);
 				StopCurrentGamestate(game);
 				StartGamestate(game, "game");
 			}

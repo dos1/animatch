@@ -176,7 +176,7 @@ void DrawField(struct Game* game, struct GamestateResources* data, struct FieldI
 	int levels = field->animation.fall_levels;
 	int level_no = field->animation.level_no;
 	float tween = Interpolate(GetTweenPosition(&field->animation.falling), TWEEN_STYLE_EXPONENTIAL_OUT) * (0.5 - level_no * 0.1) +
-		sqrt(Interpolate(GetTweenPosition(&field->animation.falling), TWEEN_STYLE_BOUNCE_OUT)) * (0.5 + level_no * 0.1);
+	  sqrt(Interpolate(GetTweenPosition(&field->animation.falling), TWEEN_STYLE_BOUNCE_OUT)) * (0.5 + level_no * 0.1);
 
 	int levelDiff = (int)(levels * 90 * (1.0 - tween));
 

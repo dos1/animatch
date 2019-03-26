@@ -140,7 +140,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
 				ALLEGRO_BITMAP* bmp = data->field_bgs[(j * ROWS + i + j % 2) % 4];
 				al_draw_tinted_scaled_bitmap(bmp, color, 0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
-					i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
+				  i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
 			}
 		}
 	}
@@ -201,7 +201,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		ALLEGRO_TRANSFORM transform, orig = *al_get_current_transform();
 		al_identity_transform(&transform);
 		al_scale_transform(&transform, 1.0 + GetTweenValue(&data->scoring) / 4.0, 1.0 + GetTweenValue(&data->scoring) / 4.0);
-		al_translate_transform(&transform, 322 + 70, 35 + 105 / 2 + 30);
+		al_translate_transform(&transform, 322 + 70, 35 + 105 / 2.0 + 30);
 		al_compose_transform(&transform, &orig);
 		al_use_transform(&transform);
 		al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 0, -30, ALLEGRO_ALIGN_CENTER, "%d", data->score);

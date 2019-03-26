@@ -389,6 +389,8 @@ static TM_ACTION(AnimateSwapping) {
 			two->animation.swapping = StaticTween(game, 0.0);
 			return true;
 		}
+		case TM_ACTIONSTATE_DESTROY:
+			free(TM_GetArg(action->arguments, 2));
 		default:
 			return true;
 	}

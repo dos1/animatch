@@ -50,7 +50,7 @@ void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->lowres_scene_blur);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
-		0, 0, al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur), 0);
+	  0, 0, al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur), 0);
 
 	al_set_target_bitmap(data->lowres_scene);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
