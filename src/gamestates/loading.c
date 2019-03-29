@@ -39,18 +39,18 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_clear_to_color(al_map_rgb(255, 255, 255));
 	al_draw_tinted_scaled_bitmap(data->bg_blur, al_map_rgba(64, 64, 64, 64), 0, 0,
-	  al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur),
-	  0, 0,
-	  game->viewport.width, game->viewport.height, 0);
+		al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur),
+		0, 0,
+		game->viewport.width, game->viewport.height, 0);
 	al_draw_bitmap(data->pangolin, (game->viewport.width - al_get_bitmap_width(data->pangolin)) / 2.0,
-	  (game->viewport.height - al_get_bitmap_height(data->pangolin)) / 2.0 - al_get_bitmap_height(data->bar1) / 2.0, 0);
+		(game->viewport.height - al_get_bitmap_height(data->pangolin)) / 2.0 - al_get_bitmap_height(data->bar1) / 2.0, 0);
 
 	al_draw_bitmap(data->bar1, (game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
-	  (game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
+		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
 	al_draw_bitmap_region(data->bar2, 0, 0,
-	  al_get_bitmap_width(data->bar2) * game->loading.progress, al_get_bitmap_height(data->bar2),
-	  (game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
-	  (game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
+		al_get_bitmap_width(data->bar2) * game->loading.progress, al_get_bitmap_height(data->bar2),
+		(game->viewport.width - al_get_bitmap_width(data->bar1)) / 2.0,
+		(game->viewport.height + al_get_bitmap_height(data->pangolin)) / 2.0, 0);
 };
 
 void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
@@ -71,7 +71,7 @@ void Gamestate_PostLoad(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->bg_blur);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_draw_scaled_bitmap(data->bg, 0, 0, al_get_bitmap_width(data->bg), al_get_bitmap_height(data->bg),
-	  0, 0, al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur), 0);
+		0, 0, al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur), 0);
 
 	float size[2] = {al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur)};
 

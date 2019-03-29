@@ -140,7 +140,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
 				ALLEGRO_BITMAP* bmp = data->field_bgs[(j * ROWS + i + j % 2) % 4];
 				al_draw_tinted_scaled_bitmap(bmp, color, 0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
-				  i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
+					i * 90 + 1, j * 90 + offsetY + 1, 90 - 2, 90 - 2, 0);
 			}
 		}
 	}
@@ -422,7 +422,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	// require main OpenGL context.
 
 	struct GamestateResources* data = calloc(1, sizeof(struct GamestateResources));
-	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
+	for (size_t i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
 		data->animal_archetypes[i] = CreateCharacter(game, StrToLower(game, ANIMALS[i]));
 		RegisterSpritesheet(game, data->animal_archetypes[i], "stand");
 		RegisterSpritesheet(game, data->animal_archetypes[i], "blink");
@@ -464,7 +464,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	LoadSpritesheets(game, data->snail, progress);
 	SelectSpritesheet(game, data->snail, "snail");
 
-	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
+	for (size_t i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
 		data->special_archetypes[i] = CreateCharacter(game, StrToLower(game, SPECIALS[i]));
 		for (int j = 0; j < SPECIAL_ACTIONS[i].actions; j++) {
 			RegisterSpritesheet(game, data->special_archetypes[i], SPECIAL_ACTIONS[i].names[j]);
@@ -563,10 +563,10 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 			DestroyCharacter(game, data->fields[i][j].overlay);
 		}
 	}
-	for (unsigned int i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
+	for (size_t i = 0; i < sizeof(ANIMALS) / sizeof(ANIMALS[0]); i++) {
 		DestroyCharacter(game, data->animal_archetypes[i]);
 	}
-	for (unsigned int i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
+	for (size_t i = 0; i < sizeof(SPECIALS) / sizeof(SPECIALS[0]); i++) {
 		DestroyCharacter(game, data->special_archetypes[i]);
 	}
 	for (int i = 0; i < 4; i++) {

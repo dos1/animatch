@@ -29,10 +29,10 @@ void Compositor(struct Game* game) {
 
 		double scale = Interpolate((1.0 - game->data->transition.progress) * 0.7 + 0.3, TWEEN_STYLE_QUINTIC_IN) * 6.0;
 		al_draw_scaled_rotated_bitmap(game->data->silhouette,
-		  al_get_bitmap_width(game->data->silhouette) / 2.0,
-		  al_get_bitmap_height(game->data->silhouette) / 2.0,
-		  game->viewport.width * game->data->transition.x, game->viewport.height * game->data->transition.y,
-		  scale, scale, 0.0, 0);
+			al_get_bitmap_width(game->data->silhouette) / 2.0,
+			al_get_bitmap_height(game->data->silhouette) / 2.0,
+			game->viewport.width * game->data->transition.x, game->viewport.height * game->data->transition.y,
+			scale, scale, 0.0, 0);
 
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
 

@@ -60,15 +60,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	for (int i = 0; i < 99; i++) {
 		if (i > data->unlocked) {
-			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
-			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (i % 3), 25 + 175 * floor(i / 3.0), 0);
+			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * floor(i / 3.0) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		} else {
 			ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
 			if (data->highlight == i) {
 				color = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
 			}
-			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, color, 50 + 150 * (i % 3), 25 + 175 * (i / 3), 0);
-			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * (i / 3) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
+			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, color, 50 + 150 * (i % 3), 25 + 175 * floor(i / 3.0), 0);
+			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * floor(i / 3.0) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		}
 	}
 
@@ -264,7 +264,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->menu.pressed = false;
 	data->menu.triggered = false;
 
-	data->menu.pos = Clamp(0, data->menu.content - data->menu.h, 175 * (data->unlocked / 3 - 1));
+	data->menu.pos = Clamp(0, data->menu.content - data->menu.h, 175 * floor(data->unlocked / 3.0 - 1));
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

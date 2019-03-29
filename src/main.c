@@ -27,17 +27,17 @@ int main(int argc, char** argv) {
 	al_set_app_name(LIBSUPERDERPY_GAMENAME_PRETTY);
 
 	struct Game* game = libsuperderpy_init(argc, argv, LIBSUPERDERPY_GAMENAME,
-	  (struct Params){
-	    720,
-	    1440,
-	    .show_loading_on_launch = true,
-	    .handlers = (struct Handlers){
-	      .event = GlobalEventHandler,
-	      .destroy = DestroyGameData,
-	      .postdraw = DrawBuildInfo,
-	      .postlogic = PostLogic,
-	    },
-	  });
+		(struct Params){
+			720,
+			1440,
+			.show_loading_on_launch = true,
+			.handlers = (struct Handlers){
+				.event = GlobalEventHandler,
+				.destroy = DestroyGameData,
+				.postdraw = DrawBuildInfo,
+				.postlogic = PostLogic,
+			},
+		});
 
 	if (!game) { return 1; }
 
