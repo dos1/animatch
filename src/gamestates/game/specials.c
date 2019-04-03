@@ -145,7 +145,7 @@ TM_ACTION(AnimateSpecial) {
 void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field) {
 	TM_WrapArg(int, count, 64);
 	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(field, count));
-	TM_AddDelay(data->timeline, 0.001);
+	TM_AddDelay(data->timeline, 0.0333);
 	if (field->type != FIELD_TYPE_FREEFALL && field->type != FIELD_TYPE_DISABLED) {
 		if (field->type == FIELD_TYPE_ANIMAL) {
 			SelectSpritesheet(game, field->drawable, ANIMAL_ACTIONS[field->data.animal.type].names[rand() % ANIMAL_ACTIONS[field->type].actions]);
