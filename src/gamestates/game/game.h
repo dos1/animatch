@@ -42,10 +42,18 @@
 	SPECIAL(DANDELION)             \
 	SPECIAL(CLOUD)
 
+#define FOREACH_FIELD_TYPE(TYPE) \
+	TYPE(ANIMAL)                   \
+	TYPE(FREEFALL)                 \
+	TYPE(COLLECTIBLE)              \
+	TYPE(EMPTY)                    \
+	TYPE(DISABLED)
+
 #define GENERATE_STRING(VAL) #VAL,
 #define GENERATE_ANIMAL_ENUM(VAL) ANIMAL_TYPE_##VAL,
 #define GENERATE_SPECIAL_ENUM(VAL) SPECIAL_TYPE_##VAL,
 #define GENERATE_COLLECTIBLE_ENUM(VAL) COLLECTIBLE_TYPE_##VAL,
+#define GENERATE_FIELD_TYPE_ENUM(VAL) FIELD_TYPE_##VAL,
 
 enum ANIMAL_TYPE {
 	FOREACH_ANIMAL(GENERATE_ANIMAL_ENUM)
@@ -63,6 +71,12 @@ enum COLLECTIBLE_TYPE {
 	FOREACH_COLLECTIBLE(GENERATE_COLLECTIBLE_ENUM)
 	//
 	COLLECTIBLE_TYPES
+};
+
+enum FIELD_TYPE {
+	FOREACH_FIELD_TYPE(GENERATE_FIELD_TYPE_ENUM)
+	//
+	FIELD_TYPES
 };
 
 static char* ANIMALS[] = {FOREACH_ANIMAL(GENERATE_STRING)};
@@ -111,16 +125,6 @@ static struct {
 };
 
 SUPPRESS_END
-
-enum FIELD_TYPE {
-	FIELD_TYPE_ANIMAL,
-	FIELD_TYPE_FREEFALL,
-	FIELD_TYPE_COLLECTIBLE,
-	FIELD_TYPE_EMPTY,
-	FIELD_TYPE_DISABLED,
-
-	FIELD_TYPES
-};
 
 struct FieldID {
 	int i;
@@ -279,6 +283,7 @@ void DrawScene(struct Game* game, struct GamestateResources* data);
 void UpdateBlur(struct Game* game, struct GamestateResources* data);
 
 // debug
+void HandleDebugEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev);
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data);
 
 #endif

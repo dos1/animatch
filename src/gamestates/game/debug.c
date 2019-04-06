@@ -20,6 +20,107 @@
 
 #include "game.h"
 
+static void UpdateField(struct Game* game, struct GamestateResources* data, struct Field* field) {
+	if (field->type == FIELD_TYPE_FREEFALL) {
+		field->data.freefall.variant = fmin(field->data.freefall.variant, SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions - 1);
+	}
+	if (field->type == FIELD_TYPE_ANIMAL) {
+		field->data.animal.type = fmin(field->data.animal.type, ANIMAL_TYPES - 1);
+	}
+	if (field->type == FIELD_TYPE_COLLECTIBLE) {
+		field->data.collectible.type = fmin(field->data.collectible.type, COLLECTIBLE_TYPES - 1);
+		field->data.collectible.variant = 0;
+	}
+	UpdateDrawable(game, data, field->id);
+}
+
+void HandleDebugEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
+#ifdef LIBSUPERDERPY_IMGUI
+	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN && ev->keyboard.keycode == ALLEGRO_KEY_SPACE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && ev->mouse.button == 2)) {
+		PrintConsole(game, "Debug interface toggled.");
+		data->debug = !data->debug;
+		return;
+	}
+#endif
+
+	if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
+		if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
+			ShowHint(game, data);
+			return;
+		}
+		if (ev->keyboard.keycode == ALLEGRO_KEY_A) {
+			AutoMove(game, data);
+			return;
+		}
+
+		int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
+
+		struct Field* field = GetField(game, data, data->hovered);
+
+		if (!field) {
+			return;
+		}
+
+		if (ev->keyboard.keycode == ALLEGRO_KEY_S) {
+			if (field->type != FIELD_TYPE_ANIMAL) {
+				return;
+			}
+			field->data.animal.sleeping = !field->data.animal.sleeping;
+			UpdateField(game, data, field);
+			PrintConsole(game, "Field %dx%d, sleeping = %d", field->id.i, field->id.j, field->data.animal.sleeping);
+			return;
+		}
+
+		if (ev->keyboard.keycode == ALLEGRO_KEY_D) {
+			if (field->type != FIELD_TYPE_ANIMAL) {
+				return;
+			}
+			field->data.animal.super = !field->data.animal.super;
+			UpdateField(game, data, field);
+			PrintConsole(game, "Field %dx%d, super = %d", field->id.i, field->id.j, field->data.animal.super);
+			return;
+		}
+
+		if (ev->keyboard.keycode == ALLEGRO_KEY_MINUS) {
+			Gravity(game, data);
+			ProcessFields(game, data);
+		}
+
+		if (type == -1) {
+			type = 9;
+		}
+		if (type < 0) {
+			return;
+		}
+		if (type >= ANIMAL_TYPES + FIELD_TYPES) {
+			return;
+		}
+		if (type >= ANIMAL_TYPES) {
+			type -= ANIMAL_TYPES - 1;
+			if (field->type == (enum FIELD_TYPE)type) {
+				field->data.collectible.type++;
+				if (field->data.collectible.type == COLLECTIBLE_TYPES) {
+					field->data.collectible.type = 0;
+				}
+			} else {
+				field->data.collectible.type = 0;
+			}
+			field->type = type;
+			if (field->type == FIELD_TYPE_FREEFALL) {
+				field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
+			} else {
+				field->data.collectible.variant = 0;
+			}
+			PrintConsole(game, "Setting field type to %d", type);
+		} else {
+			field->type = FIELD_TYPE_ANIMAL;
+			field->data.animal.type = type;
+			PrintConsole(game, "Setting animal type to %d", type);
+		}
+		UpdateField(game, data, field);
+	}
+}
+
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 #ifdef LIBSUPERDERPY_IMGUI
 
@@ -38,6 +139,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		igBegin("Animatch Debug Toolbox", &data->debug, 0);
 		igSetWindowFontScale(1.5);
 
+		igTextColored(data->locked ? gray : white, "Enabled: %d", !data->locked);
 		igText("Particles: %d", data->particles->active);
 		igText("Possible moves: %d", CountMoves(game, data));
 		igSeparator();
@@ -97,8 +199,60 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				if (igIsItemHovered(0)) {
 					data->hovered = (struct FieldID){i, j};
 				}
+
+				char buf[12];
+				snprintf(buf, 12, "transmute%d", j * COLS + i);
+
 				if (igIsItemClicked(0)) {
 					data->current = (struct FieldID){i, j};
+					igOpenPopup(buf);
+				}
+
+				if (igBeginPopup(buf, 0)) {
+					igSetWindowFontScale(1.5);
+
+#define AddFieldTypeMenuItem(t)                                      \
+	if (igMenuItemBool(#t, "", field->type == FIELD_TYPE_##t, true)) { \
+		field->type = FIELD_TYPE_##t;                                    \
+		UpdateField(game, data, field);                                  \
+	}
+
+					FOREACH_FIELD_TYPE(AddFieldTypeMenuItem)
+
+					igSeparator();
+
+					if (field->type == FIELD_TYPE_COLLECTIBLE) {
+#define AddCollectibleMenuItem(t)                                                           \
+	if (igMenuItemBool(#t, "", field->data.collectible.type == COLLECTIBLE_TYPE_##t, true)) { \
+		field->data.collectible.type = COLLECTIBLE_TYPE_##t;                                    \
+		UpdateField(game, data, field);                                                         \
+	}
+
+						FOREACH_COLLECTIBLE(AddCollectibleMenuItem)
+					} else if (field->type == FIELD_TYPE_ANIMAL) {
+						char b[2] = "0";
+
+#define AddAnimalMenuItem(t)                                                     \
+	b[0] = '1' + ANIMAL_TYPE_##t;                                                  \
+	if (igMenuItemBool(#t, b, field->data.animal.type == ANIMAL_TYPE_##t, true)) { \
+		field->data.animal.type = ANIMAL_TYPE_##t;                                   \
+		UpdateField(game, data, field);                                              \
+	}
+
+						FOREACH_ANIMAL(AddAnimalMenuItem)
+
+						igSeparator();
+
+						if (igMenuItemBool("Sleeping", "S", field->data.animal.sleeping, true)) {
+							field->data.animal.sleeping = !field->data.animal.sleeping;
+							UpdateField(game, data, field);
+						}
+						if (igMenuItemBool("Super", "D", field->data.animal.super, true)) {
+							field->data.animal.super = !field->data.animal.super;
+							UpdateField(game, data, field);
+						}
+					}
+					igEndPopup();
 				}
 
 				igNextColumn();

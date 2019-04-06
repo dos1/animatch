@@ -304,16 +304,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		}
 	}
 
-	if (game->config.debug.enabled) {
-#ifdef LIBSUPERDERPY_IMGUI
-		if ((ev->type == ALLEGRO_EVENT_KEY_DOWN && ev->keyboard.keycode == ALLEGRO_KEY_SPACE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && ev->mouse.button == 2)) {
-			PrintConsole(game, "Debug interface toggled.");
-			data->debug = !data->debug;
-			return;
-		}
-#endif
-	}
-
 	if (data->locked) {
 		return;
 	}
@@ -332,84 +322,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if (game->config.debug.enabled) {
-		if (ev->type == ALLEGRO_EVENT_KEY_DOWN) {
-			if (ev->keyboard.keycode == ALLEGRO_KEY_H) {
-				ShowHint(game, data);
-				return;
-			}
-			if (ev->keyboard.keycode == ALLEGRO_KEY_A) {
-				AutoMove(game, data);
-				return;
-			}
-
-			int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
-
-			struct Field* field = GetField(game, data, data->hovered);
-
-			if (!field) {
-				return;
-			}
-
-			if (ev->keyboard.keycode == ALLEGRO_KEY_S) {
-				if (field->type != FIELD_TYPE_ANIMAL) {
-					return;
-				}
-				field->data.animal.sleeping = !field->data.animal.sleeping;
-				UpdateDrawable(game, data, field->id);
-				PrintConsole(game, "Field %dx%d, sleeping = %d", field->id.i, field->id.j, field->data.animal.sleeping);
-				return;
-			}
-
-			if (ev->keyboard.keycode == ALLEGRO_KEY_D) {
-				if (field->type != FIELD_TYPE_ANIMAL) {
-					return;
-				}
-				field->data.animal.super = !field->data.animal.super;
-				UpdateDrawable(game, data, field->id);
-				PrintConsole(game, "Field %dx%d, super = %d", field->id.i, field->id.j, field->data.animal.super);
-				return;
-			}
-
-			if (ev->keyboard.keycode == ALLEGRO_KEY_MINUS) {
-				Gravity(game, data);
-				ProcessFields(game, data);
-			}
-
-			if (type == -1) {
-				type = 9;
-			}
-			if (type < 0) {
-				return;
-			}
-			if (type >= ANIMAL_TYPES + FIELD_TYPES) {
-				return;
-			}
-			if (type >= ANIMAL_TYPES) {
-				type -= ANIMAL_TYPES - 1;
-				if (field->type == (enum FIELD_TYPE)type) {
-					field->data.collectible.type++;
-					if (field->data.collectible.type == COLLECTIBLE_TYPES) {
-						field->data.collectible.type = 0;
-					}
-				} else {
-					field->data.collectible.type = 0;
-				}
-				field->type = type;
-				if (field->type == FIELD_TYPE_FREEFALL) {
-					field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-				} else {
-					field->data.collectible.variant = 0;
-				}
-				PrintConsole(game, "Setting field type to %d", type);
-			} else {
-				field->type = FIELD_TYPE_ANIMAL;
-				field->data.animal.type = type;
-				PrintConsole(game, "Setting animal type to %d", type);
-			}
-			if (IsDrawable(field->type)) {
-				UpdateDrawable(game, data, field->id);
-			}
-		}
+		HandleDebugEvent(game, data, ev);
 	}
 }
 
