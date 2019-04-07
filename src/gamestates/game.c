@@ -442,7 +442,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 	data->timeline = TM_Init(game, data, "timeline");
 
-	data->particles = CreateParticleBucket(game, 3072, true);
+	data->particles = CreateParticleBucket(game, 4096, true);
 
 	return data;
 }
