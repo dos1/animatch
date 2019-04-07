@@ -59,6 +59,9 @@ bool ShowHint(struct Game* game, struct GamestateResources* data) {
 }
 
 bool AutoMove(struct Game* game, struct GamestateResources* data) {
+	if (data->locked) {
+		return false;
+	}
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			struct FieldID id = {.i = i, .j = j};
