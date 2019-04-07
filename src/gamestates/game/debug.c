@@ -136,7 +136,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 
 		igSetNextWindowSize((ImVec2){1024, 700}, ImGuiCond_FirstUseEver);
 		igBegin("Animatch Debug Toolbox", &data->debug, 0);
-		igSetWindowFontScale(1.5);
+		igSetWindowFontScale(strtod(GetConfigOptionDefault(game, "SuperDerpy", "scale", "1"), NULL));
 
 		igTextColored(data->locked ? gray : white, "Enabled: %d", !data->locked);
 		igText("Particles: %d", data->particles->active);
@@ -209,8 +209,8 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 						igOpenPopup(buf);
 					}
 
-					igSetWindowFontScale(1.5);
 					if (igBeginPopup(buf, 0)) {
+						igSetWindowFontScale(strtod(GetConfigOptionDefault(game, "SuperDerpy", "scale", "1"), NULL));
 
 #define AddFieldTypeMenuItem(t)                                      \
 	if (igMenuItemBool(#t, "", field->type == FIELD_TYPE_##t, true)) { \
