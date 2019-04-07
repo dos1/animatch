@@ -123,7 +123,6 @@ void HandleDebugEvent(struct Game* game, struct GamestateResources* data, ALLEGR
 
 void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 #ifdef LIBSUPERDERPY_IMGUI
-
 	if (data->debug) {
 		ImVec4 white = {1.0, 1.0, 1.0, 1.0};
 		ImVec4 red = {1.0, 0.0, 0.0, 1.0};
@@ -143,73 +142,75 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		igText("Particles: %d", data->particles->active);
 		igText("Possible moves: %d", CountMoves(game, data));
 		igSeparator();
-		for (int j = 0; j < ROWS; j++) {
-			igColumns(COLS, "fields", true);
-			for (int i = 0; i < COLS; i++) {
-				struct FieldID id = {.i = i, .j = j};
-				struct Field* field = GetField(game, data, id);
 
-				igBeginGroup();
+		if (igCollapsingHeader("Board", 0)) {
+			for (int j = 0; j < ROWS; j++) {
+				igColumns(COLS, "fields", true);
+				for (int i = 0; i < COLS; i++) {
+					struct FieldID id = {.i = i, .j = j};
+					struct Field* field = GetField(game, data, id);
 
-				igTextColored(IsSameID(id, data->hovered) ? green : white, "i = %d", i);
-				igTextColored(IsSameID(id, data->current) ? blue : white, "j = %d", j);
+					igBeginGroup();
 
-				switch (field->type) {
-					case FIELD_TYPE_ANIMAL:
-						igTextColored(field->data.animal.super ? pink : white, "ANIMAL %d%s", field->data.animal.type, field->data.animal.super ? "S" : "");
+					igTextColored(IsSameID(id, data->hovered) ? green : white, "i = %d", i);
+					igTextColored(IsSameID(id, data->current) ? blue : white, "j = %d", j);
 
-						if (field->data.animal.sleeping) {
-							igTextColored(violet, "SLEEPING");
-						} else {
+					switch (field->type) {
+						case FIELD_TYPE_ANIMAL:
+							igTextColored(field->data.animal.super ? pink : white, "ANIMAL %d%s", field->data.animal.type, field->data.animal.super ? "S" : "");
+
+							if (field->data.animal.sleeping) {
+								igTextColored(violet, "SLEEPING");
+							} else {
+								igText("");
+							}
+
+							break;
+						case FIELD_TYPE_FREEFALL:
+							igTextColored(yellow, "FREEFALL %d", field->data.freefall.variant);
 							igText("");
-						}
+							break;
+						case FIELD_TYPE_EMPTY:
+							igTextColored(gray, "EMPTY");
+							igText("");
+							break;
+						case FIELD_TYPE_DISABLED:
+							igTextColored(gray, "DISABLED");
+							igText("");
+							break;
+						case FIELD_TYPE_COLLECTIBLE:
+							igTextColored(yellow, "COLLECT. %d", field->data.collectible.type);
+							igText("Variant %d", field->data.collectible.variant);
+							break;
+						default:
+							break;
+					}
 
-						break;
-					case FIELD_TYPE_FREEFALL:
-						igTextColored(yellow, "FREEFALL %d", field->data.freefall.variant);
+					if (field->matched) {
+						igTextColored(purple, "MATCHED %d", field->match_mark);
+					} else if (CanBeMatched(game, data, id)) {
+						igTextColored(red, "MATCHABLE");
+					} else {
 						igText("");
-						break;
-					case FIELD_TYPE_EMPTY:
-						igTextColored(gray, "EMPTY");
-						igText("");
-						break;
-					case FIELD_TYPE_DISABLED:
-						igTextColored(gray, "DISABLED");
-						igText("");
-						break;
-					case FIELD_TYPE_COLLECTIBLE:
-						igTextColored(yellow, "COLLECT. %d", field->data.collectible.type);
-						igText("Variant %d", field->data.collectible.variant);
-						break;
-					default:
-						break;
-				}
+					}
 
-				if (field->matched) {
-					igTextColored(purple, "MATCHED %d", field->match_mark);
-				} else if (CanBeMatched(game, data, id)) {
-					igTextColored(red, "MATCHABLE");
-				} else {
-					igText("");
-				}
+					igText("%s %s %s", field->handled ? "H" : " ", field->matched ? "M" : " ", field->to_remove ? "R" : " ");
 
-				igText("%s %s %s", field->handled ? "H" : " ", field->matched ? "M" : " ", field->to_remove ? "R" : " ");
+					igEndGroup();
+					if (igIsItemHovered(0)) {
+						data->hovered = (struct FieldID){i, j};
+					}
 
-				igEndGroup();
-				if (igIsItemHovered(0)) {
-					data->hovered = (struct FieldID){i, j};
-				}
+					char buf[12];
+					snprintf(buf, 12, "transmute%d", j * COLS + i);
 
-				char buf[12];
-				snprintf(buf, 12, "transmute%d", j * COLS + i);
+					if (igIsItemClicked(0)) {
+						data->current = (struct FieldID){i, j};
+						igOpenPopup(buf);
+					}
 
-				if (igIsItemClicked(0)) {
-					data->current = (struct FieldID){i, j};
-					igOpenPopup(buf);
-				}
-
-				if (igBeginPopup(buf, 0)) {
 					igSetWindowFontScale(1.5);
+					if (igBeginPopup(buf, 0)) {
 
 #define AddFieldTypeMenuItem(t)                                      \
 	if (igMenuItemBool(#t, "", field->type == FIELD_TYPE_##t, true)) { \
@@ -217,20 +218,20 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		UpdateField(game, data, field);                                  \
 	}
 
-					FOREACH_FIELD_TYPE(AddFieldTypeMenuItem)
+						FOREACH_FIELD_TYPE(AddFieldTypeMenuItem)
 
-					igSeparator();
+						igSeparator();
 
-					if (field->type == FIELD_TYPE_COLLECTIBLE) {
+						if (field->type == FIELD_TYPE_COLLECTIBLE) {
 #define AddCollectibleMenuItem(t)                                                           \
 	if (igMenuItemBool(#t, "", field->data.collectible.type == COLLECTIBLE_TYPE_##t, true)) { \
 		field->data.collectible.type = COLLECTIBLE_TYPE_##t;                                    \
 		UpdateField(game, data, field);                                                         \
 	}
 
-						FOREACH_COLLECTIBLE(AddCollectibleMenuItem)
-					} else if (field->type == FIELD_TYPE_ANIMAL) {
-						char b[2] = "0";
+							FOREACH_COLLECTIBLE(AddCollectibleMenuItem)
+						} else if (field->type == FIELD_TYPE_ANIMAL) {
+							char b[2] = "0";
 
 #define AddAnimalMenuItem(t)                                                     \
 	b[0] = '1' + ANIMAL_TYPE_##t;                                                  \
@@ -239,26 +240,45 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		UpdateField(game, data, field);                                              \
 	}
 
-						FOREACH_ANIMAL(AddAnimalMenuItem)
+							FOREACH_ANIMAL(AddAnimalMenuItem)
 
-						igSeparator();
+							igSeparator();
 
-						if (igMenuItemBool("Sleeping", "S", field->data.animal.sleeping, true)) {
-							field->data.animal.sleeping = !field->data.animal.sleeping;
-							UpdateField(game, data, field);
+							if (igMenuItemBool("Sleeping", "S", field->data.animal.sleeping, true)) {
+								field->data.animal.sleeping = !field->data.animal.sleeping;
+								UpdateField(game, data, field);
+							}
+							if (igMenuItemBool("Super", "D", field->data.animal.super, true)) {
+								field->data.animal.super = !field->data.animal.super;
+								UpdateField(game, data, field);
+							}
 						}
-						if (igMenuItemBool("Super", "D", field->data.animal.super, true)) {
-							field->data.animal.super = !field->data.animal.super;
-							UpdateField(game, data, field);
-						}
+						igEndPopup();
 					}
-					igEndPopup();
+
+					igNextColumn();
 				}
 
-				igNextColumn();
+				igSeparator();
 			}
-			igSeparator();
+			igColumns(1, NULL, false);
 		}
+
+		if (igButton("Auto-move", (ImVec2){0, 0})) {
+			AutoMove(game, data);
+		}
+
+		igSameLine(0, 0);
+		if (igButton("Hint", (ImVec2){0, 0})) {
+			ShowHint(game, data);
+		}
+
+		igSameLine(0, 0);
+		if (igButton("Process", (ImVec2){0, 0})) {
+			Gravity(game, data);
+			ProcessFields(game, data);
+		}
+
 		igEnd();
 	}
 #endif
