@@ -7,6 +7,7 @@ services:
 stages:
   - build
   - deploy
+  - notify
 
 .artifacts: &artifacts
   name: "$CI_PROJECT_NAME-$CI_JOB_NAME-$CI_COMMIT_SHA"
@@ -415,3 +416,25 @@ deploy:maemo5:
     - build:maemo5
   script:
     - butler push utils/output/$PROJECT_NAME-maemo5.tar.gz $BUTLER_TARGET:ci-maemo5 --userversion `echo $CI_COMMIT_SHA | cut -c1-7`
+
+notify:success:
+  image: dosowisko/xmpp-muc-send
+  stage: notify
+  retry: 2
+  when: on_success
+  variables:
+    GIT_STRATEGY: none
+  dependencies: []
+  script:
+    - 'xmpp-muc-send -j "$XMPP_JID" -n "$XMPP_NICK" -p "$XMPP_PASSWORD" -r "$XMPP_ROOM" "New builds ($PROJECT_NAME): [`echo $CI_COMMIT_SHA | cut -c1-7`] $CI_COMMIT_TITLE"'
+
+notify:fail:
+  image: dosowisko/xmpp-muc-send
+  stage: notify
+  retry: 2
+  when: on_failure
+  variables:
+    GIT_STRATEGY: none
+  dependencies: []
+  script:
+    - 'xmpp-muc-send -j "$XMPP_JID" -n "$XMPP_NICK" -p "$XMPP_PASSWORD" -r "$XMPP_ROOM" "FAILURE ($PROJECT_NAME): [`echo $CI_COMMIT_SHA | cut -c1-7`] $CI_COMMIT_TITLE $CI_PIPELINE_URL"'
