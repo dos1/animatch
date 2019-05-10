@@ -139,6 +139,18 @@ void StartTransition(struct Game* game, float x, float y) {
 	EnableCompositor(game, Compositor);
 }
 
+void ToggleAudio(struct Game* game) {
+	if (game->config.music) {
+		game->config.music = 0;
+	} else {
+		ToggleMute(game);
+		if (!game->config.mute) {
+			game->config.music = 10;
+		}
+	}
+	al_set_mixer_gain(game->audio.music, game->config.music / 10.0);
+}
+
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));

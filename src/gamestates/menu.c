@@ -83,7 +83,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
 	DrawCharacter(game, data->beetle);
-	DrawUIElement(game, data->ui, UI_ELEMENT_NOTE);
+	DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : (game->config.music ? UI_ELEMENT_NOTE : UI_ELEMENT_FX));
 	DrawUIElement(game, data->ui, UI_ELEMENT_SETTINGS);
 	DrawUIElement(game, data->ui, UI_ELEMENT_ABOUT);
 }
@@ -134,6 +134,10 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)) {
 		if (IsOnCharacter(game, data->snail, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
 			data->scrolling = true;
+		}
+		if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+			ToggleAudio(game);
+			return;
 		}
 	}
 

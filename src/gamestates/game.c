@@ -232,7 +232,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 		al_draw_bitmap(data->leaf, -32, 1083, 0);
 
-		DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : UI_ELEMENT_NOTE);
+		DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : (game->config.music ? UI_ELEMENT_NOTE : UI_ELEMENT_FX));
 		DrawUIElement(game, data->ui, UI_ELEMENT_HINT);
 		DrawUIElement(game, data->ui, UI_ELEMENT_HOME);
 
@@ -260,10 +260,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		}
 		if (data->menu) {
 			if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
-				game->config.mute = !game->config.mute;
-				al_set_mixer_gain(game->audio.mixer, game->config.mute ? 0.0 : 1.0);
-				SetConfigOption(game, "SuperDerpy", "mute", game->config.mute ? "1" : "0");
-				PrintConsole(game, "Mute: %d", game->config.mute);
+				ToggleAudio(game);
 				return;
 			}
 
