@@ -13,7 +13,7 @@ stages:
   name: "$CI_PROJECT_NAME-$CI_JOB_NAME-$CI_COMMIT_SHA"
   paths:
     - utils/output/
-  expire_in: 90 minutes
+  expire_in: 300 minutes
 
 build:win64:
   image: dosowisko/libsuperderpy-win64
