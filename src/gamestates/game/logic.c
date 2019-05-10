@@ -421,6 +421,7 @@ void StartBadSwapping(struct Game* game, struct GamestateResources* data, struct
 
 static TM_ACTION(AfterMatching) {
 	TM_RunningOnly;
+	assert(data); // silence clang-analyzer
 	DoRemoval(game, data);
 	Gravity(game, data);
 	ProcessFields(game, data);
