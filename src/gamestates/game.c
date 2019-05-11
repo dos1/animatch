@@ -37,13 +37,17 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	UpdateTween(&data->acorn_top.tween, delta);
 	UpdateTween(&data->acorn_bottom.tween, delta);
 	UpdateTween(&data->scoring, delta);
-	AnimateCharacter(game, data->beetle, delta, 1.0);
 	data->snail_blink -= delta;
 
-	if (data->snail_blink < 0) {
-		data->snail_blink = 6.0 + rand() / (float)RAND_MAX * 16.0;
-		data->snail->pos = rand() % data->snail->spritesheet->frame_count;
-		data->snail->frame = &data->snail->spritesheet->frames[data->snail->pos];
+	if (!game->data->config.less_movement) {
+		AnimateCharacter(game, data->beetle, delta, 1.0);
+		if (data->snail_blink < 0) {
+			data->snail_blink = 6.0 + rand() / (float)RAND_MAX * 16.0;
+			data->snail->pos = rand() % data->snail->spritesheet->frame_count;
+			data->snail->frame = &data->snail->spritesheet->frames[data->snail->pos];
+		}
+	} else {
+		data->scoring.pos = 1.0;
 	}
 
 	for (int i = 0; i < COLS; i++) {
@@ -52,7 +56,9 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 				AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
 			}
 			if (data->fields[i][j].overlay_visible) {
-				AnimateCharacter(game, data->fields[i][j].overlay, delta, 1.0);
+				if (!game->data->config.less_movement) {
+					AnimateCharacter(game, data->fields[i][j].overlay, delta, 1.0);
+				}
 			}
 			UpdateTween(&data->fields[i][j].animation.falling, delta);
 			UpdateTween(&data->fields[i][j].animation.hiding, delta);
@@ -76,41 +82,43 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 				continue;
 			}
 
-			if (data->fields[i][j].animation.blink_time) {
-				data->fields[i][j].animation.blink_time -= (int)(delta * 1000);
-				if (data->fields[i][j].animation.blink_time <= 0) {
-					data->fields[i][j].animation.blink_time = 0;
-					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-						SelectSpritesheet(game, data->fields[i][j].drawable, "stand");
-					}
-				}
-			} else if (data->fields[i][j].animation.action_time) {
-				data->fields[i][j].animation.action_time -= (int)(delta * 1000);
-				if (data->fields[i][j].animation.action_time <= 0) {
-					data->fields[i][j].animation.action_time = 0;
-					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-						SelectSpritesheet(game, data->fields[i][j].drawable, "stand");
-					}
-				}
-			} else {
-				data->fields[i][j].animation.time_to_action -= (int)(delta * 1000);
-				data->fields[i][j].animation.time_to_blink -= (int)(delta * 1000);
-
-				if (data->fields[i][j].animation.time_to_action <= 0) {
-					data->fields[i][j].animation.time_to_action = rand() % 250000 + 500000;
-					data->fields[i][j].animation.action_time = rand() % 2000 + 1000;
-					if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-						SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].actions]);
-					}
-				}
-
-				if (data->fields[i][j].animation.time_to_blink <= 0) {
-					if (strcmp(data->fields[i][j].drawable->spritesheet->name, "stand") == 0) {
+			if (!game->data->config.less_movement) {
+				if (data->fields[i][j].animation.blink_time) {
+					data->fields[i][j].animation.blink_time -= (int)(delta * 1000);
+					if (data->fields[i][j].animation.blink_time <= 0) {
+						data->fields[i][j].animation.blink_time = 0;
 						if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
-							SelectSpritesheet(game, data->fields[i][j].drawable, "blink");
+							SelectSpritesheet(game, data->fields[i][j].drawable, "stand");
 						}
-						data->fields[i][j].animation.time_to_blink = rand() % 100000 + 200000;
-						data->fields[i][j].animation.blink_time = rand() % 400 + 100;
+					}
+				} else if (data->fields[i][j].animation.action_time) {
+					data->fields[i][j].animation.action_time -= (int)(delta * 1000);
+					if (data->fields[i][j].animation.action_time <= 0) {
+						data->fields[i][j].animation.action_time = 0;
+						if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+							SelectSpritesheet(game, data->fields[i][j].drawable, "stand");
+						}
+					}
+				} else {
+					data->fields[i][j].animation.time_to_action -= (int)(delta * 1000);
+					data->fields[i][j].animation.time_to_blink -= (int)(delta * 1000);
+
+					if (data->fields[i][j].animation.time_to_action <= 0) {
+						data->fields[i][j].animation.time_to_action = rand() % 250000 + 500000;
+						data->fields[i][j].animation.action_time = rand() % 2000 + 1000;
+						if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+							SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].actions]);
+						}
+					}
+
+					if (data->fields[i][j].animation.time_to_blink <= 0) {
+						if (strcmp(data->fields[i][j].drawable->spritesheet->name, "stand") == 0) {
+							if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+								SelectSpritesheet(game, data->fields[i][j].drawable, "blink");
+							}
+							data->fields[i][j].animation.time_to_blink = rand() % 100000 + 200000;
+							data->fields[i][j].animation.blink_time = rand() % 400 + 100;
+						}
 					}
 				}
 			}
