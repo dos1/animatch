@@ -60,6 +60,11 @@ struct CommonResources {
 		struct Gamestate* gamestate;
 		float x, y;
 	} transition;
+
+	struct {
+		bool less_movement;
+		bool solid_background;
+	} config;
 };
 
 void Compositor(struct Game* game);

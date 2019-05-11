@@ -132,11 +132,13 @@ bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 }
 
 void StartTransition(struct Game* game, float x, float y) {
-	game->data->transition.progress = 1.0;
-	game->data->transition.gamestate = GetCurrentGamestate(game);
-	game->data->transition.x = x;
-	game->data->transition.y = y;
-	EnableCompositor(game, Compositor);
+	if (!game->data->config.less_movement) {
+		game->data->transition.progress = 1.0;
+		game->data->transition.gamestate = GetCurrentGamestate(game);
+		game->data->transition.x = x;
+		game->data->transition.y = y;
+		EnableCompositor(game, Compositor);
+	}
 }
 
 void ToggleAudio(struct Game* game) {
@@ -158,6 +160,9 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
 
 	data->level = 0;
+
+	data->config.less_movement = strtol(GetConfigOptionDefault(game, "Animatch", "less_movement", "0"), NULL, 0);
+	data->config.solid_background = strtol(GetConfigOptionDefault(game, "Animatch", "solid_background", "0"), NULL, 0);
 
 	return data;
 }

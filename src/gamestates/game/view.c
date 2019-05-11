@@ -70,7 +70,7 @@ void SpawnParticles(struct Game* game, struct GamestateResources* data, struct F
 			data->special_archetypes[SPECIAL_TYPE_DANDELION]->pos = 0;
 		}
 		float x = GetCharacterX(game, field->drawable) / (double)game->viewport.width, y = GetCharacterY(game, field->drawable) / (double)game->viewport.height;
-		EmitParticle(game, data->particles, data->special_archetypes[SPECIAL_TYPE_DANDELION], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(1.0, 0.025, DandelionParticle, DandelionParticleData(color)));
+		EmitParticle(game, data->particles, data->special_archetypes[SPECIAL_TYPE_DANDELION], FaderParticle, SpawnParticleBetween(x - 0.01, y - 0.01, x + 0.01, y + 0.01), FaderParticleData(game->data->config.less_movement ? 0.5 : 1.0, game->data->config.less_movement ? 0.1 : 0.025, DandelionParticle, DandelionParticleData(color)));
 	}
 	data->counter_strength += sqrt(num);
 	data->counter_speed = 2.0;

@@ -69,6 +69,12 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 
 void Gamestate_PostLoad(struct Game* game, struct GamestateResources* data) {
 	al_set_target_bitmap(data->bg_blur);
+
+	if (game->data->config.solid_background) {
+		al_clear_to_color(al_map_rgb(208, 215, 125));
+		return;
+	}
+
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	al_draw_scaled_bitmap(data->bg, 0, 0, al_get_bitmap_width(data->bg), al_get_bitmap_height(data->bg),
 		0, 0, al_get_bitmap_width(data->bg_blur), al_get_bitmap_height(data->bg_blur), 0);
@@ -104,11 +110,13 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 }
 
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
-	EnableCompositor(game, Compositor);
-	game->data->transition.progress = 1.0;
-	game->data->transition.gamestate = GetGamestate(game, NULL);
-	game->data->transition.x = 0.5;
-	game->data->transition.y = 0.5;
+	if (!game->data->config.less_movement) {
+		EnableCompositor(game, Compositor);
+		game->data->transition.progress = 1.0;
+		game->data->transition.gamestate = GetGamestate(game, NULL);
+		game->data->transition.x = 0.5;
+		game->data->transition.y = 0.5;
+	}
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {}

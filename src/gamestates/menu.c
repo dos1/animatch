@@ -51,10 +51,16 @@ void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	// Draw everything to the screen here.
-	al_draw_bitmap(data->bg, 0, 0, 0);
-	al_draw_bitmap(data->logo, 54, 35, 0);
 
-	al_draw_bitmap(data->framebg, 90, 412, 0);
+	if (game->data->config.solid_background) {
+		al_clear_to_color(al_map_rgb(208, 215, 125));
+		al_draw_filled_rectangle(90, 412, 90 + 536, 412 + 621, al_map_rgb(185, 140, 89));
+	} else {
+		al_draw_bitmap(data->bg, 0, 0, 0);
+		al_draw_bitmap(data->framebg, 90, 412, 0);
+	}
+
+	al_draw_bitmap(data->logo, 54, 35, 0);
 
 	SetScrollingViewportAsTarget(game, &data->menu);
 

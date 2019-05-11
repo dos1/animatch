@@ -21,11 +21,20 @@
 #include "game.h"
 
 void DrawScene(struct Game* game, struct GamestateResources* data) {
+	if (game->data->config.solid_background) {
+		al_clear_to_color(al_map_rgb(208, 215, 125));
+		return;
+	}
+
 	al_hold_bitmap_drawing(true);
 	al_draw_bitmap(data->bg, 0, 0, 0);
 
 	for (int i = 0; i < data->leaves->spritesheet->frame_count; i++) {
-		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((data->counter * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((data->counter * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
+		float counter = data->counter;
+		if (game->data->config.less_movement) {
+			counter = 0;
+		}
+		SetCharacterPosition(game, data->leaves, game->viewport.width / 2.0, game->viewport.height / 2.0, sin((counter * (i / 20.0) + i * 32) / 2.0) * 0.003 + cos((counter * (i / 14.0) + (i + 1) * 26) / 2.1) * 0.003);
 		data->leaves->pos = i;
 		data->leaves->frame = &data->leaves->spritesheet->frames[i];
 		DrawCharacter(game, data->leaves);
