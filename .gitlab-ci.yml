@@ -212,6 +212,8 @@ deploy:linux-steamrt-i686:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-linux-steamrt-i686
     url: $ITCH_URL
@@ -227,6 +229,8 @@ deploy:linux-steamrt-amd64:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-linux-steamrt-amd64
     url: $ITCH_URL
@@ -242,6 +246,8 @@ deploy:linux-flatpak-amd64:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-linux-flatpak-amd64
     url: $ITCH_URL
@@ -257,6 +263,8 @@ deploy:linux-flatpak-arm64:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-linux-flatpak-arm64
     url: $ITCH_URL
@@ -272,6 +280,8 @@ deploy:linux-flatpak-armv7:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-linux-flatpak-armv7
     url: $ITCH_URL
@@ -287,6 +297,8 @@ deploy:linux-flatpak-i686:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-linux-flatpak-i686
     url: $ITCH_URL
@@ -302,6 +314,8 @@ deploy:win32:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-win32
     url: $ITCH_URL
@@ -317,6 +331,8 @@ deploy:win64:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-win64
     url: $ITCH_URL
@@ -332,6 +348,8 @@ deploy:html5:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-html5
     url: $ITCH_URL
@@ -347,6 +365,8 @@ deploy:wasm:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-wasm
     url: $ITCH_URL
@@ -362,6 +382,8 @@ deploy:macos:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-macos
     url: $ITCH_URL
@@ -377,6 +399,8 @@ deploy:android-armv7:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-android-armv7
     url: $ITCH_URL
@@ -392,6 +416,8 @@ deploy:steamlink:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-steamlink
     url: $ITCH_URL
@@ -407,6 +433,8 @@ deploy:maemo5:
   stage: deploy
   when: on_success
   retry: 2
+  only:
+    - master
   environment:
     name: itch-maemo5
     url: $ITCH_URL
