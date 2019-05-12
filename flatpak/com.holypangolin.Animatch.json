@@ -18,37 +18,13 @@
   {
     "name": "SDL2",
     "buildsystem": "cmake-ninja",
-    "config-opts": ["-DCMAKE_BUILD_TYPE=RelWithDebInfo", "-DSDL_STATIC=OFF"],
+    "config-opts": ["-DSDL_STATIC=OFF", "-DCMAKE_BUILD_TYPE=RelWithDebInfo"],
     "builddir": true,
     "sources": [
       {
         "type": "archive",
-        "url": "https://libsdl.org/release/SDL2-2.0.9.tar.gz",
-        "sha512": "a78a4708b2bb5b35a7c7b7501eb3bd60a9aa3bb95a3d84e57763df4a377185e7312a94b66321eef7ca0d17255e4b402fc950e83ef0dbbd08f14ff1194107dc10"
-      },
-      {
-        "type": "patch",
-        "path": "0001-wayland-ask-KDE-protocol-extension-to-use-server-sid.patch"
-      },
-      {
-        "type": "patch",
-        "path": "0002-wayland-ask-xdg-decoration-protocol-extension-to-use.patch"
-      },
-      {
-        "type": "patch",
-        "path": "0003-wayland-fix-resizing-and-fullscreen-toggling.patch"
-      },
-      {
-        "type": "patch",
-        "path": "0004-wayland-Send-SDL_TOUCH_MOUSEID-mouse-events-for-touc.patch"
-      },
-      {
-        "type": "patch",
-        "path": "0005-wayland-add-dummy-remove-handler-to-wl_registry_list.patch"
-      },
-      {
-        "type": "patch",
-        "path": "0006-wayland-HiDPI-support.patch"
+        "url": "https://dosowisko.net/libsuperderpy/deps/SDL2-2.0.9-p2.tar.gz",
+        "sha512": "9c1ee7cb71348e06fee3cdd55f865cf5ccf99dd14109fd4afe86037d0ef637d4db90dcb33851340261ff5e5c12b1898013cba03faf108d46e6142a8f06d5240c"
       }
     ]
   },
@@ -60,9 +36,9 @@
     },
     "sources": [
       {
-        "type": "git",
-        "branch": "dos",
-        "url": "git://github.com/dos1/allegro5"
+        "type": "archive",
+        "url": "https://dosowisko.net/libsuperderpy/deps/allegro-5.2.5.0-p2.tar.gz",
+        "sha512": "e44a3b95156807edb4ab230c1b4d811ae3cd12a55943ca02a98fdcf9e0469589f836a885fd027438e9d678a6f28cf1fd38e87e42cc414d63c3210d350d61e06e"
       }
     ]
   },
