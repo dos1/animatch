@@ -454,7 +454,7 @@ notify:success:
     GIT_STRATEGY: none
   dependencies: []
   script:
-    - 'xmpp-muc-send -j "$XMPP_JID" -n "$XMPP_NICK" -p "$XMPP_PASSWORD" -r "$XMPP_ROOM" "New builds ($PROJECT_NAME): [`echo $CI_COMMIT_SHA | cut -c1-7`] $CI_COMMIT_TITLE"'
+    - 'xmpp-muc-send -j "$XMPP_JID" -n "$XMPP_NICK" -p "$XMPP_PASSWORD" -r "$XMPP_ROOM" "New builds ($PROJECT_NAME): [`echo $CI_COMMIT_SHA | cut -c1-7` | $CI_COMMIT_REF_NAME] $CI_COMMIT_TITLE"'
 
 notify:fail:
   image: dosowisko/xmpp-muc-send
@@ -465,4 +465,4 @@ notify:fail:
     GIT_STRATEGY: none
   dependencies: []
   script:
-    - 'xmpp-muc-send -j "$XMPP_JID" -n "$XMPP_NICK" -p "$XMPP_PASSWORD" -r "$XMPP_ROOM" "FAILURE ($PROJECT_NAME): [`echo $CI_COMMIT_SHA | cut -c1-7`] $CI_COMMIT_TITLE $CI_PIPELINE_URL"'
+    - 'xmpp-muc-send -j "$XMPP_JID" -n "$XMPP_NICK" -p "$XMPP_PASSWORD" -r "$XMPP_ROOM" "FAILURE ($PROJECT_NAME): [`echo $CI_COMMIT_SHA | cut -c1-7` | $CI_COMMIT_REF_NAME] $CI_COMMIT_TITLE $CI_PIPELINE_URL"'
