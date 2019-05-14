@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 76; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 78; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -123,6 +123,11 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 				}
 			}
 		}
+	}
+
+	if (data->done) {
+		data->locked = true;
+		UpdateTween(&data->finishing, delta);
 	}
 
 	DrawDebugInterface(game, data);
@@ -247,6 +252,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		DrawCharacter(game, data->beetle);
 	}
 
+	if (data->done) {
+		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->finishing)));
+		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83, 0);
+		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->finishing), 0);
+
+		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
+		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 204, ALLEGRO_ALIGN_CENTER, "COMPLETE!");
+	}
+
 	if (data->paused) {
 		DrawDebugInterface(game, data);
 	}
@@ -262,6 +276,16 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		if (data->done) {
+			if (GetTweenPosition(&data->finishing) == 1.0) {
+				StartTransition(game, game->data->mouseX, game->data->mouseY);
+				StopCurrentGamestate(game);
+				StartGamestate(game, "menu");
+				UnlockLevel(game, data->level.id + 1);
+			}
+			return;
+		}
+
 		if (IsOnCharacter(game, data->beetle, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
 			data->menu = !data->menu;
 			return;
@@ -396,6 +420,12 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->leaf = al_load_bitmap(GetDataFilePath(game, "leaf.webp"));
 	progress(game);
 
+	data->frame = al_load_bitmap(GetDataFilePath(game, "frame_small.webp"));
+	progress(game);
+
+	data->frame_bg = al_load_bitmap(GetDataFilePath(game, "frame_small_bg.webp"));
+	progress(game);
+
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].drawable = CreateCharacter(game, NULL);
@@ -423,7 +453,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.webp"));
 	progress(game);
 
-	data->placeholder = al_load_bitmap(GetDataFilePath(game, "placeholder.png"));
+	data->placeholder = al_load_bitmap(GetDataFilePath(game, "placeholder.webp"));
 
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
@@ -511,6 +541,8 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
+	game->data->last_unlocked_level = -1;
+
 	data->counter = 0.0;
 	data->counter_speed = 0.0;
 	data->counter_strength = 0.0;
@@ -518,7 +550,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->clicked = false;
 	data->paused = false;
 	data->menu = false;
+	data->done = false;
 	data->snail_blink = 0.0;
+	data->finishing = StaticTween(game, 0.0);
 
 	for (int i = 0; i < ANIMAL_TYPES; i++) {
 		data->level.animals[i] = true;

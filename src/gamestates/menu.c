@@ -28,7 +28,6 @@ struct GamestateResources {
 	ALLEGRO_FONT* font;
 	struct Character *beetle, *ui, *snail;
 
-	int unlocked;
 	int highlight;
 	bool scrolling;
 
@@ -65,7 +64,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	SetScrollingViewportAsTarget(game, &data->menu);
 
 	for (int i = 0; i < 99; i++) {
-		if (i > data->unlocked) {
+		if (i > game->data->unlocked_levels) {
 			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (i % 3), 25 + 175 * floor(i / 3.0), 0);
 			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * floor(i / 3.0) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		} else {
@@ -73,14 +72,18 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			if (data->highlight == i) {
 				color = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
 			}
-			al_draw_tinted_bitmap(((i / 3) % 2) ? data->leaf1 : data->leaf2, color, 50 + 150 * (i % 3), 25 + 175 * floor(i / 3.0), 0);
+			ALLEGRO_BITMAP* bitmap = ((i / 3) % 2) ? data->leaf1 : data->leaf2;
+			al_draw_tinted_rotated_bitmap(bitmap, color,
+				al_get_bitmap_width(bitmap) / 2.0, al_get_bitmap_height(bitmap) / 2.0,
+				50 + 150 * (i % 3) + al_get_bitmap_width(bitmap) / 2.0, 25 + 175 * floor(i / 3.0) + al_get_bitmap_height(bitmap) / 2.0,
+				game->data->last_unlocked_level == i ? (sin(game->time * 4.0) / 16.0) : 0, 0);
 			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (i % 3) + 150 / 2.0 + (((i / 3) % 2) ? 7 : 0), 25 + 175 * floor(i / 3.0) + 150 * 0.3 + (((i / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i + 1);
 		}
 	}
 
 	SetScrollingViewportAsTarget(game, NULL);
 
-	al_draw_bitmap(data->frame, 0, 0, 0);
+	al_draw_bitmap(data->frame, 30, 315, 0);
 
 	float pos = Clamp(0.12, 0.88, 0.12 + 0.76 * data->menu.pos / (float)(data->menu.content - data->menu.h));
 	int off = ((int)(620 * pos) / 8) * 8;
@@ -159,7 +162,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		if (data->menu.pressed && !data->menu.triggered) {
 			PrintConsole(game, "click");
 			game->data->level = WhichLevel(game, data);
-			if (game->data->level >= 0 && game->data->level <= data->unlocked) {
+			if (game->data->level >= 0 && game->data->level <= game->data->unlocked_levels) {
 				StartTransition(game, (data->menu.x + 50 + game->data->level % 3 * 150 + 150 / 2.0) / (float)game->viewport.width, (data->menu.y + 25 + game->data->level / 3.0 * 175 + 175 / 2.0 - data->menu.pos - 10) / (float)game->viewport.height);
 				StopCurrentGamestate(game);
 				StartGamestate(game, "game");
@@ -192,7 +195,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 		ALLEGRO_COLOR color;
 		do {
 			offset++;
-			color = al_get_pixel(data->frame, 614 + offset, 412 + i);
+			color = al_get_pixel(data->frame, 614 + offset - 30, 412 + i - 315);
 		} while (color.a < 0.9);
 		data->snail_offset[i] = offset;
 	}
@@ -267,14 +270,13 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
 	SetScrollingViewportPosition(game, &data->menu, 90, 412, 536, 621, 5800);
 
-	data->unlocked = 0;
 	data->highlight = -1;
 
 	data->menu.speed = 0;
 	data->menu.pressed = false;
 	data->menu.triggered = false;
 
-	data->menu.pos = Clamp(0, data->menu.content - data->menu.h, 175 * floor(data->unlocked / 3.0 - 1));
+	data->menu.pos = Clamp(0, data->menu.content - data->menu.h, 175 * floor(game->data->unlocked_levels / 3.0 - 1));
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

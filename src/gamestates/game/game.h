@@ -178,6 +178,8 @@ struct GamestateResources {
 
 	ALLEGRO_FONT *font, *font_num_small, *font_num_medium, *font_num_big;
 
+	ALLEGRO_BITMAP *frame, *frame_bg;
+
 	struct Character* animal_archetypes[sizeof(ANIMALS) / sizeof(ANIMALS[0])];
 	struct Character* special_archetypes[sizeof(SPECIALS) / sizeof(SPECIALS[0])];
 	struct FieldID current, hovered, swap1, swap2;
@@ -203,7 +205,7 @@ struct GamestateResources {
 	float snail_blink;
 
 	int moves, score;
-	struct Tween scoring;
+	struct Tween scoring, finishing;
 
 	struct {
 		bool animals[ANIMAL_TYPES];
@@ -221,7 +223,7 @@ struct GamestateResources {
 		int id;
 	} level;
 
-	bool debug, paused, menu;
+	bool debug, paused, menu, done;
 	float counter, counter_speed, counter_strength;
 };
 
@@ -277,6 +279,7 @@ bool AreSwappable(struct Game* game, struct GamestateResources* data, struct Fie
 void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
 void DrawField(struct Game* game, struct GamestateResources* data, struct FieldID id);
 void DrawOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id);
+void FinishLevel(struct Game* game, struct GamestateResources* data);
 
 // scene
 void DrawScene(struct Game* game, struct GamestateResources* data);

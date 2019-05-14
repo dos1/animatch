@@ -53,6 +53,11 @@ void HandleDebugEvent(struct Game* game, struct GamestateResources* data, ALLEGR
 			return;
 		}
 
+		if (ev->keyboard.keycode == ALLEGRO_KEY_Z) {
+			FinishLevel(game, data);
+			return;
+		}
+
 		int type = ev->keyboard.keycode - ALLEGRO_KEY_1;
 
 		struct Field* field = GetField(game, data, data->hovered);

@@ -53,7 +53,7 @@ struct CommonResources {
 	bool touch;
 	ALLEGRO_BITMAP* silhouette;
 	ALLEGRO_SHADER* kawese_shader;
-	int level;
+	int level, unlocked_levels, last_unlocked_level;
 
 	struct {
 		float progress;
@@ -77,6 +77,7 @@ void DrawUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT element, float x, float y);
 void StartTransition(struct Game* game, float x, float y);
 void ToggleAudio(struct Game* game);
+void UnlockLevel(struct Game* game, int level);
 
 #include "scrollingviewport.h"
 

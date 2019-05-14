@@ -153,6 +153,13 @@ void ToggleAudio(struct Game* game) {
 	al_set_mixer_gain(game->audio.music, game->config.music / 10.0);
 }
 
+void UnlockLevel(struct Game* game, int level) {
+	if (game->data->unlocked_levels + 1 == level) {
+		game->data->unlocked_levels = level;
+		game->data->last_unlocked_level = level;
+	}
+}
+
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
@@ -160,6 +167,8 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
 
 	data->level = 0;
+	data->unlocked_levels = 0;
+	data->last_unlocked_level = -1;
 
 	data->config.less_movement = strtol(GetConfigOptionDefault(game, "Animatch", "less_movement", "0"), NULL, 0);
 	data->config.solid_background = strtol(GetConfigOptionDefault(game, "Animatch", "solid_background", "0"), NULL, 0);
