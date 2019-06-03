@@ -273,7 +273,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	}
 
 	if (GetTweenValue(&data->failing)) {
-		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->finishing)));
+		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->failing)));
 		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83, 0);
 		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->failing), 0);
 
