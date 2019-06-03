@@ -119,6 +119,7 @@ void FinishLevel(struct Game* game, struct GamestateResources* data) {
 			SpawnParticles(game, data, (struct FieldID){i, j}, 16);
 		}
 	}
+	UnlockLevel(game, data->level.id + 1);
 }
 
 void FailLevel(struct Game* game, struct GamestateResources* data) {

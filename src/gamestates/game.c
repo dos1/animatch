@@ -323,7 +323,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				StartTransition(game, game->data->mouseX, game->data->mouseY);
 				StopCurrentGamestate(game);
 				StartGamestate(game, "menu");
-				UnlockLevel(game, data->level.id + 1);
 			}
 			return;
 		}
