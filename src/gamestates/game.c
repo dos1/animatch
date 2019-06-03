@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 78; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 80; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -128,6 +128,17 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	if (data->done) {
 		data->locked = true;
 		UpdateTween(&data->finishing, delta);
+	}
+
+	if (data->failed) {
+		data->locked = true;
+		UpdateTween(&data->failing, delta);
+	}
+
+	if (data->restart_hover) {
+		data->restart_btn->tint = al_map_rgb_f(1.5, 1.5, 1.5);
+	} else {
+		data->restart_btn->tint = al_map_rgb_f(1.0, 1.0, 1.0);
 	}
 
 	DrawDebugInterface(game, data);
@@ -261,6 +272,20 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 204, ALLEGRO_ALIGN_CENTER, "COMPLETE!");
 	}
 
+	if (GetTweenValue(&data->failing)) {
+		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->finishing)));
+		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83, 0);
+		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->failing), 0);
+
+		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->failing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
+		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->failing) + 204, ALLEGRO_ALIGN_CENTER, "FAILED!");
+
+		//al_draw_textf(data->font_small, al_map_rgb(255, 255, 255), 130, -410 + (508 + 410) * GetTweenValue(&data->failing) + 353, ALLEGRO_ALIGN_LEFT, "CONTINUE >");
+
+		SetCharacterPosition(game, data->restart_btn, 440 + 169 / 2.0, 175 / 2.0 + 780 - (508 + 410) * (1.0 - GetTweenValue(&data->failing)), 0);
+		DrawCharacter(game, data->restart_btn);
+	}
+
 	if (data->paused) {
 		DrawDebugInterface(game, data);
 	}
@@ -275,6 +300,23 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		StartGamestate(game, "menu");
 	}
 
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		if (!IsOnCharacter(game, data->restart_btn, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->restart_hover = false;
+		}
+	}
+
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		data->restart_hover = IsOnCharacter(game, data->restart_btn, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true);
+	}
+
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
+		if (data->failed && data->restart_hover) {
+			RestartLevel(game, data);
+		}
+		data->restart_hover = false;
+	}
+
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
 		if (data->done) {
 			if (GetTweenPosition(&data->finishing) == 1.0) {
@@ -283,6 +325,10 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				StartGamestate(game, "menu");
 				UnlockLevel(game, data->level.id + 1);
 			}
+			return;
+		}
+
+		if (data->failed) {
 			return;
 		}
 
@@ -426,6 +472,11 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->frame_bg = al_load_bitmap(GetDataFilePath(game, "frame_small_bg.webp"));
 	progress(game);
 
+	data->restart_btn = CreateCharacter(game, "restart_btn");
+	data->restart = al_load_bitmap(GetDataFilePath(game, "przycisk_do_tylu_on.webp"));
+	RegisterSpritesheetFromBitmap(game, data->restart_btn, "restart", data->restart);
+	LoadSpritesheets(game, data->restart_btn, progress);
+
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].drawable = CreateCharacter(game, NULL);
@@ -467,6 +518,8 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	progress(game);
 
 	data->font = al_load_font(GetDataFilePath(game, "fonts/Caroni.ttf"), 35, 0);
+	progress(game);
+	data->font_small = al_load_font(GetDataFilePath(game, "fonts/Caroni.ttf"), 24, 0);
 	progress(game);
 	data->font_num_small = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 42, 0);
 	progress(game);
@@ -520,6 +573,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < 4; i++) {
 		al_destroy_bitmap(data->field_bgs[i]);
 	}
+	al_destroy_bitmap(data->restart);
 	al_destroy_bitmap(data->placeholder);
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
@@ -532,6 +586,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_font(data->font_num_small);
 	al_destroy_font(data->font_num_medium);
 	al_destroy_font(data->font_num_big);
+	al_destroy_font(data->font_small);
 	DestroyShader(game, data->combine_shader);
 	DestroyShader(game, data->desaturate_shader);
 	TM_Destroy(data->timeline);
@@ -551,87 +606,13 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->paused = false;
 	data->menu = false;
 	data->done = false;
+	data->failed = false;
 	data->snail_blink = 0.0;
 	data->finishing = StaticTween(game, 0.0);
-
-	for (int i = 0; i < ANIMAL_TYPES; i++) {
-		data->level.animals[i] = true;
-	}
-	for (int i = 0; i < SPECIAL_TYPES; i++) {
-		data->level.specials[i] = true;
-	}
-	data->level.sleeping = true;
-	data->level.supers = true;
-	data->level.specials[SPECIAL_TYPE_EGG] = false;
-	data->level.infinite = true;
-
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
-			data->fields[i][j].animation.falling = StaticTween(game, 1.0);
-
-			data->fields[i][j].animation.time_to_action = (int)((rand() % 250000 + 500000) * (rand() / (double)RAND_MAX));
-			data->fields[i][j].animation.time_to_blink = (int)((rand() % 100000 + 200000) * (rand() / (double)RAND_MAX));
-		}
-	}
-
-	// temporary
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
-			data->level.fields[i][j].animal_type = (j * COLS + i) % ANIMAL_TYPES;
-			data->level.fields[i][j].random_animal = true;
-			data->level.fields[i][j].sleeping = false;
-			data->level.fields[i][j].super = false;
-		}
-	}
-
-	PrintConsole(game, "level: %d", game->data->level);
-	if (game->data->level >= 0) {
-		data->level.id = game->data->level;
-
-		for (int i = 0; i < COLS; i++) {
-			for (int j = 0; j < ROWS; j++) {
-				if (data->level.fields[i][j].field_type == FIELD_TYPE_EMPTY) {
-					GenerateField(game, data, &data->fields[i][j], false);
-				} else {
-					data->fields[i][j].type = data->level.fields[i][j].field_type;
-
-					switch (data->level.fields[i][j].field_type) {
-						case FIELD_TYPE_COLLECTIBLE:
-							data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
-							break;
-						case FIELD_TYPE_FREEFALL:
-							data->fields[i][j].data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-							break;
-						case FIELD_TYPE_ANIMAL:
-							if (data->level.fields[i][j].random_animal) {
-								GenerateAnimal(game, data, &data->fields[i][j], false);
-							} else {
-								data->fields[i][j].data.animal.type = data->level.fields[i][j].animal_type;
-							}
-							data->fields[i][j].data.animal.sleeping = data->level.fields[i][j].sleeping;
-							data->fields[i][j].data.animal.super = data->level.fields[i][j].super;
-							break;
-						default:
-							break;
-					}
-					UpdateDrawable(game, data, data->fields[i][j].id);
-				}
-			}
-		}
-		data->moves = 0;
-		data->score = 0;
-	}
-
-	data->current = (struct FieldID){-1, -1};
-	do {
-		DoRemoval(game, data);
-		Gravity(game, data);
-	} while (MarkMatching(game, data));
-	StopAnimations(game, data);
-
+	data->failing = StaticTween(game, 0.0);
 	data->scoring = StaticTween(game, 0.0);
+
+	LoadLevel(game, data);
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

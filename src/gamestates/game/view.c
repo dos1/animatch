@@ -215,13 +215,3 @@ void DrawOverlay(struct Game* game, struct GamestateResources* data, struct Fiel
 		}
 	}
 }
-
-void FinishLevel(struct Game* game, struct GamestateResources* data) {
-	data->done = true;
-	data->finishing = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, 1.0);
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			SpawnParticles(game, data, (struct FieldID){i, j}, 16);
-		}
-	}
-}

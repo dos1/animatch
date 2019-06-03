@@ -174,9 +174,9 @@ struct GamestateResources {
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_BITMAP *bg, *leaf;
 
-	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *placeholder;
+	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *placeholder, *restart;
 
-	ALLEGRO_FONT *font, *font_num_small, *font_num_medium, *font_num_big;
+	ALLEGRO_FONT *font, *font_num_small, *font_num_medium, *font_num_big, *font_small;
 
 	ALLEGRO_BITMAP *frame, *frame_bg;
 
@@ -195,7 +195,7 @@ struct GamestateResources {
 
 	struct ParticleBucket* particles;
 
-	struct Character *leaves, *ui, *beetle, *snail;
+	struct Character *leaves, *ui, *beetle, *snail, *restart_btn;
 
 	struct {
 		struct Character* character;
@@ -205,7 +205,7 @@ struct GamestateResources {
 	float snail_blink;
 
 	int moves, score;
-	struct Tween scoring, finishing;
+	struct Tween scoring, finishing, failing;
 
 	struct {
 		bool animals[ANIMAL_TYPES];
@@ -223,7 +223,7 @@ struct GamestateResources {
 		int id;
 	} level;
 
-	bool debug, paused, menu, done;
+	bool debug, paused, menu, done, failed, restart_hover;
 	float counter, counter_speed, counter_strength;
 };
 
@@ -247,6 +247,12 @@ bool IsDrawable(enum FIELD_TYPE type);
 int IsMatchExtension(struct Game* game, struct GamestateResources* data, struct FieldID id);
 int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct FieldID id);
 bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
+
+// levels
+void LoadLevel(struct Game* game, struct GamestateResources* data);
+void RestartLevel(struct Game* game, struct GamestateResources* data);
+void FinishLevel(struct Game* game, struct GamestateResources* data);
+void FailLevel(struct Game* game, struct GamestateResources* data);
 
 // logic
 int MarkMatching(struct Game* game, struct GamestateResources* data);
@@ -279,7 +285,6 @@ bool AreSwappable(struct Game* game, struct GamestateResources* data, struct Fie
 void UpdateDrawable(struct Game* game, struct GamestateResources* data, struct FieldID id);
 void DrawField(struct Game* game, struct GamestateResources* data, struct FieldID id);
 void DrawOverlay(struct Game* game, struct GamestateResources* data, struct FieldID id);
-void FinishLevel(struct Game* game, struct GamestateResources* data);
 
 // scene
 void DrawScene(struct Game* game, struct GamestateResources* data);
