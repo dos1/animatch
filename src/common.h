@@ -64,6 +64,7 @@ struct CommonResources {
 	struct {
 		bool less_movement;
 		bool solid_background;
+		bool allow_continuing;
 	} config;
 };
 

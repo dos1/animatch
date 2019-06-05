@@ -280,7 +280,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->failing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->failing) + 204, ALLEGRO_ALIGN_CENTER, "FAILED!");
 
-		//al_draw_textf(data->font_small, al_map_rgb(255, 255, 255), 130, -410 + (508 + 410) * GetTweenValue(&data->failing) + 353, ALLEGRO_ALIGN_LEFT, "CONTINUE >");
+		if (game->data->config.allow_continuing) {
+			al_draw_textf(data->font_small, al_map_rgb(255, 255, 255), 130, -410 + (508 + 410) * GetTweenValue(&data->failing) + 353, ALLEGRO_ALIGN_LEFT, "CONTINUE >");
+		}
 
 		SetCharacterPosition(game, data->restart_btn, 440 + 169 / 2.0, 175 / 2.0 + 780 - (508 + 410) * (1.0 - GetTweenValue(&data->failing)), 0);
 		DrawCharacter(game, data->restart_btn);
@@ -308,6 +310,15 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
 		data->restart_hover = IsOnCharacter(game, data->restart_btn, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true);
+
+		if (game->data->config.allow_continuing && data->failed) {
+			int x1 = 120, x2 = 240, y1 = 918 * GetTweenValue(&data->failing) - 67, y2 = 918 * GetTweenValue(&data->failing) - 22;
+			if (game->data->mouseX * game->viewport.width >= x1 && game->data->mouseX * game->viewport.width <= x2 && game->data->mouseY * game->viewport.height >= y1 && game->data->mouseY * game->viewport.height <= y2) {
+				data->failed = false;
+				data->failing = StaticTween(game, 0.0);
+				data->locked = false;
+			}
+		}
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) || (ev->type == ALLEGRO_EVENT_TOUCH_END)) {
