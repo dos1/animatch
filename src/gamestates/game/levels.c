@@ -31,6 +31,9 @@ void LoadLevel(struct Game* game, struct GamestateResources* data) {
 	data->level.supers = true;
 	data->level.specials[SPECIAL_TYPE_EGG] = false;
 	data->level.infinite = true;
+	data->level.goals[0].type = GOAL_TYPE_NONE;
+	data->level.goals[1].type = GOAL_TYPE_NONE;
+	data->level.goals[2].type = GOAL_TYPE_NONE;
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -56,6 +59,12 @@ void LoadLevel(struct Game* game, struct GamestateResources* data) {
 	PrintConsole(game, "level: %d", game->data->level);
 	if (game->data->level >= 0) {
 		data->level.id = game->data->level;
+
+		data->goals[0] = data->level.goals[0];
+		data->goals[1] = data->level.goals[1];
+		data->goals[2] = data->level.goals[2];
+		data->infinite = data->level.infinite;
+		data->moves_goal = data->level.moves;
 
 		for (int i = 0; i < COLS; i++) {
 			for (int j = 0; j < ROWS; j++) {

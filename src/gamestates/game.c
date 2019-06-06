@@ -198,15 +198,19 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_hold_bitmap_drawing(true);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
-	DrawUIElement(game, data->ui, data->level.infinite ? UI_ELEMENT_BALOON_MEDIUM : UI_ELEMENT_BALOON_BIG);
+	DrawUIElement(game, data->ui, data->infinite ? UI_ELEMENT_BALOON_MEDIUM : UI_ELEMENT_BALOON_BIG);
 	DrawUIElement(game, data->ui, UI_ELEMENT_BALOON_MINI);
 	DrawUIElement(game, data->ui, UI_ELEMENT_SCORE);
 	al_hold_bitmap_drawing(false);
 
 	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 53, ALLEGRO_ALIGN_CENTER, "MOVES");
-	al_draw_textf(data->moves >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, data->moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", data->moves);
+	int moves = data->moves_goal - data->moves;
+	if (data->infinite) {
+		moves = data->moves;
+	}
+	al_draw_textf(moves >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
-	if (data->level.infinite) {
+	if (data->infinite) {
 		al_draw_text(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "∞");
 	} else {
 		al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
@@ -219,7 +223,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	DrawCharacter(game, data->beetle);
 
-	if (data->level.infinite) {
+	if (data->infinite) {
 		al_draw_text(data->font, al_map_rgb(64, 72, 5), 322 + 70, 48, ALLEGRO_ALIGN_CENTER, "SCORE");
 
 		ALLEGRO_TRANSFORM transform, orig = *al_get_current_transform();

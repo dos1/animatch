@@ -42,18 +42,28 @@
 	SPECIAL(DANDELION)             \
 	SPECIAL(CLOUD)
 
-#define FOREACH_FIELD_TYPE(TYPE) \
-	TYPE(ANIMAL)                   \
-	TYPE(FREEFALL)                 \
-	TYPE(COLLECTIBLE)              \
-	TYPE(EMPTY)                    \
-	TYPE(DISABLED)
+#define FOREACH_FIELD(FIELD) \
+	FIELD(ANIMAL)              \
+	FIELD(FREEFALL)            \
+	FIELD(COLLECTIBLE)         \
+	FIELD(EMPTY)               \
+	FIELD(DISABLED)
+
+#define FOREACH_GOAL(GOAL) \
+	GOAL(NONE)               \
+	GOAL(SCORE)              \
+	GOAL(FREEFALL)           \
+	GOAL(ANIMAL)             \
+	FOREACH_ANIMAL(GOAL)     \
+	GOAL(COLLECTIBLE)        \
+	FOREACH_COLLECTIBLE(GOAL)
 
 #define GENERATE_STRING(VAL) #VAL,
 #define GENERATE_ANIMAL_ENUM(VAL) ANIMAL_TYPE_##VAL,
 #define GENERATE_SPECIAL_ENUM(VAL) SPECIAL_TYPE_##VAL,
 #define GENERATE_COLLECTIBLE_ENUM(VAL) COLLECTIBLE_TYPE_##VAL,
-#define GENERATE_FIELD_TYPE_ENUM(VAL) FIELD_TYPE_##VAL,
+#define GENERATE_FIELD_ENUM(VAL) FIELD_TYPE_##VAL,
+#define GENERATE_GOAL_ENUM(VAL) GOAL_TYPE_##VAL,
 
 enum ANIMAL_TYPE {
 	FOREACH_ANIMAL(GENERATE_ANIMAL_ENUM)
@@ -74,9 +84,15 @@ enum COLLECTIBLE_TYPE {
 };
 
 enum FIELD_TYPE {
-	FOREACH_FIELD_TYPE(GENERATE_FIELD_TYPE_ENUM)
+	FOREACH_FIELD(GENERATE_FIELD_ENUM)
 	//
 	FIELD_TYPES
+};
+
+enum GOAL_TYPE {
+	FOREACH_GOAL(GENERATE_GOAL_ENUM)
+	//
+	GOAL_TYPES
 };
 
 static char* ANIMALS[] = {FOREACH_ANIMAL(GENERATE_STRING)};
@@ -169,6 +185,31 @@ struct Field {
 	} animation;
 };
 
+struct Goal {
+	enum GOAL_TYPE type;
+	int value;
+};
+
+struct Level {
+	bool animals[ANIMAL_TYPES];
+	bool specials[SPECIAL_TYPES];
+	struct {
+		enum FIELD_TYPE field_type;
+		enum COLLECTIBLE_TYPE collectible_type;
+		enum ANIMAL_TYPE animal_type;
+		bool random_animal;
+		bool sleeping;
+		bool super;
+	} fields[COLS][ROWS];
+	bool supers, sleeping;
+
+	struct Goal goals[3];
+
+	bool infinite;
+	int moves;
+	int id;
+};
+
 struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
@@ -204,26 +245,14 @@ struct GamestateResources {
 
 	float snail_blink;
 
-	int moves, score;
+	int moves, moves_goal, score;
 	struct Tween scoring, finishing, failing;
 
-	struct {
-		bool animals[ANIMAL_TYPES];
-		bool specials[SPECIAL_TYPES];
-		struct {
-			enum FIELD_TYPE field_type;
-			enum COLLECTIBLE_TYPE collectible_type;
-			enum ANIMAL_TYPE animal_type;
-			bool random_animal;
-			bool sleeping;
-			bool super;
-		} fields[COLS][ROWS];
-		bool supers, sleeping, infinite;
+	struct Goal goals[3];
 
-		int id;
-	} level;
+	struct Level level;
 
-	bool debug, paused, menu, done, failed, restart_hover;
+	bool debug, paused, menu, done, failed, restart_hover, infinite;
 	float counter, counter_speed, counter_strength;
 };
 

@@ -152,6 +152,71 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		igText("Possible moves: %d", CountMoves(game, data));
 		igSeparator();
 
+		if (igButton("Auto-move", (ImVec2){0, 0})) {
+			AutoMove(game, data);
+		}
+
+		igSameLine(0, 0);
+		if (igButton("Hint", (ImVec2){0, 0})) {
+			ShowHint(game, data);
+		}
+
+		igSameLine(0, 0);
+		if (igButton("Process", (ImVec2){0, 0})) {
+			Gravity(game, data);
+			ProcessFields(game, data);
+		}
+
+		igSeparator();
+		igInputInt("Moves taken", &data->moves, 1, 10, 0);
+
+		igSeparator();
+
+		if (igCollapsingHeader("Goals", 0)) {
+			igCheckbox("Infinite", &data->infinite);
+			if (!data->infinite) {
+				char* current = "...";
+
+#define CheckGoalComboItem(t) \
+	if (data->goals[i].type == GOAL_TYPE_##t) { current = STRINGIFY(t); }
+
+#define AddGoalComboItem(t)                                                        \
+	if (igSelectable(#t, data->goals[i].type == GOAL_TYPE_##t, 0, (ImVec2){0, 0})) { \
+		data->goals[i].type = GOAL_TYPE_##t;                                           \
+	}
+
+				igSeparator();
+				int i = 0;
+				FOREACH_GOAL(CheckGoalComboItem)
+				if (igBeginCombo("Goal 1", current, 0)) {
+					FOREACH_GOAL(AddGoalComboItem)
+					igEndCombo();
+				}
+				igInputInt("Value 1", &data->goals[i].value, 1, 10, 0);
+
+				igSeparator();
+				i = 1;
+				FOREACH_GOAL(CheckGoalComboItem)
+				if (igBeginCombo("Goal 2", current, 0)) {
+					FOREACH_GOAL(AddGoalComboItem)
+					igEndCombo();
+				}
+				igInputInt("Value 2", &data->goals[i].value, 1, 10, 0);
+
+				igSeparator();
+				i = 2;
+				FOREACH_GOAL(CheckGoalComboItem)
+				if (igBeginCombo("Goal 3", current, 0)) {
+					FOREACH_GOAL(AddGoalComboItem)
+					igEndCombo();
+				}
+				igInputInt("Value 3", &data->goals[i].value, 1, 10, 0);
+
+				igSeparator();
+				igInputInt("Moves", &data->moves_goal, 1, 10, 0);
+			}
+		}
+
 		if (igCollapsingHeader("Board", 0)) {
 			for (int j = 0; j < ROWS; j++) {
 				igColumns(COLS, "fields", true);
@@ -225,7 +290,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		UpdateField(game, data, field);                                  \
 	}
 
-						FOREACH_FIELD_TYPE(AddFieldTypeMenuItem)
+						FOREACH_FIELD(AddFieldTypeMenuItem)
 
 						igSeparator();
 
@@ -269,21 +334,6 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				igSeparator();
 			}
 			igColumns(1, NULL, false);
-		}
-
-		if (igButton("Auto-move", (ImVec2){0, 0})) {
-			AutoMove(game, data);
-		}
-
-		igSameLine(0, 0);
-		if (igButton("Hint", (ImVec2){0, 0})) {
-			ShowHint(game, data);
-		}
-
-		igSameLine(0, 0);
-		if (igButton("Process", (ImVec2){0, 0})) {
-			Gravity(game, data);
-			ProcessFields(game, data);
 		}
 
 		igEnd();
