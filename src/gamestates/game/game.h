@@ -278,10 +278,13 @@ int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct
 bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 
 // levels
-void LoadLevel(struct Game* game, struct GamestateResources* data);
+void LoadLevel(struct Game* game, struct GamestateResources* data, int id);
+void ApplyLevel(struct Game* game, struct GamestateResources* data);
+void StoreLevel(struct Game* game, struct GamestateResources* data);
 void RestartLevel(struct Game* game, struct GamestateResources* data);
 void FinishLevel(struct Game* game, struct GamestateResources* data);
 void FailLevel(struct Game* game, struct GamestateResources* data);
+void CopyLevel(struct Game* game, struct GamestateResources* data);
 
 // logic
 int MarkMatching(struct Game* game, struct GamestateResources* data);

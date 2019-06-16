@@ -208,7 +208,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	if (data->infinite) {
 		moves = data->moves;
 	}
-	al_draw_textf(moves >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", moves);
+	al_draw_textf(abs(moves) >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
 	if (data->infinite) {
 		al_draw_text(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "∞");
@@ -626,7 +626,10 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->failing = StaticTween(game, 0.0);
 	data->scoring = StaticTween(game, 0.0);
 
-	LoadLevel(game, data);
+	if (game->data->level >= 0) {
+		LoadLevel(game, data, game->data->level);
+		ApplyLevel(game, data);
+	}
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

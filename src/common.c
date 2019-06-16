@@ -156,7 +156,7 @@ void ToggleAudio(struct Game* game) {
 void UnlockLevel(struct Game* game, int level) {
 	if (game->data->unlocked_levels + 1 == level) {
 		game->data->unlocked_levels = level;
-		game->data->last_unlocked_level = level;
+		game->data->last_unlocked_level = game->data->unlocked_levels;
 	}
 }
 
@@ -167,7 +167,7 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
 
 	data->level = 0;
-	data->unlocked_levels = 0;
+	data->unlocked_levels = 1;
 	data->last_unlocked_level = -1;
 
 	data->config.less_movement = strtol(GetConfigOptionDefault(game, "Animatch", "less_movement", "0"), NULL, 0);

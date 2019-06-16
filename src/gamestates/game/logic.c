@@ -36,7 +36,7 @@
  *      - if something happened earlier, DispatchAnimations is queued after any previously queued animation
  *      - if nothing happened and there are no possible moves left, HandleDeadlock is called which is supposed
  *        to shuffle the board in order to get out of deadlock; DispatchAnimations is then queued
- *      - otherwise, the controls are unlocked and the execution flow stops there.
+ *      - otherwise, the controls are unlocked, goals/turns checked and the execution flow stops there.
  *
  *  - DispatchAnimations does two things:
  *    - call PerformActions, which triggers animations and turns fields into specials
@@ -248,6 +248,10 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 			TM_AddAction(data->timeline, DispatchAnimations, NULL);
 		} else {
 			data->locked = false;
+			// TODO: check goals
+			if (!data->infinite && data->moves == data->moves_goal) {
+				FailLevel(game, data);
+			}
 		}
 	}
 }

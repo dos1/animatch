@@ -336,6 +336,11 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 			igColumns(1, NULL, false);
 		}
 
+		if (igButton("Save level", (ImVec2){0, 0})) {
+			CopyLevel(game, data);
+			StoreLevel(game, data);
+		}
+
 		igEnd();
 	}
 #endif

@@ -20,21 +20,203 @@
 
 #include "game.h"
 
-void LoadLevel(struct Game* game, struct GamestateResources* data) {
+void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
+	if (id == 0) {
+		// infinite level
+		for (int i = 0; i < ANIMAL_TYPES; i++) {
+			data->level.animals[i] = true;
+		}
+		for (int i = 0; i < SPECIAL_TYPES; i++) {
+			data->level.specials[i] = true;
+		}
+		data->level.sleeping = true;
+		data->level.supers = true;
+		data->level.specials[SPECIAL_TYPE_EGG] = false;
+		data->level.infinite = true;
+		data->level.goals[0].type = GOAL_TYPE_NONE;
+		data->level.goals[1].type = GOAL_TYPE_NONE;
+		data->level.goals[2].type = GOAL_TYPE_NONE;
+
+		for (int i = 0; i < COLS; i++) {
+			for (int j = 0; j < ROWS; j++) {
+				data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
+				data->level.fields[i][j].animal_type = (j * COLS + i) % ANIMAL_TYPES;
+				data->level.fields[i][j].random_animal = true;
+				data->level.fields[i][j].sleeping = false;
+				data->level.fields[i][j].super = false;
+			}
+		}
+		data->level.id = id;
+		data->level.infinite = true;
+		return;
+	}
+
+	char* filename = malloc(255 * sizeof(char));
+	snprintf(filename, 255, "%d.lvl", id);
+
+	ALLEGRO_FILE* file;
+	// TODO: use proper path
+	if (!al_filename_exists(filename)) {
+		snprintf(filename, 255, "levels/%d.lvl", id);
+		const char* filename2 = GetDataFilePath(game, filename);
+		file = al_fopen(filename2, "rb");
+	} else {
+		file = al_fopen(filename, "rb");
+	}
+
+	if (!file) {
+		FatalError(game, false, "Could not open level data file: %s", filename);
+		free(filename);
+		return;
+	}
+
+	char buf[14];
+	al_fread(file, buf, 14);
+	if (strncmp("ANIMATCH_LEVEL", buf, 14) != 0) {
+		FatalError(game, false, "Incorrect level data: %s", filename);
+		goto err;
+	}
+
+	int val = al_fread32le(file);
+	if (val > 0) {
+		FatalError(game, false, "Incompatible version (%d) in level data: %s", val, filename);
+		goto err;
+	}
+
+	data->level.moves = al_fread16le(file);
+
+	al_fread16le(file); // nr of thresholds
+
+	val = al_fread16le(file); // nr of goal groups
+	if (val > 1) {
+		FatalError(game, false, "Too many goal groups (%d) in level data: %s", val, filename);
+		goto err;
+	}
+
+	{
+		val = al_fread16le(file); // goal group type (AND)
+		if (val != 0) {
+			FatalError(game, false, "Invalid goal group type (%d) in level data: %s", val, filename);
+			goto err;
+		}
+
+		val = al_fread16le(file); // nr of goals
+
+		if (val > 3) {
+			FatalError(game, false, "Invalid number of goals (%d) in level data: %s", val, filename);
+			goto err;
+		}
+
+		for (int i = 0; i < 3; i++) {
+			data->level.goals[i].type = GOAL_TYPE_NONE;
+		}
+		for (int i = 0; i < val; i++) {
+			data->level.goals[i].type = al_fread16le(file);
+			data->level.goals[i].value = al_fread16le(file);
+		}
+	}
+
+	val = al_fread16le(file);
+	if (val != ANIMAL_TYPES) {
+		FatalError(game, false, "Invalid number of animal types (%d) in level data: %s", val, filename);
+		goto err;
+	}
+
 	for (int i = 0; i < ANIMAL_TYPES; i++) {
-		data->level.animals[i] = true;
+		data->level.animals[i] = al_fread16le(file);
+	}
+
+	val = al_fread16le(file);
+	if (val != SPECIAL_TYPES) {
+		FatalError(game, false, "Invalid number of special types (%d) in level data: %s", val, filename);
+		goto err;
 	}
 	for (int i = 0; i < SPECIAL_TYPES; i++) {
-		data->level.specials[i] = true;
+		data->level.specials[i] = al_fread16le(file);
 	}
-	data->level.sleeping = true;
-	data->level.supers = true;
-	data->level.specials[SPECIAL_TYPE_EGG] = false;
-	data->level.infinite = true;
-	data->level.goals[0].type = GOAL_TYPE_NONE;
-	data->level.goals[1].type = GOAL_TYPE_NONE;
-	data->level.goals[2].type = GOAL_TYPE_NONE;
 
+	val = al_fread16le(file);
+	if (val != 0) {
+		FatalError(game, false, "Invalid number of probability values (%d) in level data: %s", val, filename);
+		goto err;
+	}
+
+	val = al_fread16le(file);
+	if (val != 2) {
+		FatalError(game, false, "Invalid number of config options (%d) in level data: %s", val, filename);
+		goto err;
+	}
+	data->level.supers = al_fread16le(file);
+	data->level.sleeping = al_fread16le(file);
+
+	val = al_fread16le(file);
+	if (val != ROWS) {
+		FatalError(game, false, "Invalid number of rows (%d) in level data: %s", val, filename);
+		goto err;
+	}
+	val = al_fread16le(file);
+	if (val != COLS) {
+		FatalError(game, false, "Invalid number of cols (%d) in level data: %s", val, filename);
+		goto err;
+	}
+
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->level.fields[i][j].field_type = al_fread16le(file);
+
+			switch (data->level.fields[i][j].field_type) {
+				case FIELD_TYPE_ANIMAL:
+					data->level.fields[i][j].animal_type = al_fread16le(file);
+					break;
+				case FIELD_TYPE_COLLECTIBLE:
+					data->level.fields[i][j].collectible_type = al_fread16le(file);
+					break;
+				default:
+					al_fread16le(file);
+			}
+			al_fread16le(file); // random subtype
+			data->level.fields[i][j].sleeping = al_fread16le(file);
+			data->level.fields[i][j].super = al_fread16le(file);
+		}
+	}
+
+	data->level.id = id;
+	data->level.infinite = false;
+
+err:
+	free(filename);
+	al_fclose(file);
+}
+
+void CopyLevel(struct Game* game, struct GamestateResources* data) {
+	data->level.goals[0] = data->goals[0];
+	data->level.goals[1] = data->goals[1];
+	data->level.goals[2] = data->goals[2];
+	data->level.infinite = data->infinite;
+	data->level.moves = data->moves_goal;
+
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			data->level.fields[i][j].field_type = data->fields[i][j].type;
+
+			switch (data->level.fields[i][j].field_type) {
+				case FIELD_TYPE_COLLECTIBLE:
+					data->level.fields[i][j].collectible_type = data->fields[i][j].data.collectible.type;
+					break;
+				case FIELD_TYPE_ANIMAL:
+					data->level.fields[i][j].random_animal = false;
+					data->level.fields[i][j].animal_type = data->fields[i][j].data.animal.type;
+					data->level.fields[i][j].sleeping = data->fields[i][j].data.animal.sleeping;
+					data->level.fields[i][j].super = data->fields[i][j].data.animal.super;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+}
+
+void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
@@ -42,17 +224,6 @@ void LoadLevel(struct Game* game, struct GamestateResources* data) {
 
 			data->fields[i][j].animation.time_to_action = (int)((rand() % 250000 + 500000) * (rand() / (double)RAND_MAX));
 			data->fields[i][j].animation.time_to_blink = (int)((rand() % 100000 + 200000) * (rand() / (double)RAND_MAX));
-		}
-	}
-
-	// temporary
-	for (int i = 0; i < COLS; i++) {
-		for (int j = 0; j < ROWS; j++) {
-			data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
-			data->level.fields[i][j].animal_type = (j * COLS + i) % ANIMAL_TYPES;
-			data->level.fields[i][j].random_animal = true;
-			data->level.fields[i][j].sleeping = false;
-			data->level.fields[i][j].super = false;
 		}
 	}
 
@@ -109,7 +280,7 @@ void LoadLevel(struct Game* game, struct GamestateResources* data) {
 }
 
 void RestartLevel(struct Game* game, struct GamestateResources* data) {
-	LoadLevel(game, data);
+	ApplyLevel(game, data);
 	data->failed = false;
 	data->failing = StaticTween(game, 0.0);
 	data->locked = false;
@@ -134,4 +305,76 @@ void FinishLevel(struct Game* game, struct GamestateResources* data) {
 void FailLevel(struct Game* game, struct GamestateResources* data) {
 	data->failed = true;
 	data->failing = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, 1.0);
+}
+
+void StoreLevel(struct Game* game, struct GamestateResources* data) {
+	char* filename = malloc(255 * sizeof(char));
+	snprintf(filename, 255, "%d.lvl", data->level.id);
+	// TODO: set a proper writable path
+	ALLEGRO_FILE* file = al_fopen(filename, "wb");
+
+	if (!file) {
+		FatalError(game, false, "Could not open level data file for writing: %s", filename);
+	}
+
+	free(filename);
+
+	if (!file) { return; }
+
+	al_fwrite(file, "ANIMATCH_LEVEL", 14);
+	al_fwrite32le(file, 0); // file version
+
+	al_fwrite16le(file, data->level.moves);
+
+	al_fwrite16le(file, 0); // nr of thresholds
+
+	al_fwrite16le(file, 1); // nr of goal groups
+	{
+		al_fwrite16le(file, 0); // goal group type (AND)
+		al_fwrite16le(file, 3); // nr of goals
+
+		for (int i = 0; i < 3; i++) {
+			al_fwrite16le(file, data->level.goals[i].type);
+			al_fwrite16le(file, data->level.goals[i].value);
+		}
+	}
+
+	al_fwrite16le(file, ANIMAL_TYPES);
+	for (int i = 0; i < ANIMAL_TYPES; i++) {
+		al_fwrite16le(file, data->level.animals[i]);
+	}
+
+	al_fwrite16le(file, SPECIAL_TYPES);
+	for (int i = 0; i < SPECIAL_TYPES; i++) {
+		al_fwrite16le(file, data->level.specials[i]);
+	}
+
+	al_fwrite16le(file, 0); // nr of probability values
+
+	al_fwrite16le(file, 2); // nr of config options
+	al_fwrite16le(file, data->level.supers);
+	al_fwrite16le(file, data->level.sleeping);
+
+	al_fwrite16le(file, ROWS);
+	al_fwrite16le(file, COLS);
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			al_fwrite16le(file, data->level.fields[i][j].field_type);
+			switch (data->level.fields[i][j].field_type) {
+				case FIELD_TYPE_ANIMAL:
+					al_fwrite16le(file, data->level.fields[i][j].animal_type);
+					break;
+				case FIELD_TYPE_COLLECTIBLE:
+					al_fwrite16le(file, data->level.fields[i][j].collectible_type);
+					break;
+				default:
+					al_fwrite16le(file, -1);
+			}
+			al_fwrite16le(file, 0); // random subtype
+			al_fwrite16le(file, data->level.fields[i][j].sleeping);
+			al_fwrite16le(file, data->level.fields[i][j].super);
+		}
+	}
+
+	al_fclose(file);
 }
