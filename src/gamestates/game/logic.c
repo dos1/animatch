@@ -50,6 +50,20 @@
  *  (routine naming is hard...)
  */
 
+void UpdateGoal(struct Game* game, struct GamestateResources* data, enum GOAL_TYPE type, int val) {
+	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].type == type) {
+			data->goals[i].value -= val;
+		}
+	}
+}
+
+void AddScore(struct Game* game, struct GamestateResources* data, int val) {
+	data->score += val;
+	data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+	UpdateGoal(game, data, GOAL_TYPE_SCORE, val);
+}
+
 int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	int matching = 0;
 	for (int i = 0; i < COLS; i++) {
@@ -75,9 +89,9 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					data->fields[i][j].to_remove = true;
 					data->fields[i][j].handled = true;
 					data->fields[i][j].to_highlight = true;
-					data->score += 100;
-					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+					AddScore(game, data, 100);
 					collected++;
+					UpdateGoal(game, data, GOAL_TYPE_FREEFALL, 1);
 				}
 			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
 				if (IsSleeping(&data->fields[i][j])) {
@@ -87,9 +101,9 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					data->fields[i][j].to_highlight = true;
-					data->score += 10;
-					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					collected++;
+					AddScore(game, data, 10);
+					UpdateGoal(game, data, GOAL_TYPE_SLEEPING, 1);
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].data.collectible.variant++;
 
@@ -97,13 +111,13 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 						data->fields[i][j].data.collectible.variant = SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions - 1;
 						data->fields[i][j].to_remove = true;
 						PrintConsole(game, "collecting field %d, %d", i, j);
-						data->score += 50;
-						data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+						AddScore(game, data, 50);
 					} else {
 						data->fields[i][j].to_remove = false;
 						PrintConsole(game, "advancing field %d, %d", i, j);
-						data->score += 20;
-						data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+						AddScore(game, data, 20);
+						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE, 1);
+						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE + 1 + data->fields[i][j].data.collectible.type, 1);
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
@@ -290,14 +304,16 @@ static void PerformActions(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].matched) {
 				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
 					SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].type].actions]);
+					UpdateGoal(game, data, GOAL_TYPE_ANIMAL, 1);
+					UpdateGoal(game, data, GOAL_TYPE_ANIMAL + 1 + data->fields[i][j].data.animal.type, 1);
 
 					if (data->fields[i][j].matched >= 4 && data->fields[i][j].match_mark) {
 						TurnMatchToSuper(game, data, data->fields[i][j].matched, data->fields[i][j].match_mark);
 					}
 				}
 
-				data->score += 10;
-				data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+				AddScore(game, data, 10);
+
 				SpawnParticles(game, data, data->fields[i][j].id, 16);
 			}
 		}

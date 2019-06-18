@@ -49,14 +49,16 @@
 	FIELD(EMPTY)               \
 	FIELD(DISABLED)
 
-#define FOREACH_GOAL(GOAL) \
-	GOAL(NONE)               \
-	GOAL(SCORE)              \
-	GOAL(FREEFALL)           \
-	GOAL(ANIMAL)             \
-	FOREACH_ANIMAL(GOAL)     \
-	GOAL(COLLECTIBLE)        \
-	FOREACH_COLLECTIBLE(GOAL)
+#define FOREACH_GOAL(GOAL)  \
+	GOAL(NONE)                \
+	GOAL(SCORE)               \
+	GOAL(FREEFALL)            \
+	GOAL(ANIMAL)              \
+	FOREACH_ANIMAL(GOAL)      \
+	GOAL(COLLECTIBLE)         \
+	FOREACH_COLLECTIBLE(GOAL) \
+	GOAL(SLEEPING)            \
+	GOAL(SUPER)
 
 #define GENERATE_STRING(VAL) #VAL,
 #define GENERATE_ANIMAL_ENUM(VAL) ANIMAL_TYPE_##VAL,
@@ -287,6 +289,8 @@ void FailLevel(struct Game* game, struct GamestateResources* data);
 void CopyLevel(struct Game* game, struct GamestateResources* data);
 
 // logic
+void UpdateGoal(struct Game* game, struct GamestateResources* data, enum GOAL_TYPE type, int val);
+void AddScore(struct Game* game, struct GamestateResources* data, int val);
 int MarkMatching(struct Game* game, struct GamestateResources* data);
 void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches);
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches);
