@@ -23,15 +23,18 @@
 void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 	if (id == 0) {
 		// infinite level
+		for (int i = 0; i < FIELD_TYPES; i++) {
+			data->level.field_types[i] = true;
+		}
 		for (int i = 0; i < ANIMAL_TYPES; i++) {
 			data->level.animals[i] = true;
 		}
-		for (int i = 0; i < SPECIAL_TYPES; i++) {
-			data->level.specials[i] = true;
+		for (int i = 0; i < COLLECTIBLE_TYPES; i++) {
+			data->level.collectibles[i] = true;
 		}
 		data->level.sleeping = true;
 		data->level.supers = true;
-		data->level.specials[SPECIAL_TYPE_EGG] = false;
+		data->level.field_types[FIELD_TYPE_FREEFALL] = false;
 		data->level.infinite = true;
 		data->level.goals[0].type = GOAL_TYPE_NONE;
 		data->level.goals[1].type = GOAL_TYPE_NONE;
@@ -117,6 +120,16 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 	}
 
 	val = al_fread16le(file);
+	if (val != FIELD_TYPES) {
+		FatalError(game, false, "Invalid number of field types (%d) in level data: %s", val, filename);
+		goto err;
+	}
+
+	for (int i = 0; i < FIELD_TYPES; i++) {
+		data->level.field_types[i] = al_fread16le(file);
+	}
+
+	val = al_fread16le(file);
 	if (val != ANIMAL_TYPES) {
 		FatalError(game, false, "Invalid number of animal types (%d) in level data: %s", val, filename);
 		goto err;
@@ -127,12 +140,12 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 	}
 
 	val = al_fread16le(file);
-	if (val != SPECIAL_TYPES) {
+	if (val != COLLECTIBLE_TYPES) {
 		FatalError(game, false, "Invalid number of special types (%d) in level data: %s", val, filename);
 		goto err;
 	}
-	for (int i = 0; i < SPECIAL_TYPES; i++) {
-		data->level.specials[i] = al_fread16le(file);
+	for (int i = 0; i < COLLECTIBLE_TYPES; i++) {
+		data->level.collectibles[i] = al_fread16le(file);
 	}
 
 	val = al_fread16le(file);
@@ -269,6 +282,10 @@ void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 		}
 		data->moves = 0;
 		data->score = 0;
+		data->failing = StaticTween(game, 0.0);
+		data->failed = false;
+		data->finishing = StaticTween(game, 0.0);
+		data->done = false;
 	}
 
 	data->current = (struct FieldID){-1, -1};
@@ -339,14 +356,19 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 
+	al_fwrite16le(file, FIELD_TYPES);
+	for (int i = 0; i < FIELD_TYPES; i++) {
+		al_fwrite16le(file, data->level.field_types[i]);
+	}
+
 	al_fwrite16le(file, ANIMAL_TYPES);
 	for (int i = 0; i < ANIMAL_TYPES; i++) {
 		al_fwrite16le(file, data->level.animals[i]);
 	}
 
-	al_fwrite16le(file, SPECIAL_TYPES);
-	for (int i = 0; i < SPECIAL_TYPES; i++) {
-		al_fwrite16le(file, data->level.specials[i]);
+	al_fwrite16le(file, COLLECTIBLE_TYPES);
+	for (int i = 0; i < COLLECTIBLE_TYPES; i++) {
+		al_fwrite16le(file, data->level.collectibles[i]);
 	}
 
 	al_fwrite16le(file, 0); // nr of probability values

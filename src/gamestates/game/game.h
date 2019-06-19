@@ -193,12 +193,14 @@ struct Goal {
 };
 
 struct Level {
+	bool field_types[FIELD_TYPES];
 	bool animals[ANIMAL_TYPES];
-	bool specials[SPECIAL_TYPES];
+	bool collectibles[SPECIAL_TYPES];
 	struct {
 		enum FIELD_TYPE field_type;
 		enum COLLECTIBLE_TYPE collectible_type;
 		enum ANIMAL_TYPE animal_type;
+		int variant;
 		bool random_animal;
 		bool sleeping;
 		bool super;
@@ -254,7 +256,7 @@ struct GamestateResources {
 
 	struct Level level;
 
-	bool debug, paused, menu, done, failed, restart_hover, infinite;
+	bool debug, paused, menu, done, failed, restart_hover, infinite, goal_lock;
 	float counter, counter_speed, counter_strength;
 };
 

@@ -51,6 +51,9 @@
  */
 
 void UpdateGoal(struct Game* game, struct GamestateResources* data, enum GOAL_TYPE type, int val) {
+	if (data->goal_lock) {
+		return;
+	}
 	for (int i = 0; i < 3; i++) {
 		if (data->goals[i].type == type) {
 			data->goals[i].value -= val;
@@ -146,7 +149,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 
 void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
 	field->type = FIELD_TYPE_ANIMAL;
-	while (data->level.fields[FIELD_TYPE_ANIMAL]) {
+	while (data->level.field_types[FIELD_TYPE_ANIMAL]) {
 		field->data.animal.type = rand() % ANIMAL_TYPES;
 		if (!allow_matches && IsMatching(game, data, field->id)) {
 			continue;
@@ -170,24 +173,24 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 		if (rand() / (float)RAND_MAX < 0.001) {
 			field->type = FIELD_TYPE_FREEFALL;
 			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-			if (data->level.specials[SPECIAL_TYPE_EGG]) {
+			if (data->level.fields[FIELD_TYPE_FREEFALL]) {
 				break;
 			}
 		} else if (rand() / (float)RAND_MAX < 0.01) {
 			field->type = FIELD_TYPE_COLLECTIBLE;
-			while (data->level.fields[FIELD_TYPE_COLLECTIBLE]) {
+			while (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
-				if (data->level.specials[FIRST_COLLECTIBLE + field->data.collectible.type]) {
+				if (data->level.collectibles[field->data.collectible.type]) {
 					break;
 				}
 			}
 			field->data.collectible.variant = 0;
-			if (data->level.fields[FIELD_TYPE_COLLECTIBLE]) {
+			if (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				break;
 			}
 		} else {
 			GenerateAnimal(game, data, field, allow_matches);
-			if (data->level.fields[FIELD_TYPE_ANIMAL]) {
+			if (data->level.field_types[FIELD_TYPE_ANIMAL]) {
 				break;
 			}
 		}
@@ -273,11 +276,14 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 			TM_AddAction(data->timeline, DispatchAnimations, NULL);
 		} else {
 			data->locked = false;
-			if (CheckGoals(game, data)) {
-				FinishLevel(game, data);
-			} else if (!data->infinite && data->moves == data->moves_goal) {
-				FailLevel(game, data);
+			if (!data->goal_lock) {
+				if (CheckGoals(game, data)) {
+					FinishLevel(game, data);
+				} else if (!data->infinite && data->moves == data->moves_goal) {
+					FailLevel(game, data);
+				}
 			}
+			data->goal_lock = false;
 		}
 	}
 }

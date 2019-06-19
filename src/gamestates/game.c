@@ -621,6 +621,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->menu = false;
 	data->done = false;
 	data->failed = false;
+	data->goal_lock = false;
 	data->snail_blink = 0.0;
 	data->finishing = StaticTween(game, 0.0);
 	data->failing = StaticTween(game, 0.0);
