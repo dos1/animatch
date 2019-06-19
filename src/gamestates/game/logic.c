@@ -64,6 +64,17 @@ void AddScore(struct Game* game, struct GamestateResources* data, int val) {
 	UpdateGoal(game, data, GOAL_TYPE_SCORE, val);
 }
 
+static bool CheckGoals(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].type != GOAL_TYPE_NONE) {
+			if (data->goals[i].value > 0) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	int matching = 0;
 	for (int i = 0; i < COLS; i++) {
@@ -262,8 +273,9 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 			TM_AddAction(data->timeline, DispatchAnimations, NULL);
 		} else {
 			data->locked = false;
-			// TODO: check goals
-			if (!data->infinite && data->moves == data->moves_goal) {
+			if (CheckGoals(game, data)) {
+				FinishLevel(game, data);
+			} else if (!data->infinite && data->moves == data->moves_goal) {
 				FailLevel(game, data);
 			}
 		}
