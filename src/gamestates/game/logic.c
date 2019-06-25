@@ -172,22 +172,64 @@ void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct F
 }
 
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
+	bool need_collectible = false;
+	int collectibles = 0, freefalls = 0, collectible[COLLECTIBLE_TYPES] = {};
+	for (int i = 0; i < ROWS; i++) {
+		for (int j = 0; j < COLS; j++) {
+			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+				freefalls++;
+			} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
+				collectibles++;
+				collectible[data->fields[i][j].data.collectible.type]++;
+			}
+		}
+	}
+
+	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].type == GOAL_TYPE_FREEFALL) {
+			freefalls -= data->goals[i].value;
+		} else if (data->goals[i].type == GOAL_TYPE_COLLECTIBLE) {
+			collectibles -= data->goals[i].value;
+			if (collectibles < 0) {
+				need_collectible = true;
+			}
+		}
+
+		for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
+			if ((data->goals[i].type - GOAL_TYPE_COLLECTIBLE) == type) {
+				collectible[type] -= data->goals[i].value;
+				if (collectible[type] < 0) {
+					need_collectible = true;
+				}
+			}
+		}
+	}
+
 	while (true) {
-		if (rand() / (float)RAND_MAX < 0.001) {
+		if (rand() / (float)RAND_MAX < ((freefalls < 0) ? 0.5 : 0.001)) {
 			field->type = FIELD_TYPE_FREEFALL;
 			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
 			if (data->level.field_types[FIELD_TYPE_FREEFALL]) {
 				break;
 			}
-		} else if (rand() / (float)RAND_MAX < 0.01) {
+		} else if (rand() / (float)RAND_MAX < (need_collectible ? 0.5 : 0.01)) {
 			field->type = FIELD_TYPE_COLLECTIBLE;
+			field->data.collectible.variant = 0;
+			if (need_collectible) {
+				// compensate for missing fields needed to reach the goals
+				for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
+					if (collectible[type] < 0) {
+						field->data.collectible.type = type;
+						break;
+					}
+				}
+			}
 			while (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
 				if (data->level.collectibles[field->data.collectible.type]) {
 					break;
 				}
 			}
-			field->data.collectible.variant = 0;
 			if (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				break;
 			}
