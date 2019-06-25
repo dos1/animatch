@@ -310,12 +310,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->snail->scaleX = 0.5;
 	data->snail->scaleY = 0.5;
 
-	int i = 0;
-	do {
-		data->levels = i;
-		i++;
-	} while (LevelExists(game, i));
-
 	data->menu.pos = 0;
 	return data;
 }
@@ -347,6 +341,12 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
+	int i = 0;
+	do {
+		data->levels = i;
+		i++;
+	} while (LevelExists(game, i));
+
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
 	SetScrollingViewportPosition(game, &data->menu, 90, 412, 536, 621, ceil(data->levels / 3.0) * 175 + 25);
