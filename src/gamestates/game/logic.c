@@ -68,6 +68,9 @@ void AddScore(struct Game* game, struct GamestateResources* data, int val) {
 }
 
 static bool CheckGoals(struct Game* game, struct GamestateResources* data) {
+	if (data->infinite) {
+		return false;
+	}
 	for (int i = 0; i < 3; i++) {
 		if (data->goals[i].type != GOAL_TYPE_NONE) {
 			if (data->goals[i].value > 0) {

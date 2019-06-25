@@ -334,6 +334,7 @@ void FinishLevel(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	UnlockLevel(game, data->level.id + 1);
+	game->data->in_progress = false;
 }
 
 void FailLevel(struct Game* game, struct GamestateResources* data) {

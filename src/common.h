@@ -54,6 +54,7 @@ struct CommonResources {
 	ALLEGRO_BITMAP* silhouette;
 	ALLEGRO_SHADER* kawese_shader;
 	int level, unlocked_levels, last_unlocked_level;
+	bool in_progress;
 
 	struct {
 		float progress;

@@ -188,6 +188,7 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	data->level = 0;
 	data->unlocked_levels = 1;
 	data->last_unlocked_level = -1;
+	data->in_progress = false;
 
 	data->config.less_movement = strtol(GetConfigOptionDefault(game, "Animatch", "less_movement", "0"), NULL, 0);
 	data->config.solid_background = strtol(GetConfigOptionDefault(game, "Animatch", "solid_background", "0"), NULL, 0);

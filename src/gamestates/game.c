@@ -572,6 +572,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	DestroyCharacter(game, data->snail);
 	DestroyCharacter(game, data->acorn_top.character);
 	DestroyCharacter(game, data->acorn_bottom.character);
+	DestroyCharacter(game, data->restart_btn);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
@@ -611,6 +612,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
 	game->data->last_unlocked_level = -1;
+	game->data->in_progress = true;
 
 	data->counter = 0.0;
 	data->counter_speed = 0.0;
@@ -630,6 +632,8 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	if (game->data->level >= 0) {
 		LoadLevel(game, data, game->data->level);
 		ApplyLevel(game, data);
+	} else {
+		game->data->level = data->level.id;
 	}
 }
 

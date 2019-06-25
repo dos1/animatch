@@ -24,9 +24,10 @@
 struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
-	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2, *leaf1b, *leaf2b;
+	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2, *leaf1b, *leaf2b, *infinitybmp, *back_onbmp, *back_offbmp;
 	ALLEGRO_FONT* font;
-	struct Character *beetle, *ui, *snail;
+	bool infinity_hover, back_hover;
+	struct Character *beetle, *ui, *snail, *infinity, *back;
 
 	int levels;
 	int highlight;
@@ -37,12 +38,31 @@ struct GamestateResources {
 	struct ScrollingViewport menu;
 };
 
-int Gamestate_ProgressCount = 13; // number of loading steps as reported by Gamestate_Load; 0 when missing
+int Gamestate_ProgressCount = 16; // number of loading steps as reported by Gamestate_Load; 0 when missing
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
 	AnimateCharacter(game, data->beetle, delta, 1.0);
 	AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->menu.speed))), 1.0);
+
+	if (data->infinity_hover) {
+		data->infinity->tint = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
+	} else {
+		data->infinity->tint = al_map_rgba_f(1.0, 1.0, 1.0, 1.0);
+	}
+
+	if (game->data->in_progress) {
+		data->back->spritesheet = data->back->spritesheets;
+		if (data->back_hover) {
+			data->back->tint = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
+		} else {
+			data->back->tint = al_map_rgba_f(1.0, 1.0, 1.0, 1.0);
+		}
+	} else {
+		data->back->tint = al_map_rgba_f(0.4, 0.4, 0.4, 0.4);
+		data->back->spritesheet = data->back->spritesheets->next;
+	}
+	data->back->frame = &data->back->spritesheet->frames[0];
 }
 
 void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
@@ -91,6 +111,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	int off = ((int)(620 * pos) / 8) * 8;
 	SetCharacterPosition(game, data->snail, data->snail_offset[off] - 14 + data->menu.x + data->menu.w, data->menu.y + data->menu.h * pos, ALLEGRO_PI / 2.0);
 	DrawCharacter(game, data->snail);
+
+	DrawCharacter(game, data->infinity);
+	DrawCharacter(game, data->back);
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
 	DrawCharacter(game, data->beetle);
@@ -142,6 +165,15 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		// When there are no active gamestates, the engine will quit.
 	}
 
+	if ((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
+		if (!IsOnCharacter(game, data->infinity, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->infinity_hover = false;
+		}
+		if (!IsOnCharacter(game, data->back, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->back_hover = false;
+		}
+	}
+
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)) {
 		if (IsOnCharacter(game, data->snail, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
 			data->scrolling = true;
@@ -149,6 +181,12 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
 			ToggleAudio(game);
 			return;
+		}
+		if (IsOnCharacter(game, data->infinity, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->infinity_hover = true;
+		}
+		if (IsOnCharacter(game, data->back, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			data->back_hover = true;
 		}
 	}
 
@@ -170,6 +208,20 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				StartGamestate(game, "game");
 			}
 		}
+		if (data->infinity_hover) {
+			game->data->level = 0;
+			StartTransition(game, 0.5, 0.5);
+			StopCurrentGamestate(game);
+			StartGamestate(game, "game");
+		}
+		if (game->data->in_progress && data->back_hover) {
+			game->data->level = -1;
+			StartTransition(game, 0.5, 0.5);
+			StopCurrentGamestate(game);
+			StartGamestate(game, "game");
+		}
+		data->back_hover = false;
+		data->infinity_hover = false;
 	}
 
 	ProcessScrollingViewportEvent(game, ev, &data->menu);
@@ -222,6 +274,22 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->leaf2b = al_load_bitmap(GetDataFilePath(game, "listek2_bw2.webp"));
 	progress(game);
 
+	data->infinitybmp = al_load_bitmap(GetDataFilePath(game, "przycisk_nieskonczonosc_on.webp"));
+	data->infinity = CreateCharacter(game, "infinity");
+	RegisterSpritesheetFromBitmap(game, data->infinity, "infinity", data->infinitybmp);
+	LoadSpritesheets(game, data->infinity, progress);
+	SelectSpritesheet(game, data->infinity, "infinity");
+	SetCharacterPosition(game, data->infinity, game->viewport.width - al_get_bitmap_width(data->infinitybmp) / 2.0 - 20, game->viewport.height - al_get_bitmap_height(data->infinitybmp) / 2.0 - 40, 0);
+
+	data->back_onbmp = al_load_bitmap(GetDataFilePath(game, "przycisk_do_tylu_on.webp"));
+	data->back_offbmp = al_load_bitmap(GetDataFilePath(game, "przycisk_do_tylu_off.webp"));
+	data->back = CreateCharacter(game, "back");
+	RegisterSpritesheetFromBitmap(game, data->back, "back_off", data->back_offbmp);
+	RegisterSpritesheetFromBitmap(game, data->back, "back_on", data->back_onbmp);
+	LoadSpritesheets(game, data->back, progress);
+	SelectSpritesheet(game, data->back, "back_off");
+	SetCharacterPosition(game, data->back, game->viewport.width - al_get_bitmap_width(data->infinitybmp) - al_get_bitmap_width(data->back_onbmp) / 2.0 - 40, game->viewport.height - al_get_bitmap_height(data->back_onbmp) / 2.0 - 40, 0);
+
 	data->font = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 88, 0);
 	progress(game);
 
@@ -268,6 +336,11 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	DestroyCharacter(game, data->ui);
 	DestroyCharacter(game, data->beetle);
 	DestroyCharacter(game, data->snail);
+	DestroyCharacter(game, data->infinity);
+	DestroyCharacter(game, data->back);
+	al_destroy_bitmap(data->infinitybmp);
+	al_destroy_bitmap(data->back_onbmp);
+	al_destroy_bitmap(data->back_offbmp);
 	free(data);
 }
 
