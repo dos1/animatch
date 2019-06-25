@@ -176,25 +176,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	data->highlight = WhichLevel(game, data);
 }
 
-static bool LevelExists(struct Game* game, int id) {
-	char* name = malloc(255 * sizeof(char));
-	snprintf(name, 255, "%d.lvl", id);
-
-	ALLEGRO_PATH* path = al_get_standard_path(ALLEGRO_USER_DATA_PATH);
-	ALLEGRO_PATH* p = al_create_path(name);
-	al_join_paths(path, p);
-	const char* filename = al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP);
-
-	bool val = al_filename_exists(filename);
-
-	snprintf(name, 255, "levels/%d.lvl", id);
-	val = val | (FindDataFilePath(game, name) != NULL);
-	al_destroy_path(p);
-	al_destroy_path(path);
-	free(name);
-	return val;
-}
-
 void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	// Called once, when the gamestate library is being loaded.
 	// Good place for allocating memory, loading bitmaps etc.

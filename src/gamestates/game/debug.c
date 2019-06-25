@@ -390,15 +390,17 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 
 		if (igCollapsingHeader("Levels", 0)) {
 			igInputInt("Level ID", &game->data->level, 1, 10, 0);
-			if (igButton("Save level", (ImVec2){0, 0})) {
+			if (igButton(LevelExists(game, game->data->level) ? "Save level" : "Create level", (ImVec2){0, 0})) {
 				data->level.id = game->data->level;
 				CopyLevel(game, data);
 				StoreLevel(game, data);
 			}
 			igSameLine(0, 0);
-			if (igButton("Load level", (ImVec2){0, 0})) {
-				LoadLevel(game, data, game->data->level);
-				ApplyLevel(game, data);
+			if (LevelExists(game, game->data->level)) {
+				if (igButton("Load level", (ImVec2){0, 0})) {
+					LoadLevel(game, data, game->data->level);
+					ApplyLevel(game, data);
+				}
 			}
 		}
 

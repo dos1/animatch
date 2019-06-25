@@ -160,6 +160,25 @@ void UnlockLevel(struct Game* game, int level) {
 	}
 }
 
+bool LevelExists(struct Game* game, int id) {
+	char* name = malloc(255 * sizeof(char));
+	snprintf(name, 255, "%d.lvl", id);
+
+	ALLEGRO_PATH* path = al_get_standard_path(ALLEGRO_USER_DATA_PATH);
+	ALLEGRO_PATH* p = al_create_path(name);
+	al_join_paths(path, p);
+	const char* filename = al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP);
+
+	bool val = al_filename_exists(filename);
+
+	snprintf(name, 255, "levels/%d.lvl", id);
+	val = val | (FindDataFilePath(game, name) != NULL);
+	al_destroy_path(p);
+	al_destroy_path(path);
+	free(name);
+	return val;
+}
+
 struct CommonResources* CreateGameData(struct Game* game) {
 	struct CommonResources* data = calloc(1, sizeof(struct CommonResources));
 	data->kawese_shader = CreateShader(game, GetDataFilePath(game, "shaders/vertex.glsl"), GetDataFilePath(game, "shaders/kawese.glsl"));
