@@ -201,7 +201,7 @@ struct Level {
 		enum COLLECTIBLE_TYPE collectible_type;
 		enum ANIMAL_TYPE animal_type;
 		int variant;
-		bool random_animal;
+		bool random_subtype;
 		bool sleeping;
 		bool super;
 	} fields[COLS][ROWS];

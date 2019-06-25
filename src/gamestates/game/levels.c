@@ -44,7 +44,7 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 			for (int j = 0; j < ROWS; j++) {
 				data->level.fields[i][j].field_type = FIELD_TYPE_ANIMAL;
 				data->level.fields[i][j].animal_type = (j * COLS + i) % ANIMAL_TYPES;
-				data->level.fields[i][j].random_animal = true;
+				data->level.fields[i][j].random_subtype = true;
 				data->level.fields[i][j].sleeping = false;
 				data->level.fields[i][j].super = false;
 			}
@@ -202,7 +202,7 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 				default:
 					al_fread16le(file);
 			}
-			al_fread16le(file); // random subtype
+			data->level.fields[i][j].random_subtype = al_fread16le(file); // random subtype
 			data->level.fields[i][j].sleeping = al_fread16le(file);
 			data->level.fields[i][j].super = al_fread16le(file);
 		}
@@ -234,7 +234,7 @@ void CopyLevel(struct Game* game, struct GamestateResources* data) {
 					data->level.fields[i][j].collectible_type = data->fields[i][j].data.collectible.type;
 					break;
 				case FIELD_TYPE_ANIMAL:
-					data->level.fields[i][j].random_animal = false;
+					data->level.fields[i][j].random_subtype = false;
 					data->level.fields[i][j].animal_type = data->fields[i][j].data.animal.type;
 					data->level.fields[i][j].sleeping = data->fields[i][j].data.animal.sleeping;
 					data->level.fields[i][j].super = data->fields[i][j].data.animal.super;
@@ -282,7 +282,7 @@ void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 							data->fields[i][j].data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
 							break;
 						case FIELD_TYPE_ANIMAL:
-							if (data->level.fields[i][j].random_animal) {
+							if (data->level.fields[i][j].random_subtype) {
 								GenerateAnimal(game, data, &data->fields[i][j], false);
 							} else {
 								data->fields[i][j].data.animal.type = data->level.fields[i][j].animal_type;
