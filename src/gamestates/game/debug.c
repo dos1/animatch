@@ -171,6 +171,15 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				Gravity(game, data);
 				ProcessFields(game, data);
 			}
+
+			if (igButton("Win", (ImVec2){0, 0})) {
+				FinishLevel(game, data);
+			}
+
+			igSameLine(0, 10);
+			if (igButton("Lose", (ImVec2){0, 0})) {
+				FailLevel(game, data);
+			}
 		}
 		if (igCollapsingHeader("Board", 0)) {
 			for (int j = 0; j < ROWS; j++) {

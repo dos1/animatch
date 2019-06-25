@@ -157,6 +157,9 @@ void UnlockLevel(struct Game* game, int level) {
 	if (game->data->unlocked_levels + 1 == level) {
 		game->data->unlocked_levels = level;
 		game->data->last_unlocked_level = game->data->unlocked_levels;
+		char val[255] = {};
+		snprintf(val, 255, "%d", game->data->unlocked_levels);
+		SetConfigOption(game, "Animatch", "unlocked_levels", val);
 	}
 }
 
@@ -186,7 +189,7 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	data->silhouette = al_load_bitmap(GetDataFilePath(game, names[rand() % (sizeof(names) / sizeof(names[0]))]));
 
 	data->level = 0;
-	data->unlocked_levels = 1;
+	data->unlocked_levels = strtol(GetConfigOptionDefault(game, "Animatch", "unlocked_levels", "1"), NULL, 0);
 	data->last_unlocked_level = -1;
 	data->in_progress = false;
 
