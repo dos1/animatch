@@ -174,7 +174,7 @@ void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct F
 }
 
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
-	bool need_collectible = false;
+	bool need_collectible = false, need_freefall = false, need_collectible_type[COLLECTIBLE_TYPES] = {};
 	int collectibles = 0, freefalls = 0, collectible[COLLECTIBLE_TYPES] = {};
 	for (int i = 0; i < ROWS; i++) {
 		for (int j = 0; j < COLS; j++) {
@@ -188,27 +188,32 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 	}
 
 	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].value <= 0) {
+			continue;
+		}
+
 		if (data->goals[i].type == GOAL_TYPE_FREEFALL) {
-			freefalls -= data->goals[i].value;
+			if (freefalls == 0) {
+				need_freefall = true;
+			}
 		} else if (data->goals[i].type == GOAL_TYPE_COLLECTIBLE) {
-			collectibles -= data->goals[i].value;
-			if (collectibles < 0) {
+			if (collectibles == 0) {
 				need_collectible = true;
 			}
 		}
 
 		for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
-			if ((data->goals[i].type - GOAL_TYPE_COLLECTIBLE) == type) {
-				collectible[type] -= data->goals[i].value;
-				if (collectible[type] < 0) {
+			if ((data->goals[i].type - GOAL_TYPE_COLLECTIBLE - 1) == type) {
+				if (collectible[type] == 0) {
 					need_collectible = true;
+					need_collectible_type[type] = true;
 				}
 			}
 		}
 	}
 
 	while (true) {
-		if (rand() / (float)RAND_MAX < ((freefalls < 0) ? 0.5 : 0.001)) {
+		if (rand() / (float)RAND_MAX < (need_freefall ? 0.5 : 0.001)) {
 			field->type = FIELD_TYPE_FREEFALL;
 			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
 			if (data->level.field_types[FIELD_TYPE_FREEFALL]) {
@@ -220,7 +225,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 			if (need_collectible) {
 				// compensate for missing fields needed to reach the goals
 				for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
-					if (collectible[type] < 0) {
+					if (need_collectible_type[type]) {
 						field->data.collectible.type = type;
 						break;
 					}
