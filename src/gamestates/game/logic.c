@@ -102,7 +102,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
-				if (j == ROWS - 1) {
+				if (j == ROWS - 1 || data->fields[i][j + 1].type == FIELD_TYPE_DISABLED) {
 					data->fields[i][j].to_remove = true;
 					data->fields[i][j].handled = true;
 					data->fields[i][j].to_highlight = true;
