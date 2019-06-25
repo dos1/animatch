@@ -54,22 +54,37 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 		return;
 	}
 
-	char* filename = malloc(255 * sizeof(char));
-	snprintf(filename, 255, "%d.lvl", id);
+	char* name = malloc(255 * sizeof(char));
+	snprintf(name, 255, "%d.lvl", id);
 
 	ALLEGRO_FILE* file;
-	// TODO: use proper path
+
+	ALLEGRO_PATH* path = al_get_standard_path(ALLEGRO_USER_DATA_PATH);
+	ALLEGRO_PATH* p = al_create_path(name);
+	al_join_paths(path, p);
+	const char* filename = al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP);
+
 	if (!al_filename_exists(filename)) {
-		snprintf(filename, 255, "levels/%d.lvl", id);
-		const char* filename2 = GetDataFilePath(game, filename);
+		snprintf(name, 255, "levels/%d.lvl", id);
+		const char* filename2 = FindDataFilePath(game, name);
+		if (!filename2) {
+			FatalError(game, false, "Could not find level data file: %s", name);
+			al_destroy_path(p);
+			al_destroy_path(path);
+			free(name);
+			return;
+		}
 		file = al_fopen(filename2, "rb");
+		filename = filename2;
 	} else {
 		file = al_fopen(filename, "rb");
 	}
 
 	if (!file) {
 		FatalError(game, false, "Could not open level data file: %s", filename);
-		free(filename);
+		al_destroy_path(p);
+		al_destroy_path(path);
+		free(name);
 		return;
 	}
 
@@ -197,7 +212,9 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 	data->level.infinite = false;
 
 err:
-	free(filename);
+	al_destroy_path(p);
+	al_destroy_path(path);
+	free(name);
 	al_fclose(file);
 }
 
@@ -325,8 +342,12 @@ void FailLevel(struct Game* game, struct GamestateResources* data) {
 }
 
 void StoreLevel(struct Game* game, struct GamestateResources* data) {
-	char* filename = malloc(255 * sizeof(char));
-	snprintf(filename, 255, "%d.lvl", data->level.id);
+	char* name = malloc(255 * sizeof(char));
+	snprintf(name, 255, "%d.lvl", data->level.id);
+	ALLEGRO_PATH* path = al_get_standard_path(ALLEGRO_USER_DATA_PATH);
+	ALLEGRO_PATH* p = al_create_path(name);
+	al_join_paths(path, p);
+	const char* filename = al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP);
 	// TODO: set a proper writable path
 	ALLEGRO_FILE* file = al_fopen(filename, "wb");
 
@@ -334,7 +355,9 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 		FatalError(game, false, "Could not open level data file for writing: %s", filename);
 	}
 
-	free(filename);
+	free(name);
+	al_destroy_path(p);
+	al_destroy_path(path);
 
 	if (!file) { return; }
 
