@@ -129,12 +129,12 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 						data->fields[i][j].to_remove = true;
 						PrintConsole(game, "collecting field %d, %d", i, j);
 						AddScore(game, data, 50);
+						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE, 1);
+						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE + 1 + data->fields[i][j].data.collectible.type, 1);
 					} else {
 						data->fields[i][j].to_remove = false;
 						PrintConsole(game, "advancing field %d, %d", i, j);
 						AddScore(game, data, 20);
-						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE, 1);
-						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE + 1 + data->fields[i][j].data.collectible.type, 1);
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
