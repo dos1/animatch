@@ -330,7 +330,11 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 					}
 				}
 				data->goal_lock = true;
-				ProcessFields(game, data);
+				do {
+					DoRemoval(game, data);
+					Gravity(game, data);
+				} while (MarkMatching(game, data));
+				StopAnimations(game, data);
 			}
 
 #define AddFieldConfigItem(t)                                 \
