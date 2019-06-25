@@ -176,7 +176,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 		if (rand() / (float)RAND_MAX < 0.001) {
 			field->type = FIELD_TYPE_FREEFALL;
 			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-			if (data->level.fields[FIELD_TYPE_FREEFALL]) {
+			if (data->level.field_types[FIELD_TYPE_FREEFALL]) {
 				break;
 			}
 		} else if (rand() / (float)RAND_MAX < 0.01) {
@@ -462,7 +462,6 @@ void StartBadSwapping(struct Game* game, struct GamestateResources* data, struct
 
 static TM_ACTION(AfterMatching) {
 	TM_RunningOnly;
-	assert(data); // silence clang-analyzer
 	DoRemoval(game, data);
 	Gravity(game, data);
 	ProcessFields(game, data);
