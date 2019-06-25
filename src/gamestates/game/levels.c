@@ -325,6 +325,44 @@ void RestartLevel(struct Game* game, struct GamestateResources* data) {
 	}
 }
 
+void SanityCheckLevel(struct Game* game, struct GamestateResources* data) {
+	// avoid endless loops from impossible level configurations
+	bool used = false;
+	for (enum FIELD_TYPE i = 0; i < FIELD_TYPES; i++) {
+		if (data->level.field_types[i]) {
+			used = true;
+		}
+	}
+	if (!used) {
+		data->level.field_types[0] = true;
+	}
+	int count = 0;
+	for (enum ANIMAL_TYPE i = 0; i < ANIMAL_TYPES; i++) {
+		if (data->level.animals[i]) {
+			count++;
+		}
+	}
+	if (data->level.field_types[FIELD_TYPE_ANIMAL] && count < 3) {
+		int i = 0;
+		while (count < 3) {
+			if (!data->level.animals[i]) {
+				data->level.animals[i] = true;
+				count++;
+			}
+			i++;
+		}
+	}
+	used = false;
+	for (enum COLLECTIBLE_TYPE i = 0; i < COLLECTIBLE_TYPES; i++) {
+		if (data->level.collectibles[i]) {
+			used = true;
+		}
+	}
+	if (!used && data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
+		data->level.collectibles[0] = true;
+	}
+}
+
 void FinishLevel(struct Game* game, struct GamestateResources* data) {
 	data->done = true;
 	data->finishing = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, 1.0);

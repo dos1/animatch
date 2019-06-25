@@ -24,6 +24,9 @@ int Gamestate_ProgressCount = 80; // number of loading steps as reported by Game
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
+
+	SanityCheckLevel(game, data);
+
 	data->counter += delta * sqrt(1.0 + data->counter_speed * data->counter_strength);
 	data->counter_speed -= delta;
 	data->counter_strength -= delta * 8;

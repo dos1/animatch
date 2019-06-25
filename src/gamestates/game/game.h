@@ -286,6 +286,7 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id);
 void ApplyLevel(struct Game* game, struct GamestateResources* data);
 void StoreLevel(struct Game* game, struct GamestateResources* data);
 void RestartLevel(struct Game* game, struct GamestateResources* data);
+void SanityCheckLevel(struct Game* game, struct GamestateResources* data);
 void FinishLevel(struct Game* game, struct GamestateResources* data);
 void FailLevel(struct Game* game, struct GamestateResources* data);
 void CopyLevel(struct Game* game, struct GamestateResources* data);
