@@ -161,10 +161,12 @@ void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct F
 			break;
 		}
 	}
+	field->data.animal.sleeping = false;
+	field->data.animal.super = false;
+
 	if (rand() / (float)RAND_MAX < 0.005) {
 		field->data.animal.sleeping = data->level.sleeping;
 	}
-	field->data.animal.super = false;
 
 	field->overlay_visible = false;
 	field->locked = true;
