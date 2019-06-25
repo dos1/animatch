@@ -161,12 +161,12 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				AutoMove(game, data);
 			}
 
-			igSameLine(0, 0);
+			igSameLine(0, 10);
 			if (igButton("Hint", (ImVec2){0, 0})) {
 				ShowHint(game, data);
 			}
 
-			igSameLine(0, 0);
+			igSameLine(0, 10);
 			if (igButton("Process", (ImVec2){0, 0})) {
 				Gravity(game, data);
 				ProcessFields(game, data);
@@ -295,15 +295,29 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 			if (igButton("Clear fields", (ImVec2){0, 0})) {
 				for (int i = 0; i < COLS; i++) {
 					for (int j = 0; j < ROWS; j++) {
+						if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+							data->fields[i][j].type = FIELD_TYPE_EMPTY;
+						}
+					}
+				}
+			}
+
+			igSameLine(0, 10);
+			if (igButton("Reset board", (ImVec2){0, 0})) {
+				for (int i = 0; i < COLS; i++) {
+					for (int j = 0; j < ROWS; j++) {
 						data->fields[i][j].type = FIELD_TYPE_EMPTY;
 					}
 				}
 			}
-			igSameLine(0, 0);
+
+			igSameLine(0, 10);
 			if (igButton("Regenerate", (ImVec2){0, 0})) {
 				for (int i = 0; i < COLS; i++) {
 					for (int j = 0; j < ROWS; j++) {
-						data->fields[i][j].type = FIELD_TYPE_EMPTY;
+						if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+							data->fields[i][j].type = FIELD_TYPE_EMPTY;
+						}
 					}
 				}
 				data->goal_lock = true;
@@ -347,7 +361,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 			if (!data->infinite) {
 				igInputInt("Moves", &data->moves_goal, 1, 10, 0);
 
-				if (igCollapsingHeader("Goals", 0)) {
+				if (igCollapsingHeader("Goals", ImGuiTreeNodeFlags_DefaultOpen)) {
 					char* current = "...";
 
 #define CheckGoalComboItem(t) \
@@ -395,7 +409,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				CopyLevel(game, data);
 				StoreLevel(game, data);
 			}
-			igSameLine(0, 0);
+			igSameLine(0, 10);
 			if (LevelExists(game, game->data->level)) {
 				if (igButton("Load level", (ImVec2){0, 0})) {
 					LoadLevel(game, data, game->data->level);
