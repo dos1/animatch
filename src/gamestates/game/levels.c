@@ -346,6 +346,9 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 	char* name = malloc(255 * sizeof(char));
 	snprintf(name, 255, "%d.lvl", data->level.id);
 	ALLEGRO_PATH* path = al_get_standard_path(ALLEGRO_USER_DATA_PATH);
+	if (!al_filename_exists(al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP))) {
+		al_make_directory(al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
+	}
 	ALLEGRO_PATH* p = al_create_path(name);
 	al_join_paths(path, p);
 	const char* filename = al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP);
