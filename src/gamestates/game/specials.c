@@ -114,7 +114,6 @@ static void LaunchSpecial(struct Game* game, struct GamestateResources* data, st
 	TM_WrapArg(int, count, 64);
 	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(GetField(game, data, id), count));
 	AddScore(game, data, 200);
-	UpdateGoal(game, data, GOAL_TYPE_SUPER, 1);
 }
 
 bool AnimateSpecials(struct Game* game, struct GamestateResources* data) {

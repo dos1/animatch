@@ -122,7 +122,6 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					data->fields[i][j].to_highlight = true;
 					AddScore(game, data, 100);
 					collected++;
-					UpdateGoal(game, data, GOAL_TYPE_FREEFALL, 1);
 				}
 			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
 				if (IsSleeping(&data->fields[i][j])) {
@@ -143,8 +142,6 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 						data->fields[i][j].to_remove = true;
 						PrintConsole(game, "collecting field %d, %d", i, j);
 						AddScore(game, data, 50);
-						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE, 1);
-						UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE + 1 + data->fields[i][j].data.collectible.type, 1);
 					} else {
 						data->fields[i][j].to_remove = false;
 						PrintConsole(game, "advancing field %d, %d", i, j);
@@ -388,8 +385,6 @@ static void PerformActions(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].matched) {
 				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
 					SelectSpritesheet(game, data->fields[i][j].drawable, ANIMAL_ACTIONS[data->fields[i][j].data.animal.type].names[rand() % ANIMAL_ACTIONS[data->fields[i][j].type].actions]);
-					UpdateGoal(game, data, GOAL_TYPE_ANIMAL, 1);
-					UpdateGoal(game, data, GOAL_TYPE_ANIMAL + 1 + data->fields[i][j].data.animal.type, 1);
 
 					if (data->fields[i][j].matched >= 4 && data->fields[i][j].match_mark) {
 						TurnMatchToSuper(game, data, data->fields[i][j].matched, data->fields[i][j].match_mark);
@@ -416,6 +411,24 @@ void DoRemoval(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].match_mark = 0;
 			data->fields[i][j].to_highlight = false;
 			if (data->fields[i][j].to_remove) {
+				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+					UpdateGoal(game, data, GOAL_TYPE_ANIMAL, 1);
+					UpdateGoal(game, data, GOAL_TYPE_ANIMAL + 1 + data->fields[i][j].data.animal.type, 1);
+					if (data->fields[i][j].data.animal.sleeping) {
+						UpdateGoal(game, data, GOAL_TYPE_SLEEPING, 1);
+					}
+					if (data->fields[i][j].data.animal.super) {
+						UpdateGoal(game, data, GOAL_TYPE_SUPER, 1);
+					}
+				}
+				if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
+					UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE, 1);
+					UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE + 1 + data->fields[i][j].data.collectible.type, 1);
+				}
+				if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+					UpdateGoal(game, data, GOAL_TYPE_FREEFALL, 1);
+				}
+
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].to_remove = false;
 				data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
