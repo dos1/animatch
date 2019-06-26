@@ -271,7 +271,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 					DrawCharacter(game, archetype);
 				}
 				al_draw_filled_circle(x + 15, y + 25, 20, al_map_rgb(57, 54, 48));
-				al_draw_textf(data->font_num_small, al_map_rgb(255, 255, 255), x + 15, y + 8, ALLEGRO_ALIGN_CENTER, "%d", MAX(0, data->goals[i].value));
+				al_draw_textf(data->font_num_small, al_map_rgb(255, 255, 255), x + 15, y + 8, ALLEGRO_ALIGN_CENTER, "%d", data->goals[i].value > 0 ? data->goals[i].value : 0);
 				goal++;
 			}
 		}
