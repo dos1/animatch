@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 80; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 82; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -259,6 +259,12 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 				}
 				if (data->goals[i].type == GOAL_TYPE_FREEFALL) {
 					archetype = data->special_archetypes[SPECIAL_TYPE_EGG];
+				}
+				if (data->goals[i].type == GOAL_TYPE_SLEEPING) {
+					archetype = data->cloud_goal;
+				}
+				if (data->goals[i].type == GOAL_TYPE_ANIMAL) {
+					archetype = data->animals_goal;
 				}
 
 				float x = 240 + 85 * goal + 40 + (85 * (3 - goals)) / 2.0, y = 45 + 105 / 2.0;
@@ -532,6 +538,16 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	RegisterSpritesheetFromBitmap(game, data->restart_btn, "restart", data->restart);
 	LoadSpritesheets(game, data->restart_btn, progress);
 
+	data->cloud_goal = CreateCharacter(game, "cloud_goal");
+	data->cloud_goal_bmp = al_load_bitmap(GetDataFilePath(game, "cloud_goal.webp"));
+	RegisterSpritesheetFromBitmap(game, data->cloud_goal, "cloud_goal", data->cloud_goal_bmp);
+	LoadSpritesheets(game, data->cloud_goal, progress);
+
+	data->animals_goal = CreateCharacter(game, "animals_goal");
+	data->animals_goal_bmp = al_load_bitmap(GetDataFilePath(game, "animals_goal.webp"));
+	RegisterSpritesheetFromBitmap(game, data->animals_goal, "animals_goal", data->animals_goal_bmp);
+	LoadSpritesheets(game, data->animals_goal, progress);
+
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].drawable = CreateCharacter(game, NULL);
@@ -612,6 +628,8 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	DestroyCharacter(game, data->acorn_top.character);
 	DestroyCharacter(game, data->acorn_bottom.character);
 	DestroyCharacter(game, data->restart_btn);
+	DestroyCharacter(game, data->cloud_goal);
+	DestroyCharacter(game, data->animals_goal);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
@@ -628,6 +646,8 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 		al_destroy_bitmap(data->field_bgs[i]);
 	}
 	al_destroy_bitmap(data->restart);
+	al_destroy_bitmap(data->cloud_goal_bmp);
+	al_destroy_bitmap(data->animals_goal_bmp);
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->leaf);
