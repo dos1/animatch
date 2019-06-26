@@ -57,6 +57,8 @@ void UpdateGoal(struct Game* game, struct GamestateResources* data, enum GOAL_TY
 	for (int i = 0; i < 3; i++) {
 		if (data->goals[i].type == type) {
 			data->goals[i].value -= val;
+			data->goal_tween[i] = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
+			UpdateTween(&data->goal_tween[i], (1.0 / 20.0) * (rand() / (float)RAND_MAX));
 		}
 	}
 }

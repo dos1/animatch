@@ -253,6 +253,7 @@ struct GamestateResources {
 	struct Tween scoring, finishing, failing;
 
 	struct Goal goals[3];
+	struct Tween goal_tween[3];
 
 	struct Level level;
 
