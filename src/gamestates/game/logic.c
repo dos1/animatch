@@ -233,14 +233,19 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 		} else if (rand() / (float)RAND_MAX < (need_collectible ? 0.5 : 0.01)) {
 			field->type = FIELD_TYPE_COLLECTIBLE;
 			field->data.collectible.variant = 0;
+			bool set = false;
 			if (need_collectible) {
 				// compensate for missing fields needed to reach the goals
 				for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
 					if (need_collectible_type[type]) {
 						field->data.collectible.type = type;
+						set = true;
 						break;
 					}
 				}
+			}
+			if (set) {
+				break;
 			}
 			while (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
