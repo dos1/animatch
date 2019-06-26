@@ -219,7 +219,7 @@ struct GamestateResources {
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_BITMAP *bg, *leaf;
 
-	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *placeholder, *restart;
+	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *restart;
 
 	ALLEGRO_FONT *font, *font_num_small, *font_num_medium, *font_num_big, *font_small;
 

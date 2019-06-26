@@ -242,8 +242,6 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 0, -30, ALLEGRO_ALIGN_CENTER, "%d", data->score);
 		al_use_transform(&orig);
 	} else {
-		//al_draw_bitmap(data->placeholder, 240, 45, 0);
-
 		int goal = 0, goals = 0;
 		for (int i = 0; i < 3; i++) {
 			if (data->goals[i].type != GOAL_TYPE_NONE) {
@@ -561,8 +559,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.webp"));
 	progress(game);
 
-	data->placeholder = al_load_bitmap(GetDataFilePath(game, "placeholder.webp"));
-
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->lowres_scene_blur = al_create_bitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
@@ -632,7 +628,6 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 		al_destroy_bitmap(data->field_bgs[i]);
 	}
 	al_destroy_bitmap(data->restart);
-	al_destroy_bitmap(data->placeholder);
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->leaf);
