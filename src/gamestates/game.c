@@ -20,7 +20,7 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 82; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 82 + COLS * 3; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
@@ -54,6 +54,8 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	}
 
 	for (int i = 0; i < COLS; i++) {
+		UpdateTween(&data->nests[i].tween, delta);
+
 		for (int j = 0; j < ROWS; j++) {
 			if (IsDrawable(data->fields[i][j].type)) {
 				AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
@@ -177,10 +179,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	}
 	al_hold_bitmap_drawing(false);
 
+	bool show_nests = data->level.field_types[FIELD_TYPE_FREEFALL];
+
 	al_use_shader(data->desaturate_shader);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DrawField(game, data, data->fields[i][j].id);
+			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+				show_nests = true;
+			}
 		}
 	}
 	al_reset_clipping_rectangle();
@@ -202,6 +209,19 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_draw_bitmap(data->board, 0, 0, 0);
 	al_use_shader(NULL);
+
+	if (show_nests) {
+		for (int i = 0; i < COLS; i++) {
+			int j = ROWS - 1;
+			while (j > 0 && data->fields[i][j].type == FIELD_TYPE_DISABLED) {
+				j--;
+			}
+			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+				SetCharacterPosition(game, data->nests[i].character, (i + 0.5) * (game->viewport.width / (float)COLS), offsetY + (j + 1.2) * (game->viewport.height - offsetY * 2) / (float)ROWS, sin(GetTweenValue(&data->nests[i].tween) * 2.5 * ALLEGRO_PI) / 12.0);
+				DrawCharacter(game, data->nests[i].character);
+			}
+		}
+	}
 
 	al_hold_bitmap_drawing(true);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
@@ -549,6 +569,19 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	LoadSpritesheets(game, data->animals_goal, progress);
 
 	for (int i = 0; i < COLS; i++) {
+		data->nests[i].character = CreateCharacter(game, "nest");
+		RegisterSpritesheet(game, data->nests[i].character, "nest1");
+		RegisterSpritesheet(game, data->nests[i].character, "nest2");
+		RegisterSpritesheet(game, data->nests[i].character, "nest3");
+		LoadSpritesheets(game, data->nests[i].character, progress);
+		char name[6] = "nest1";
+		name[4] = '1' + i % 3;
+		SelectSpritesheet(game, data->nests[i].character, name);
+
+		data->nests[i].tween = StaticTween(game, 0.0);
+	}
+
+	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			data->fields[i][j].drawable = CreateCharacter(game, NULL);
 			data->fields[i][j].drawable->shared = true;
@@ -631,6 +664,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	DestroyCharacter(game, data->cloud_goal);
 	DestroyCharacter(game, data->animals_goal);
 	for (int i = 0; i < COLS; i++) {
+		DestroyCharacter(game, data->nests[i].character);
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
 			DestroyCharacter(game, data->fields[i][j].overlay);

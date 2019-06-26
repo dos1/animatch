@@ -245,7 +245,7 @@ struct GamestateResources {
 	struct {
 		struct Character* character;
 		struct Tween tween;
-	} acorn_top, acorn_bottom;
+	} acorn_top, acorn_bottom, nests[COLS];
 
 	float snail_blink;
 

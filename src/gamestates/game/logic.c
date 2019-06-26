@@ -379,6 +379,10 @@ static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].to_remove) {
 				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
+				if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+					data->nests[i].tween = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_OUT, SHAKING_TIME);
+					data->nests[i].tween.predelay = 0.5;
+				}
 			}
 		}
 	}
