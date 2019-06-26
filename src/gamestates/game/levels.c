@@ -47,6 +47,7 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 				data->level.fields[i][j].random_subtype = true;
 				data->level.fields[i][j].sleeping = false;
 				data->level.fields[i][j].super = false;
+				data->level.fields[i][j].variant = 0;
 			}
 		}
 		data->level.id = id;
@@ -95,15 +96,19 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 		goto err;
 	}
 
-	int val = al_fread32le(file);
-	if (val > 0) {
-		FatalError(game, false, "Incompatible version (%d) in level data: %s", val, filename);
+	int version = al_fread32le(file);
+	if (version > 1) {
+		FatalError(game, false, "Incompatible version (%d) in level data: %s", version, filename);
 		goto err;
 	}
 
 	data->level.moves = al_fread16le(file);
 
-	al_fread16le(file); // nr of thresholds
+	int val = al_fread16le(file);
+	if (val != 0) {
+		FatalError(game, false, "Invalid number of score thresholds (%d) in level data: %s", val, filename);
+		goto err;
+	}
 
 	val = al_fread16le(file); // nr of goal groups
 	if (val > 1) {
@@ -165,7 +170,7 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 
 	val = al_fread16le(file);
 	if (val != 0) {
-		FatalError(game, false, "Invalid number of probability values (%d) in level data: %s", val, filename);
+		FatalError(game, false, "Invalid number of spawn config options (%d) in level data: %s", val, filename);
 		goto err;
 	}
 
@@ -203,6 +208,10 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 					al_fread16le(file);
 			}
 			data->level.fields[i][j].random_subtype = al_fread16le(file); // random subtype
+			data->level.fields[i][j].variant = 0;
+			if (version >= 1) {
+				data->level.fields[i][j].variant = al_fread16le(file);
+			}
 			data->level.fields[i][j].sleeping = al_fread16le(file);
 			data->level.fields[i][j].super = al_fread16le(file);
 		}
@@ -277,9 +286,10 @@ void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 					switch (data->level.fields[i][j].field_type) {
 						case FIELD_TYPE_COLLECTIBLE:
 							data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
+							data->fields[i][j].data.collectible.variant = data->level.fields[i][j].variant;
 							break;
 						case FIELD_TYPE_FREEFALL:
-							data->fields[i][j].data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
+							data->fields[i][j].data.freefall.variant = data->level.fields[i][j].variant;
 							break;
 						case FIELD_TYPE_ANIMAL:
 							if (data->level.fields[i][j].random_subtype) {
@@ -404,11 +414,11 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 	if (!file) { return; }
 
 	al_fwrite(file, "ANIMATCH_LEVEL", 14);
-	al_fwrite32le(file, 0); // file version
+	al_fwrite32le(file, 1); // file version
 
 	al_fwrite16le(file, data->level.moves);
 
-	al_fwrite16le(file, 0); // nr of thresholds
+	al_fwrite16le(file, 0); // nr of score thresholds
 
 	al_fwrite16le(file, 1); // nr of goal groups
 	{
@@ -436,7 +446,7 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 		al_fwrite16le(file, data->level.collectibles[i]);
 	}
 
-	al_fwrite16le(file, 0); // nr of probability values
+	al_fwrite16le(file, 0); // nr of spawn config options
 
 	al_fwrite16le(file, 2); // nr of config options
 	al_fwrite16le(file, data->level.supers);
@@ -458,6 +468,7 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 					al_fwrite16le(file, -1);
 			}
 			al_fwrite16le(file, 0); // random subtype
+			al_fwrite16le(file, data->level.fields[i][j].variant);
 			al_fwrite16le(file, data->level.fields[i][j].sleeping);
 			al_fwrite16le(file, data->level.fields[i][j].super);
 		}
