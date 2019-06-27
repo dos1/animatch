@@ -413,6 +413,15 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 					igInputInt("Value 3", &data->goals[i].value, 1, 10, 0);
 				}
 			}
+
+			if (igCollapsingHeader("Requirements", ImGuiTreeNodeFlags_DefaultOpen)) {
+#define AddGoalRequirement(t)                                     \
+	if (GOAL_TYPE_##t > GOAL_TYPE_SCORE) {                          \
+		igInputInt(#t, &data->requirements[GOAL_TYPE_##t], 1, 10, 0); \
+	}
+
+				FOREACH_GOAL(AddGoalRequirement)
+			}
 		}
 
 		if (igCollapsingHeader("Levels", 0)) {

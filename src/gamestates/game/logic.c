@@ -185,8 +185,10 @@ void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct F
 }
 
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
-	bool need_collectible = false, need_freefall = false, need_collectible_type[COLLECTIBLE_TYPES] = {};
-	int collectibles = 0, freefalls = 0, collectible[COLLECTIBLE_TYPES] = {};
+	bool need_collectible = false, need_freefall = false, need_sleeping = false, need_animal = false, need_super = false,
+			 need_animal_type[ANIMAL_TYPES] = {}, need_collectible_type[COLLECTIBLE_TYPES] = {};
+	int collectibles = 0, freefalls = 0, sleeping = 0, super = 0,
+			collectible[COLLECTIBLE_TYPES] = {}, animal[ANIMAL_TYPES] = {};
 	for (int i = 0; i < ROWS; i++) {
 		for (int j = 0; j < COLS; j++) {
 			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
@@ -194,6 +196,14 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 			} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 				collectibles++;
 				collectible[data->fields[i][j].data.collectible.type]++;
+			} else if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+				animal[data->fields[i][j].data.animal.type]++;
+				if (data->fields[i][j].data.animal.sleeping) {
+					sleeping++;
+				}
+				if (data->fields[i][j].data.animal.super) {
+					super++;
+				}
 			}
 		}
 	}
@@ -223,11 +233,36 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 		}
 	}
 
+	if (freefalls < data->requirements[GOAL_TYPE_FREEFALL]) {
+		need_freefall = true;
+	}
+	if (collectibles < data->requirements[GOAL_TYPE_COLLECTIBLE]) {
+		need_collectible = true;
+	}
+	if (sleeping < data->requirements[GOAL_TYPE_SLEEPING]) {
+		need_sleeping = true;
+	}
+	if (super < data->requirements[GOAL_TYPE_SUPER]) {
+		need_super = true;
+	}
+	for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
+		if (collectible[type] < data->requirements[type + GOAL_TYPE_COLLECTIBLE + 1]) {
+			need_collectible = true;
+			need_collectible_type[type] = true;
+		}
+	}
+	for (enum ANIMAL_TYPE type = 0; type < ANIMAL_TYPES; type++) {
+		if (animal[type] < data->requirements[type + GOAL_TYPE_ANIMAL + 1]) {
+			need_animal = true;
+			need_animal_type[type] = true;
+		}
+	}
+
 	while (true) {
 		if (rand() / (float)RAND_MAX < (need_freefall ? 0.5 : 0.001)) {
 			field->type = FIELD_TYPE_FREEFALL;
 			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-			if (data->level.field_types[FIELD_TYPE_FREEFALL]) {
+			if (need_freefall || data->level.field_types[FIELD_TYPE_FREEFALL]) {
 				break;
 			}
 		} else if (rand() / (float)RAND_MAX < (need_collectible ? 0.5 : 0.01)) {
@@ -253,12 +288,27 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 					break;
 				}
 			}
-			if (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
+			if (need_collectible || data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				break;
 			}
 		} else {
 			GenerateAnimal(game, data, field, allow_matches);
-			if (data->level.field_types[FIELD_TYPE_ANIMAL]) {
+			field->data.animal.super = need_super;
+			if (!field->data.animal.super) {
+				if (need_sleeping) {
+					field->data.animal.sleeping = true;
+				}
+			}
+
+			// compensate for missing fields needed to reach the goals
+			for (enum ANIMAL_TYPE type = 0; type < ANIMAL_TYPES; type++) {
+				if (need_animal_type[type]) {
+					field->data.animal.type = type;
+					break;
+				}
+			}
+
+			if (need_animal || data->level.field_types[FIELD_TYPE_ANIMAL]) {
 				break;
 			}
 		}

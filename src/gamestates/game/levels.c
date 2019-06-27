@@ -32,6 +32,9 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 		for (int i = 0; i < COLLECTIBLE_TYPES; i++) {
 			data->level.collectibles[i] = true;
 		}
+		for (int i = 0; i < GOAL_TYPES; i++) {
+			data->level.requirements[i] = 0;
+		}
 		data->level.sleeping = true;
 		data->level.supers = true;
 		data->level.field_types[FIELD_TYPE_FREEFALL] = false;
@@ -169,9 +172,12 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 	}
 
 	val = al_fread16le(file);
-	if (val != 0) {
-		FatalError(game, false, "Invalid number of spawn config options (%d) in level data: %s", val, filename);
+	if (val != GOAL_TYPES && val != 0) {
+		FatalError(game, false, "Invalid number of spawn requirements (%d) in level data: %s", val, filename);
 		goto err;
+	}
+	for (int i = 0; i < val; i++) {
+		data->level.requirements[i] = al_fread16le(file);
 	}
 
 	val = al_fread16le(file);
@@ -233,6 +239,9 @@ void CopyLevel(struct Game* game, struct GamestateResources* data) {
 	data->level.goals[2] = data->goals[2];
 	data->level.infinite = data->infinite;
 	data->level.moves = data->moves_goal;
+	for (int i = 0; i < GOAL_TYPES; i++) {
+		data->level.requirements[i] = data->requirements[i];
+	}
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -275,6 +284,9 @@ void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 		data->goals[2] = data->level.goals[2];
 		data->infinite = data->level.infinite;
 		data->moves_goal = data->level.moves;
+		for (int i = 0; i < GOAL_TYPES; i++) {
+			data->requirements[i] = data->level.requirements[i];
+		}
 
 		for (int i = 0; i < COLS; i++) {
 			for (int j = 0; j < ROWS; j++) {
@@ -446,7 +458,10 @@ void StoreLevel(struct Game* game, struct GamestateResources* data) {
 		al_fwrite16le(file, data->level.collectibles[i]);
 	}
 
-	al_fwrite16le(file, 0); // nr of spawn config options
+	al_fwrite16le(file, GOAL_TYPES); // nr of spawn requirements options
+	for (int i = 0; i < GOAL_TYPES; i++) {
+		al_fwrite16le(file, data->level.requirements[i]);
+	}
 
 	al_fwrite16le(file, 2); // nr of config options
 	al_fwrite16le(file, data->level.supers);

@@ -196,6 +196,7 @@ struct Level {
 	bool field_types[FIELD_TYPES];
 	bool animals[ANIMAL_TYPES];
 	bool collectibles[SPECIAL_TYPES];
+	int requirements[GOAL_TYPES];
 	struct {
 		enum FIELD_TYPE field_type;
 		enum COLLECTIBLE_TYPE collectible_type;
@@ -253,6 +254,8 @@ struct GamestateResources {
 	struct Tween scoring, finishing, failing;
 
 	struct Goal goals[3];
+	int requirements[GOAL_TYPES];
+
 	struct Tween goal_tween[3];
 
 	struct Level level;
