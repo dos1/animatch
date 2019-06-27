@@ -217,7 +217,9 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 				j--;
 			}
 			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
-				SetCharacterPosition(game, data->nests[i].character, (i + 0.5) * (game->viewport.width / (float)COLS), offsetY + (j + 1.2) * (game->viewport.height - offsetY * 2) / (float)ROWS, sin(GetTweenValue(&data->nests[i].tween) * 2.5 * ALLEGRO_PI) / 12.0);
+				SetCharacterPosition(game, data->nests[i].character, (i + 0.5) * (game->viewport.width / (float)COLS), offsetY + (j + 1.175) * (game->viewport.height - offsetY * 2) / (float)ROWS, sin(GetTweenValue(&data->nests[i].tween) * 2.5 * ALLEGRO_PI) / 12.0);
+				data->nests[i].character->scaleX = 0.8;
+				data->nests[i].character->scaleY = 0.8;
 				DrawCharacter(game, data->nests[i].character);
 			}
 		}
