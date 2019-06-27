@@ -176,6 +176,9 @@ void LoadLevel(struct Game* game, struct GamestateResources* data, int id) {
 		FatalError(game, false, "Invalid number of spawn requirements (%d) in level data: %s", val, filename);
 		goto err;
 	}
+	for (int i = 0; i < GOAL_TYPES; i++) {
+		data->level.requirements[i] = 0;
+	}
 	for (int i = 0; i < val; i++) {
 		data->level.requirements[i] = al_fread16le(file);
 	}
