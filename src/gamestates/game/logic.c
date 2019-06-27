@@ -270,7 +270,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 			field->data.collectible.variant = 0;
 			bool set = false;
 			if (need_collectible) {
-				// compensate for missing fields needed to reach the goals
+				// compensate for missing fields needed to reach the goals / requirements
 				for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
 					if (need_collectible_type[type]) {
 						field->data.collectible.type = type;
@@ -300,7 +300,7 @@ void GenerateField(struct Game* game, struct GamestateResources* data, struct Fi
 				}
 			}
 
-			// compensate for missing fields needed to reach the goals
+			// compensate for missing fields needed to reach the goals / requirements
 			for (enum ANIMAL_TYPE type = 0; type < ANIMAL_TYPES; type++) {
 				if (need_animal_type[type]) {
 					field->data.animal.type = type;

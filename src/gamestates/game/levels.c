@@ -264,6 +264,21 @@ void CopyLevel(struct Game* game, struct GamestateResources* data) {
 	}
 }
 
+void StartLevel(struct Game* game, struct GamestateResources* data) {
+	for (int i = 0; i < COLS; i++) {
+		for (int j = 0; j < ROWS; j++) {
+			if (data->level.fields[i][j].field_type == FIELD_TYPE_EMPTY) {
+				GenerateField(game, data, &data->fields[i][j], false);
+			}
+		}
+	}
+	do {
+		DoRemoval(game, data);
+		Gravity(game, data);
+	} while (MarkMatching(game, data));
+	StopAnimations(game, data);
+}
+
 void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -290,33 +305,29 @@ void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 
 		for (int i = 0; i < COLS; i++) {
 			for (int j = 0; j < ROWS; j++) {
-				if (data->level.fields[i][j].field_type == FIELD_TYPE_EMPTY) {
-					GenerateField(game, data, &data->fields[i][j], false);
-				} else {
-					data->fields[i][j].type = data->level.fields[i][j].field_type;
+				data->fields[i][j].type = data->level.fields[i][j].field_type;
 
-					switch (data->level.fields[i][j].field_type) {
-						case FIELD_TYPE_COLLECTIBLE:
-							data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
-							data->fields[i][j].data.collectible.variant = data->level.fields[i][j].variant;
-							break;
-						case FIELD_TYPE_FREEFALL:
-							data->fields[i][j].data.freefall.variant = data->level.fields[i][j].variant;
-							break;
-						case FIELD_TYPE_ANIMAL:
-							if (data->level.fields[i][j].random_subtype) {
-								GenerateAnimal(game, data, &data->fields[i][j], false);
-							} else {
-								data->fields[i][j].data.animal.type = data->level.fields[i][j].animal_type;
-							}
-							data->fields[i][j].data.animal.sleeping = data->level.fields[i][j].sleeping;
-							data->fields[i][j].data.animal.super = data->level.fields[i][j].super;
-							break;
-						default:
-							break;
-					}
-					UpdateDrawable(game, data, data->fields[i][j].id);
+				switch (data->level.fields[i][j].field_type) {
+					case FIELD_TYPE_COLLECTIBLE:
+						data->fields[i][j].data.collectible.type = data->level.fields[i][j].collectible_type;
+						data->fields[i][j].data.collectible.variant = data->level.fields[i][j].variant;
+						break;
+					case FIELD_TYPE_FREEFALL:
+						data->fields[i][j].data.freefall.variant = data->level.fields[i][j].variant;
+						break;
+					case FIELD_TYPE_ANIMAL:
+						if (data->level.fields[i][j].random_subtype) {
+							GenerateAnimal(game, data, &data->fields[i][j], false);
+						} else {
+							data->fields[i][j].data.animal.type = data->level.fields[i][j].animal_type;
+						}
+						data->fields[i][j].data.animal.sleeping = data->level.fields[i][j].sleeping;
+						data->fields[i][j].data.animal.super = data->level.fields[i][j].super;
+						break;
+					default:
+						break;
 				}
+				UpdateDrawable(game, data, data->fields[i][j].id);
 			}
 		}
 		data->moves = 0;
@@ -328,15 +339,11 @@ void ApplyLevel(struct Game* game, struct GamestateResources* data) {
 	}
 
 	data->current = (struct FieldID){-1, -1};
-	do {
-		DoRemoval(game, data);
-		Gravity(game, data);
-	} while (MarkMatching(game, data));
-	StopAnimations(game, data);
 }
 
 void RestartLevel(struct Game* game, struct GamestateResources* data) {
 	ApplyLevel(game, data);
+	StartLevel(game, data);
 	data->failed = false;
 	data->failing = StaticTween(game, 0.0);
 	data->locked = false;

@@ -727,6 +727,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	if (game->data->level >= 0) {
 		LoadLevel(game, data, game->data->level);
 		ApplyLevel(game, data);
+		StartLevel(game, data);
 	} else {
 		game->data->level = data->level.id;
 	}

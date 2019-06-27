@@ -287,6 +287,7 @@ bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldI
 
 // levels
 void LoadLevel(struct Game* game, struct GamestateResources* data, int id);
+void StartLevel(struct Game* game, struct GamestateResources* data);
 void ApplyLevel(struct Game* game, struct GamestateResources* data);
 void StoreLevel(struct Game* game, struct GamestateResources* data);
 void RestartLevel(struct Game* game, struct GamestateResources* data);

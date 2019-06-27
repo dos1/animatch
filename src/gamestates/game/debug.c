@@ -437,6 +437,10 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 					LoadLevel(game, data, game->data->level);
 					ApplyLevel(game, data);
 				}
+				igSameLine(0, 10);
+				if (igButton("Start level", (ImVec2){0, 0})) {
+					StartLevel(game, data);
+				}
 			}
 		}
 
