@@ -337,9 +337,9 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				StopAnimations(game, data);
 			}
 
-#define AddFieldConfigItem(t)                                 \
-	if (FIELD_TYPE_##t <= FIELD_TYPE_COLLECTIBLE) {             \
-		igCheckbox(#t, &data->level.field_types[FIELD_TYPE_##t]); \
+#define AddFieldConfigItem(t)                                                       \
+	if (FIELD_TYPE_##t <= FIELD_TYPE_COLLECTIBLE) {                                   \
+		igCheckbox(#t "##field_type_config", &data->level.field_types[FIELD_TYPE_##t]); \
 	}
 
 			FOREACH_FIELD(AddFieldConfigItem)
@@ -348,7 +348,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 
 			if (data->level.field_types[FIELD_TYPE_ANIMAL]) {
 #define AddAnimalConfigItem(t) \
-	igCheckbox(#t, &data->level.animals[ANIMAL_TYPE_##t]);
+	igCheckbox(#t "##animal_type_config", &data->level.animals[ANIMAL_TYPE_##t]);
 
 				FOREACH_ANIMAL(AddAnimalConfigItem)
 
@@ -357,7 +357,7 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 
 			if (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 #define AddCollectibleConfigItem(t) \
-	igCheckbox(#t, &data->level.collectibles[COLLECTIBLE_TYPE_##t]);
+	igCheckbox(#t "##collectible_type_config", &data->level.collectibles[COLLECTIBLE_TYPE_##t]);
 
 				FOREACH_COLLECTIBLE(AddCollectibleConfigItem)
 			}
@@ -415,9 +415,9 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 			}
 
 			if (igCollapsingHeader("Requirements", ImGuiTreeNodeFlags_DefaultOpen)) {
-#define AddGoalRequirement(t)                                     \
-	if (GOAL_TYPE_##t > GOAL_TYPE_SCORE) {                          \
-		igInputInt(#t, &data->requirements[GOAL_TYPE_##t], 1, 10, 0); \
+#define AddGoalRequirement(t)                                             \
+	if (GOAL_TYPE_##t > GOAL_TYPE_SCORE) {                                  \
+		igInputInt(#t "##req", &data->requirements[GOAL_TYPE_##t], 1, 10, 0); \
 	}
 
 				FOREACH_GOAL(AddGoalRequirement)
