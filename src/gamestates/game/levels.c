@@ -280,6 +280,8 @@ void StartLevel(struct Game* game, struct GamestateResources* data) {
 		Gravity(game, data);
 	} while (MarkMatching(game, data));
 	StopAnimations(game, data);
+
+	ProcessFields(game, data);
 }
 
 void ApplyLevel(struct Game* game, struct GamestateResources* data) {
