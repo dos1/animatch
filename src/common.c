@@ -163,6 +163,30 @@ void UnlockLevel(struct Game* game, int level) {
 	}
 }
 
+void RegisterScore(struct Game* game, int level, int moves, int score) {
+	char namescore[255] = {}, namemoves[255] = {};
+	snprintf(namescore, 255, "level%d-score", level);
+	snprintf(namemoves, 255, "level%d-moves", level);
+
+	int s = strtol(GetConfigOptionDefault(game, namescore, "score", "0"), NULL, 0);
+	int m = strtol(GetConfigOptionDefault(game, namemoves, "moves", "99999"), NULL, 0);
+
+	char val[255] = {};
+	if ((score > s) || (score == s && moves < m)) {
+		snprintf(val, 255, "%d", score);
+		SetConfigOption(game, namescore, "score", val);
+		snprintf(val, 255, "%d", moves);
+		SetConfigOption(game, namescore, "moves", val);
+	}
+
+	if ((moves < m) || (moves == m && score > s)) {
+		snprintf(val, 255, "%d", score);
+		SetConfigOption(game, namemoves, "score", val);
+		snprintf(val, 255, "%d", moves);
+		SetConfigOption(game, namemoves, "moves", val);
+	}
+}
+
 bool LevelExists(struct Game* game, int id) {
 	char* name = malloc(255 * sizeof(char));
 	snprintf(name, 255, "%d.lvl", id);

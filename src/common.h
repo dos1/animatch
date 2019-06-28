@@ -80,6 +80,7 @@ bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 void StartTransition(struct Game* game, float x, float y);
 void ToggleAudio(struct Game* game);
 void UnlockLevel(struct Game* game, int level);
+void RegisterScore(struct Game* game, int level, int moves, int score);
 bool LevelExists(struct Game* game, int id);
 
 #include "scrollingviewport.h"

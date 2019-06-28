@@ -404,6 +404,7 @@ void FinishLevel(struct Game* game, struct GamestateResources* data) {
 		}
 	}
 	UnlockLevel(game, data->level.id + 1);
+	RegisterScore(game, data->level.id, data->moves, data->score);
 	game->data->in_progress = false;
 }
 
