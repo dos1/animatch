@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
 	if (!game) { return 1; }
 
 	LoadGamestate(game, "menu");
+	LoadGamestate(game, "settings");
 	LoadGamestate(game, "game");
 
 	StartGamestate(game, "menu");

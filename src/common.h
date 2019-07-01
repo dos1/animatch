@@ -66,6 +66,7 @@ struct CommonResources {
 		bool less_movement;
 		bool solid_background;
 		bool allow_continuing;
+		bool animated_transitions;
 	} config;
 };
 

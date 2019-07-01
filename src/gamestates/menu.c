@@ -182,6 +182,10 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			ToggleAudio(game);
 			return;
 		}
+		if (IsOnUIElement(game, data->ui, UI_ELEMENT_SETTINGS, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+			ChangeCurrentGamestate(game, "settings");
+			return;
+		}
 		if (IsOnCharacter(game, data->infinity, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
 			data->infinity_hover = true;
 		}
@@ -204,21 +208,18 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			game->data->level = WhichLevel(game, data);
 			if (game->data->level >= 0 && game->data->level <= game->data->unlocked_levels && game->data->level <= data->levels) {
 				StartTransition(game, (data->menu.x + 50 + (game->data->level - 1) % 3 * 150 + 150 / 2.0) / (float)game->viewport.width, (data->menu.y + 25 + floor((game->data->level - 1) / 3.0) * 175 + 175 / 2.0 - data->menu.pos - 10) / (float)game->viewport.height);
-				StopCurrentGamestate(game);
-				StartGamestate(game, "game");
+				ChangeCurrentGamestate(game, "game");
 			}
 		}
 		if (data->infinity_hover) {
 			game->data->level = 0;
 			StartTransition(game, 0.5, 0.5);
-			StopCurrentGamestate(game);
-			StartGamestate(game, "game");
+			ChangeCurrentGamestate(game, "game");
 		}
 		if (game->data->in_progress && data->back_hover) {
 			game->data->level = -1;
 			StartTransition(game, 0.5, 0.5);
-			StopCurrentGamestate(game);
-			StartGamestate(game, "game");
+			ChangeCurrentGamestate(game, "game");
 		}
 		data->back_hover = false;
 		data->infinity_hover = false;

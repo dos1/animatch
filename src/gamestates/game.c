@@ -336,7 +336,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	if (data->done) {
 		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->finishing)));
-		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83, 0);
+		if (game->data->config.solid_background) {
+			al_draw_filled_rectangle(114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83,
+				114 + al_get_bitmap_width(data->frame_bg), -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83 + al_get_bitmap_height(data->frame_bg),
+				al_map_rgb(185, 140, 89));
+		} else {
+			al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83, 0);
+		}
 		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->finishing), 0);
 
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
@@ -345,7 +351,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	if (GetTweenValue(&data->failing)) {
 		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->failing)));
-		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83, 0);
+		if (game->data->config.solid_background) {
+			al_draw_filled_rectangle(114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83,
+				114 + al_get_bitmap_width(data->frame_bg), -410 + (508 + 410) * GetTweenValue(&data->failing) + 83 + al_get_bitmap_height(data->frame_bg),
+				al_map_rgb(185, 140, 89));
+		} else {
+			al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83, 0);
+		}
 		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->failing), 0);
 
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->failing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
@@ -369,8 +381,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	// Here you can handle user input, expiring timers etc.
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) {
 		StartTransition(game, 0.5, 0.5);
-		StopCurrentGamestate(game);
-		StartGamestate(game, "menu");
+		ChangeCurrentGamestate(game, "menu");
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
@@ -403,8 +414,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		if (data->done) {
 			if (GetTweenPosition(&data->finishing) == 1.0) {
 				StartTransition(game, game->data->mouseX, game->data->mouseY);
-				StopCurrentGamestate(game);
-				StartGamestate(game, "menu");
+				ChangeCurrentGamestate(game, "menu");
 			}
 			return;
 		}
@@ -431,8 +441,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HOME, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
 				StartTransition(game, 0.5, 0.5);
-				StopCurrentGamestate(game);
-				StartGamestate(game, "menu");
+				ChangeCurrentGamestate(game, "menu");
 				return;
 			}
 

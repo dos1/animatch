@@ -132,7 +132,7 @@ bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 }
 
 void StartTransition(struct Game* game, float x, float y) {
-	if (!game->data->config.less_movement) {
+	if (game->data->config.animated_transitions) {
 		game->data->transition.progress = 1.0;
 		game->data->transition.gamestate = GetCurrentGamestate(game);
 		game->data->transition.x = x;
@@ -220,6 +220,7 @@ struct CommonResources* CreateGameData(struct Game* game) {
 	data->config.less_movement = strtol(GetConfigOptionDefault(game, "Animatch", "less_movement", "0"), NULL, 0);
 	data->config.solid_background = strtol(GetConfigOptionDefault(game, "Animatch", "solid_background", "0"), NULL, 0);
 	data->config.allow_continuing = strtol(GetConfigOptionDefault(game, "Animatch", "allow_continuing", "0"), NULL, 0);
+	data->config.animated_transitions = strtol(GetConfigOptionDefault(game, "Animatch", "animated_transitions", "1"), NULL, 0);
 
 	return data;
 }
