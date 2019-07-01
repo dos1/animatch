@@ -342,7 +342,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
-	int i = 0;
+	int i = data->levels;
 	do {
 		data->levels = i;
 		i++;
