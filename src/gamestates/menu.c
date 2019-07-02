@@ -183,6 +183,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			return;
 		}
 		if (IsOnUIElement(game, data->ui, UI_ELEMENT_SETTINGS, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+			StartTransition(game, 0.5, 0.5);
 			ChangeCurrentGamestate(game, "settings");
 			return;
 		}
