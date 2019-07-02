@@ -70,6 +70,7 @@ bool AutoMove(struct Game* game, struct GamestateResources* data) {
 			for (int q = 0; q < 4; q++) {
 				if (IsValidMove(id, callbacks[q](id))) {
 					if (WillMatch(game, data, id, callbacks[q](id))) {
+						data->moves++;
 						StartSwapping(game, data, id, callbacks[q](id));
 						return true;
 					}

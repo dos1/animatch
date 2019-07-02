@@ -20,10 +20,13 @@
 
 #include "game/game.h"
 
-int Gamestate_ProgressCount = 80; // number of loading steps as reported by Gamestate_Load
+int Gamestate_ProgressCount = 82 + COLS * 3; // number of loading steps as reported by Gamestate_Load
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Called 60 times per second (by default). Here you should do all your game logic.
+
+	SanityCheckLevel(game, data);
+
 	data->counter += delta * sqrt(1.0 + data->counter_speed * data->counter_strength);
 	data->counter_speed -= delta;
 	data->counter_strength -= delta * 8;
@@ -51,6 +54,8 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 	}
 
 	for (int i = 0; i < COLS; i++) {
+		UpdateTween(&data->nests[i].tween, delta);
+
 		for (int j = 0; j < ROWS; j++) {
 			if (IsDrawable(data->fields[i][j].type)) {
 				AnimateCharacter(game, data->fields[i][j].drawable, delta, 1.0);
@@ -135,6 +140,10 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 		UpdateTween(&data->failing, delta);
 	}
 
+	for (int i = 0; i < 3; i++) {
+		UpdateTween(&data->goal_tween[i], delta);
+	}
+
 	if (data->restart_hover) {
 		data->restart_btn->tint = al_map_rgb_f(1.5, 1.5, 1.5);
 	} else {
@@ -170,10 +179,15 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	}
 	al_hold_bitmap_drawing(false);
 
+	bool show_nests = data->level.field_types[FIELD_TYPE_FREEFALL];
+
 	al_use_shader(data->desaturate_shader);
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			DrawField(game, data, data->fields[i][j].id);
+			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+				show_nests = true;
+			}
 		}
 	}
 	al_reset_clipping_rectangle();
@@ -196,6 +210,21 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_draw_bitmap(data->board, 0, 0, 0);
 	al_use_shader(NULL);
 
+	if (show_nests) {
+		for (int i = 0; i < COLS; i++) {
+			int j = ROWS - 1;
+			while (j > 0 && data->fields[i][j].type == FIELD_TYPE_DISABLED) {
+				j--;
+			}
+			if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+				SetCharacterPosition(game, data->nests[i].character, (i + 0.5) * (game->viewport.width / (float)COLS), offsetY + (j + 1.175) * (game->viewport.height - offsetY * 2) / (float)ROWS, sin(GetTweenValue(&data->nests[i].tween) * 2.5 * ALLEGRO_PI) / 12.0);
+				data->nests[i].character->scaleX = 0.8;
+				data->nests[i].character->scaleY = 0.8;
+				DrawCharacter(game, data->nests[i].character);
+			}
+		}
+	}
+
 	al_hold_bitmap_drawing(true);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
 	DrawUIElement(game, data->ui, data->infinite ? UI_ELEMENT_BALOON_MEDIUM : UI_ELEMENT_BALOON_BIG);
@@ -208,7 +237,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	if (data->infinite) {
 		moves = data->moves;
 	}
-	al_draw_textf(moves >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 96 : 82, ALLEGRO_ALIGN_CENTER, "%d", moves);
+	al_draw_textf(abs(moves) >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 96 : 84, ALLEGRO_ALIGN_CENTER, "%d", moves);
 	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
 	if (data->infinite) {
 		al_draw_text(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "∞");
@@ -235,7 +264,45 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 0, -30, ALLEGRO_ALIGN_CENTER, "%d", data->score);
 		al_use_transform(&orig);
 	} else {
-		al_draw_bitmap(data->placeholder, 240, 45, 0);
+		int goal = 0, goals = 0;
+		for (int i = 0; i < 3; i++) {
+			if (data->goals[i].type != GOAL_TYPE_NONE) {
+				goals++;
+			}
+		}
+		for (int i = 0; i < 3; i++) {
+			if (data->goals[i].type != GOAL_TYPE_NONE) {
+				struct Character* archetype = NULL;
+				if (data->goals[i].type > GOAL_TYPE_ANIMAL && data->goals[i].type < GOAL_TYPE_COLLECTIBLE) {
+					archetype = data->animal_archetypes[data->goals[i].type - GOAL_TYPE_ANIMAL - 1];
+				}
+				if (data->goals[i].type > GOAL_TYPE_COLLECTIBLE && data->goals[i].type < GOAL_TYPE_SLEEPING) {
+					archetype = data->special_archetypes[data->goals[i].type - GOAL_TYPE_COLLECTIBLE];
+				}
+				if (data->goals[i].type == GOAL_TYPE_FREEFALL) {
+					archetype = data->special_archetypes[SPECIAL_TYPE_EGG];
+				}
+				if (data->goals[i].type == GOAL_TYPE_SLEEPING) {
+					archetype = data->cloud_goal;
+				}
+				if (data->goals[i].type == GOAL_TYPE_ANIMAL) {
+					archetype = data->animals_goal;
+				}
+
+				float x = 240 + 85 * goal + 40 + (85 * (3 - goals)) / 2.0, y = 45 + 105 / 2.0;
+				if (archetype) {
+					float oy = (int)(sin(GetTweenValue(&data->goal_tween[i]) * ALLEGRO_PI) * 10);
+
+					SetCharacterPosition(game, archetype, x - 2, y - 2 - oy, sin(GetTweenPosition(&data->goal_tween[i]) * 2 * ALLEGRO_PI) / 12.0);
+					archetype->scaleX = 0.925;
+					archetype->scaleY = 0.925;
+					DrawCharacter(game, archetype);
+				}
+				al_draw_filled_circle(x + 15, y + 25, 20, al_map_rgb(57, 54, 48));
+				al_draw_textf(data->font_num_small, al_map_rgb(255, 255, 255), x + 15, y + 8, ALLEGRO_ALIGN_CENTER, "%d", data->goals[i].value > 0 ? data->goals[i].value : 0);
+				goal++;
+			}
+		}
 	}
 
 	DrawParticles(game, data->particles);
@@ -269,7 +336,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	if (data->done) {
 		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->finishing)));
-		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83, 0);
+		if (game->data->config.solid_background) {
+			al_draw_filled_rectangle(114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83,
+				114 + al_get_bitmap_width(data->frame_bg), -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83 + al_get_bitmap_height(data->frame_bg),
+				al_map_rgb(185, 140, 89));
+		} else {
+			al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 83, 0);
+		}
 		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->finishing), 0);
 
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->finishing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
@@ -278,7 +351,13 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	if (GetTweenValue(&data->failing)) {
 		al_draw_filled_rectangle(0, 0, game->viewport.width, game->viewport.height, al_map_rgba(0, 0, 0, 160 * GetTweenPosition(&data->failing)));
-		al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83, 0);
+		if (game->data->config.solid_background) {
+			al_draw_filled_rectangle(114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83,
+				114 + al_get_bitmap_width(data->frame_bg), -410 + (508 + 410) * GetTweenValue(&data->failing) + 83 + al_get_bitmap_height(data->frame_bg),
+				al_map_rgb(185, 140, 89));
+		} else {
+			al_draw_bitmap(data->frame_bg, 114, -410 + (508 + 410) * GetTweenValue(&data->failing) + 83, 0);
+		}
 		al_draw_bitmap(data->frame, 44, -410 + (508 + 410) * GetTweenValue(&data->failing), 0);
 
 		al_draw_textf(data->font_num_big, al_map_rgb(255, 255, 194), 720 / 2.0, -410 + (508 + 410) * GetTweenValue(&data->failing) + 120, ALLEGRO_ALIGN_CENTER, "LEVEL");
@@ -302,8 +381,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	// Here you can handle user input, expiring timers etc.
 	if ((ev->type == ALLEGRO_EVENT_KEY_DOWN) && (ev->keyboard.keycode == ALLEGRO_KEY_ESCAPE)) {
 		StartTransition(game, 0.5, 0.5);
-		StopCurrentGamestate(game);
-		StartGamestate(game, "menu");
+		ChangeCurrentGamestate(game, "menu");
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_MOUSE_AXES) || (ev->type == ALLEGRO_EVENT_TOUCH_MOVE) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) || (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN)) {
@@ -336,8 +414,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 		if (data->done) {
 			if (GetTweenPosition(&data->finishing) == 1.0) {
 				StartTransition(game, game->data->mouseX, game->data->mouseY);
-				StopCurrentGamestate(game);
-				StartGamestate(game, "menu");
+				ChangeCurrentGamestate(game, "menu");
 			}
 			return;
 		}
@@ -364,8 +441,7 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HOME, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
 				StartTransition(game, 0.5, 0.5);
-				StopCurrentGamestate(game);
-				StartGamestate(game, "menu");
+				ChangeCurrentGamestate(game, "menu");
 				return;
 			}
 
@@ -432,6 +508,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			RegisterSpritesheet(game, data->animal_archetypes[i], ANIMAL_ACTIONS[i].names[j]);
 		}
 		LoadSpritesheets(game, data->animal_archetypes[i], progress);
+		SelectSpritesheet(game, data->animal_archetypes[i], "stand");
 	}
 
 	data->leaves = CreateCharacter(game, "bg");
@@ -472,6 +549,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 			RegisterSpritesheet(game, data->special_archetypes[i], SPECIAL_ACTIONS[i].names[j]);
 		}
 		LoadSpritesheets(game, data->special_archetypes[i], progress);
+		SelectSpritesheet(game, data->special_archetypes[i], SPECIAL_ACTIONS[i].names[SPECIAL_ACTIONS[i].actions - 1]);
 	}
 
 	data->bg = al_load_bitmap(GetDataFilePath(game, "bg.webp"));
@@ -490,6 +568,29 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->restart = al_load_bitmap(GetDataFilePath(game, "przycisk_do_tylu_on.webp"));
 	RegisterSpritesheetFromBitmap(game, data->restart_btn, "restart", data->restart);
 	LoadSpritesheets(game, data->restart_btn, progress);
+
+	data->cloud_goal = CreateCharacter(game, "cloud_goal");
+	data->cloud_goal_bmp = al_load_bitmap(GetDataFilePath(game, "cloud_goal.webp"));
+	RegisterSpritesheetFromBitmap(game, data->cloud_goal, "cloud_goal", data->cloud_goal_bmp);
+	LoadSpritesheets(game, data->cloud_goal, progress);
+
+	data->animals_goal = CreateCharacter(game, "animals_goal");
+	data->animals_goal_bmp = al_load_bitmap(GetDataFilePath(game, "animals_goal.webp"));
+	RegisterSpritesheetFromBitmap(game, data->animals_goal, "animals_goal", data->animals_goal_bmp);
+	LoadSpritesheets(game, data->animals_goal, progress);
+
+	for (int i = 0; i < COLS; i++) {
+		data->nests[i].character = CreateCharacter(game, "nest");
+		RegisterSpritesheet(game, data->nests[i].character, "nest1");
+		RegisterSpritesheet(game, data->nests[i].character, "nest2");
+		RegisterSpritesheet(game, data->nests[i].character, "nest3");
+		LoadSpritesheets(game, data->nests[i].character, progress);
+		char name[6] = "nest1";
+		name[4] = '1' + i % 3;
+		SelectSpritesheet(game, data->nests[i].character, name);
+
+		data->nests[i].tween = StaticTween(game, 0.0);
+	}
 
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
@@ -517,8 +618,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	progress(game);
 	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.webp"));
 	progress(game);
-
-	data->placeholder = al_load_bitmap(GetDataFilePath(game, "placeholder.webp"));
 
 	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
@@ -572,7 +671,11 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	DestroyCharacter(game, data->snail);
 	DestroyCharacter(game, data->acorn_top.character);
 	DestroyCharacter(game, data->acorn_bottom.character);
+	DestroyCharacter(game, data->restart_btn);
+	DestroyCharacter(game, data->cloud_goal);
+	DestroyCharacter(game, data->animals_goal);
 	for (int i = 0; i < COLS; i++) {
+		DestroyCharacter(game, data->nests[i].character);
 		for (int j = 0; j < ROWS; j++) {
 			DestroyCharacter(game, data->fields[i][j].drawable);
 			DestroyCharacter(game, data->fields[i][j].overlay);
@@ -588,7 +691,8 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 		al_destroy_bitmap(data->field_bgs[i]);
 	}
 	al_destroy_bitmap(data->restart);
-	al_destroy_bitmap(data->placeholder);
+	al_destroy_bitmap(data->cloud_goal_bmp);
+	al_destroy_bitmap(data->animals_goal_bmp);
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->leaf);
@@ -611,6 +715,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	// Called when this gamestate gets control. Good place for initializing state,
 	// playing music etc.
 	game->data->last_unlocked_level = -1;
+	game->data->in_progress = true;
 
 	data->counter = 0.0;
 	data->counter_speed = 0.0;
@@ -621,12 +726,22 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	data->menu = false;
 	data->done = false;
 	data->failed = false;
+	data->goal_lock = false;
 	data->snail_blink = 0.0;
 	data->finishing = StaticTween(game, 0.0);
 	data->failing = StaticTween(game, 0.0);
 	data->scoring = StaticTween(game, 0.0);
+	for (int i = 0; i < 3; i++) {
+		data->goal_tween[i] = StaticTween(game, 0.0);
+	}
 
-	LoadLevel(game, data);
+	if (game->data->level >= 0) {
+		LoadLevel(game, data, game->data->level);
+		ApplyLevel(game, data);
+		StartLevel(game, data);
+	} else {
+		game->data->level = data->level.id;
+	}
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {

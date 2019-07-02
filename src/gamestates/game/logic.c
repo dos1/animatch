@@ -36,7 +36,7 @@
  *      - if something happened earlier, DispatchAnimations is queued after any previously queued animation
  *      - if nothing happened and there are no possible moves left, HandleDeadlock is called which is supposed
  *        to shuffle the board in order to get out of deadlock; DispatchAnimations is then queued
- *      - otherwise, the controls are unlocked and the execution flow stops there.
+ *      - otherwise, the controls are unlocked, goals/turns checked and the execution flow stops there.
  *
  *  - DispatchAnimations does two things:
  *    - call PerformActions, which triggers animations and turns fields into specials
@@ -49,6 +49,41 @@
  *
  *  (routine naming is hard...)
  */
+
+void UpdateGoal(struct Game* game, struct GamestateResources* data, enum GOAL_TYPE type, int val) {
+	if (data->goal_lock) {
+		return;
+	}
+	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].type == type) {
+			if (data->goals[i].value > 0) {
+				data->goal_tween[i] = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
+				UpdateTween(&data->goal_tween[i], (1.0 / 20.0) * (rand() / (float)RAND_MAX));
+			}
+			data->goals[i].value -= val;
+		}
+	}
+}
+
+void AddScore(struct Game* game, struct GamestateResources* data, int val) {
+	data->score += val;
+	data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+	UpdateGoal(game, data, GOAL_TYPE_SCORE, val);
+}
+
+static bool CheckGoals(struct Game* game, struct GamestateResources* data) {
+	if (data->infinite) {
+		return false;
+	}
+	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].type != GOAL_TYPE_NONE) {
+			if (data->goals[i].value > 0) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
 
 int MarkMatching(struct Game* game, struct GamestateResources* data) {
 	int matching = 0;
@@ -71,12 +106,21 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 	for (int i = 0; i < COLS; i++) {
 		for (int j = 0; j < ROWS; j++) {
 			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
-				if (j == ROWS - 1) {
+				bool to_collect = true;
+				int a = j + 1;
+				while (a < ROWS) {
+					if (data->fields[i][a].type != FIELD_TYPE_DISABLED) {
+						to_collect = false;
+						break;
+					}
+					a++;
+				}
+
+				if (to_collect) {
 					data->fields[i][j].to_remove = true;
 					data->fields[i][j].handled = true;
 					data->fields[i][j].to_highlight = true;
-					data->score += 100;
-					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+					AddScore(game, data, 100);
 					collected++;
 				}
 			} else if (ShouldBeCollected(game, data, data->fields[i][j].id) || data->fields[i][j].to_remove) {
@@ -87,9 +131,9 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
 					data->fields[i][j].to_highlight = true;
-					data->score += 10;
-					data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
 					collected++;
+					AddScore(game, data, 10);
+					UpdateGoal(game, data, GOAL_TYPE_SLEEPING, 1);
 				} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
 					data->fields[i][j].data.collectible.variant++;
 
@@ -97,13 +141,11 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 						data->fields[i][j].data.collectible.variant = SPECIAL_ACTIONS[FIRST_COLLECTIBLE + data->fields[i][j].data.collectible.type].actions - 1;
 						data->fields[i][j].to_remove = true;
 						PrintConsole(game, "collecting field %d, %d", i, j);
-						data->score += 50;
-						data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+						AddScore(game, data, 50);
 					} else {
 						data->fields[i][j].to_remove = false;
 						PrintConsole(game, "advancing field %d, %d", i, j);
-						data->score += 20;
-						data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+						AddScore(game, data, 20);
 					}
 					UpdateDrawable(game, data, data->fields[i][j].id);
 					data->fields[i][j].animation.collecting = Tween(game, 0.0, 1.0, TWEEN_STYLE_BOUNCE_OUT, COLLECTING_TIME);
@@ -121,7 +163,7 @@ static int Collect(struct Game* game, struct GamestateResources* data) {
 
 void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
 	field->type = FIELD_TYPE_ANIMAL;
-	while (data->level.fields[FIELD_TYPE_ANIMAL]) {
+	while (data->level.field_types[FIELD_TYPE_ANIMAL]) {
 		field->data.animal.type = rand() % ANIMAL_TYPES;
 		if (!allow_matches && IsMatching(game, data, field->id)) {
 			continue;
@@ -130,10 +172,12 @@ void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct F
 			break;
 		}
 	}
+	field->data.animal.sleeping = false;
+	field->data.animal.super = false;
+
 	if (rand() / (float)RAND_MAX < 0.005) {
 		field->data.animal.sleeping = data->level.sleeping;
 	}
-	field->data.animal.super = false;
 
 	field->overlay_visible = false;
 	field->locked = true;
@@ -141,28 +185,130 @@ void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct F
 }
 
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches) {
+	bool need_collectible = false, need_freefall = false, need_sleeping = false, need_animal = false, need_super = false,
+			 need_animal_type[ANIMAL_TYPES] = {}, need_collectible_type[COLLECTIBLE_TYPES] = {};
+	int collectibles = 0, freefalls = 0, sleeping = 0, super = 0,
+			collectible[COLLECTIBLE_TYPES] = {}, animal[ANIMAL_TYPES] = {};
+	for (int i = 0; i < ROWS; i++) {
+		for (int j = 0; j < COLS; j++) {
+			if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+				freefalls++;
+			} else if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
+				collectibles++;
+				collectible[data->fields[i][j].data.collectible.type]++;
+			} else if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+				animal[data->fields[i][j].data.animal.type]++;
+				if (data->fields[i][j].data.animal.sleeping) {
+					sleeping++;
+				}
+				if (data->fields[i][j].data.animal.super) {
+					super++;
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < 3; i++) {
+		if (data->goals[i].value <= 0) {
+			continue;
+		}
+
+		if (data->goals[i].type == GOAL_TYPE_FREEFALL) {
+			if (freefalls == 0) {
+				need_freefall = true;
+			}
+		} else if (data->goals[i].type == GOAL_TYPE_COLLECTIBLE) {
+			if (collectibles == 0) {
+				need_collectible = true;
+			}
+		}
+
+		for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
+			if ((data->goals[i].type - GOAL_TYPE_COLLECTIBLE - 1) == type) {
+				if (collectible[type] == 0) {
+					need_collectible = true;
+					need_collectible_type[type] = true;
+				}
+			}
+		}
+	}
+
+	if (freefalls < data->requirements[GOAL_TYPE_FREEFALL]) {
+		need_freefall = true;
+	}
+	if (collectibles < data->requirements[GOAL_TYPE_COLLECTIBLE]) {
+		need_collectible = true;
+	}
+	if (sleeping < data->requirements[GOAL_TYPE_SLEEPING]) {
+		need_sleeping = true;
+	}
+	if (super < data->requirements[GOAL_TYPE_SUPER]) {
+		need_super = true;
+	}
+	for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
+		if (collectible[type] < data->requirements[type + GOAL_TYPE_COLLECTIBLE + 1]) {
+			need_collectible = true;
+			need_collectible_type[type] = true;
+		}
+	}
+	for (enum ANIMAL_TYPE type = 0; type < ANIMAL_TYPES; type++) {
+		if (animal[type] < data->requirements[type + GOAL_TYPE_ANIMAL + 1]) {
+			need_animal = true;
+			need_animal_type[type] = true;
+		}
+	}
+
 	while (true) {
-		if (rand() / (float)RAND_MAX < 0.001) {
+		if (rand() / (float)RAND_MAX < (need_freefall ? 0.5 : 0.001)) {
 			field->type = FIELD_TYPE_FREEFALL;
 			field->data.freefall.variant = rand() % SPECIAL_ACTIONS[SPECIAL_TYPE_EGG].actions;
-			if (data->level.specials[SPECIAL_TYPE_EGG]) {
+			if (need_freefall || data->level.field_types[FIELD_TYPE_FREEFALL]) {
 				break;
 			}
-		} else if (rand() / (float)RAND_MAX < 0.01) {
+		} else if (rand() / (float)RAND_MAX < (need_collectible ? 0.5 : 0.01)) {
 			field->type = FIELD_TYPE_COLLECTIBLE;
-			while (data->level.fields[FIELD_TYPE_COLLECTIBLE]) {
+			field->data.collectible.variant = 0;
+			bool set = false;
+			if (need_collectible) {
+				// compensate for missing fields needed to reach the goals / requirements
+				for (enum COLLECTIBLE_TYPE type = 0; type < COLLECTIBLE_TYPES; type++) {
+					if (need_collectible_type[type]) {
+						field->data.collectible.type = type;
+						set = true;
+						break;
+					}
+				}
+			}
+			if (set) {
+				break;
+			}
+			while (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				field->data.collectible.type = rand() % COLLECTIBLE_TYPES;
-				if (data->level.specials[FIRST_COLLECTIBLE + field->data.collectible.type]) {
+				if (data->level.collectibles[field->data.collectible.type]) {
 					break;
 				}
 			}
-			field->data.collectible.variant = 0;
-			if (data->level.fields[FIELD_TYPE_COLLECTIBLE]) {
+			if (need_collectible || data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
 				break;
 			}
 		} else {
 			GenerateAnimal(game, data, field, allow_matches);
-			if (data->level.fields[FIELD_TYPE_ANIMAL]) {
+			field->data.animal.super = need_super;
+			if (!field->data.animal.super) {
+				if (need_sleeping) {
+					field->data.animal.sleeping = true;
+				}
+			}
+
+			// compensate for missing fields needed to reach the goals / requirements
+			for (enum ANIMAL_TYPE type = 0; type < ANIMAL_TYPES; type++) {
+				if (need_animal_type[type]) {
+					field->data.animal.type = type;
+					break;
+				}
+			}
+
+			if (need_animal || data->level.field_types[FIELD_TYPE_ANIMAL]) {
 				break;
 			}
 		}
@@ -248,6 +394,14 @@ void ProcessFields(struct Game* game, struct GamestateResources* data) {
 			TM_AddAction(data->timeline, DispatchAnimations, NULL);
 		} else {
 			data->locked = false;
+			if (!data->goal_lock) {
+				if (CheckGoals(game, data)) {
+					FinishLevel(game, data);
+				} else if (!data->infinite && data->moves == data->moves_goal) {
+					FailLevel(game, data);
+				}
+			}
+			data->goal_lock = false;
 		}
 	}
 }
@@ -275,6 +429,10 @@ static void AnimateRemoval(struct Game* game, struct GamestateResources* data) {
 			if (data->fields[i][j].to_remove) {
 				data->fields[i][j].animation.hiding = Tween(game, 0.0, 1.0, TWEEN_STYLE_LINEAR, MATCHING_TIME);
 				data->fields[i][j].animation.hiding.predelay = MATCHING_DELAY_TIME;
+				if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+					data->nests[i].tween = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_OUT, SHAKING_TIME);
+					data->nests[i].tween.predelay = 0.5;
+				}
 			}
 		}
 	}
@@ -292,8 +450,8 @@ static void PerformActions(struct Game* game, struct GamestateResources* data) {
 					}
 				}
 
-				data->score += 10;
-				data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+				AddScore(game, data, 10);
+
 				SpawnParticles(game, data, data->fields[i][j].id, 16);
 			}
 		}
@@ -312,6 +470,24 @@ void DoRemoval(struct Game* game, struct GamestateResources* data) {
 			data->fields[i][j].match_mark = 0;
 			data->fields[i][j].to_highlight = false;
 			if (data->fields[i][j].to_remove) {
+				if (data->fields[i][j].type == FIELD_TYPE_ANIMAL) {
+					UpdateGoal(game, data, GOAL_TYPE_ANIMAL, 1);
+					UpdateGoal(game, data, GOAL_TYPE_ANIMAL + 1 + data->fields[i][j].data.animal.type, 1);
+					if (data->fields[i][j].data.animal.sleeping) {
+						UpdateGoal(game, data, GOAL_TYPE_SLEEPING, 1);
+					}
+					if (data->fields[i][j].data.animal.super) {
+						UpdateGoal(game, data, GOAL_TYPE_SUPER, 1);
+					}
+				}
+				if (data->fields[i][j].type == FIELD_TYPE_COLLECTIBLE) {
+					UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE, 1);
+					UpdateGoal(game, data, GOAL_TYPE_COLLECTIBLE + 1 + data->fields[i][j].data.collectible.type, 1);
+				}
+				if (data->fields[i][j].type == FIELD_TYPE_FREEFALL) {
+					UpdateGoal(game, data, GOAL_TYPE_FREEFALL, 1);
+				}
+
 				data->fields[i][j].type = FIELD_TYPE_EMPTY;
 				data->fields[i][j].to_remove = false;
 				data->fields[i][j].animation.hiding = StaticTween(game, 0.0);
@@ -421,7 +597,6 @@ void StartBadSwapping(struct Game* game, struct GamestateResources* data, struct
 
 static TM_ACTION(AfterMatching) {
 	TM_RunningOnly;
-	assert(data); // silence clang-analyzer
 	DoRemoval(game, data);
 	Gravity(game, data);
 	ProcessFields(game, data);

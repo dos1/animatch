@@ -49,14 +49,16 @@
 	FIELD(EMPTY)               \
 	FIELD(DISABLED)
 
-#define FOREACH_GOAL(GOAL) \
-	GOAL(NONE)               \
-	GOAL(SCORE)              \
-	GOAL(FREEFALL)           \
-	GOAL(ANIMAL)             \
-	FOREACH_ANIMAL(GOAL)     \
-	GOAL(COLLECTIBLE)        \
-	FOREACH_COLLECTIBLE(GOAL)
+#define FOREACH_GOAL(GOAL)  \
+	GOAL(NONE)                \
+	GOAL(SCORE)               \
+	GOAL(FREEFALL)            \
+	GOAL(ANIMAL)              \
+	FOREACH_ANIMAL(GOAL)      \
+	GOAL(COLLECTIBLE)         \
+	FOREACH_COLLECTIBLE(GOAL) \
+	GOAL(SLEEPING)            \
+	GOAL(SUPER)
 
 #define GENERATE_STRING(VAL) #VAL,
 #define GENERATE_ANIMAL_ENUM(VAL) ANIMAL_TYPE_##VAL,
@@ -191,13 +193,16 @@ struct Goal {
 };
 
 struct Level {
+	bool field_types[FIELD_TYPES];
 	bool animals[ANIMAL_TYPES];
-	bool specials[SPECIAL_TYPES];
+	bool collectibles[SPECIAL_TYPES];
+	int requirements[GOAL_TYPES];
 	struct {
 		enum FIELD_TYPE field_type;
 		enum COLLECTIBLE_TYPE collectible_type;
 		enum ANIMAL_TYPE animal_type;
-		bool random_animal;
+		int variant;
+		bool random_subtype;
 		bool sleeping;
 		bool super;
 	} fields[COLS][ROWS];
@@ -215,7 +220,7 @@ struct GamestateResources {
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_BITMAP *bg, *leaf;
 
-	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *placeholder, *restart;
+	ALLEGRO_BITMAP *scene, *lowres_scene, *lowres_scene_blur, *board, *restart, *cloud_goal_bmp, *animals_goal_bmp;
 
 	ALLEGRO_FONT *font, *font_num_small, *font_num_medium, *font_num_big, *font_small;
 
@@ -236,12 +241,12 @@ struct GamestateResources {
 
 	struct ParticleBucket* particles;
 
-	struct Character *leaves, *ui, *beetle, *snail, *restart_btn;
+	struct Character *leaves, *ui, *beetle, *snail, *restart_btn, *cloud_goal, *animals_goal;
 
 	struct {
 		struct Character* character;
 		struct Tween tween;
-	} acorn_top, acorn_bottom;
+	} acorn_top, acorn_bottom, nests[COLS];
 
 	float snail_blink;
 
@@ -249,10 +254,13 @@ struct GamestateResources {
 	struct Tween scoring, finishing, failing;
 
 	struct Goal goals[3];
+	int requirements[GOAL_TYPES];
+
+	struct Tween goal_tween[3];
 
 	struct Level level;
 
-	bool debug, paused, menu, done, failed, restart_hover, infinite;
+	bool debug, paused, menu, done, failed, restart_hover, infinite, goal_lock;
 	float counter, counter_speed, counter_strength;
 };
 
@@ -278,12 +286,19 @@ int ShouldBeCollected(struct Game* game, struct GamestateResources* data, struct
 bool WillMatch(struct Game* game, struct GamestateResources* data, struct FieldID one, struct FieldID two);
 
 // levels
-void LoadLevel(struct Game* game, struct GamestateResources* data);
+void LoadLevel(struct Game* game, struct GamestateResources* data, int id);
+void StartLevel(struct Game* game, struct GamestateResources* data);
+void ApplyLevel(struct Game* game, struct GamestateResources* data);
+void StoreLevel(struct Game* game, struct GamestateResources* data);
 void RestartLevel(struct Game* game, struct GamestateResources* data);
+void SanityCheckLevel(struct Game* game, struct GamestateResources* data);
 void FinishLevel(struct Game* game, struct GamestateResources* data);
 void FailLevel(struct Game* game, struct GamestateResources* data);
+void CopyLevel(struct Game* game, struct GamestateResources* data);
 
 // logic
+void UpdateGoal(struct Game* game, struct GamestateResources* data, enum GOAL_TYPE type, int val);
+void AddScore(struct Game* game, struct GamestateResources* data, int val);
 int MarkMatching(struct Game* game, struct GamestateResources* data);
 void GenerateAnimal(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches);
 void GenerateField(struct Game* game, struct GamestateResources* data, struct Field* field, bool allow_matches);

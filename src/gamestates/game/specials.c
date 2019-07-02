@@ -29,8 +29,7 @@ static void TurnFieldToSuper(struct Game* game, struct GamestateResources* data,
 	field->to_remove = false;
 	UpdateDrawable(game, data, id);
 	SpawnParticles(game, data, id, 64);
-	data->score += 50;
-	data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+	AddScore(game, data, 50);
 }
 
 void TurnMatchToSuper(struct Game* game, struct GamestateResources* data, int matched, int mark) {
@@ -81,8 +80,7 @@ static TM_ACTION(DoSpawnParticles) {
 	struct Field* field = TM_Arg(0);
 	int* count = TM_Arg(1);
 	SpawnParticles(game, data, field->id, *count);
-	data->score += 10;
-	data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+	AddScore(game, data, 10);
 	free(count);
 	return true;
 }
@@ -115,8 +113,7 @@ static void LaunchSpecial(struct Game* game, struct GamestateResources* data, st
 	}
 	TM_WrapArg(int, count, 64);
 	TM_AddAction(data->timeline, DoSpawnParticles, TM_Args(GetField(game, data, id), count));
-	data->score += 200;
-	data->scoring = Tween(game, 1.0, 0.0, TWEEN_STYLE_SINE_OUT, 1.0);
+	AddScore(game, data, 200);
 }
 
 bool AnimateSpecials(struct Game* game, struct GamestateResources* data) {

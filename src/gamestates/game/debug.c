@@ -147,76 +147,40 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 		igSetNextWindowSize((ImVec2){1024, 700}, ImGuiCond_FirstUseEver);
 		igBegin("Animatch Debug Toolbox", &data->debug, 0);
 
-		igTextColored(data->locked ? gray : white, "Enabled: %d", !data->locked);
-		igText("Particles: %d", data->particles->active);
-		igText("Possible moves: %d", CountMoves(game, data));
-		igSeparator();
+		if (igCollapsingHeader("Gameplay", 0)) {
+			igTextColored(data->locked ? gray : white, "Enabled: %d", !data->locked);
+			igText("Particles: %d", data->particles->active);
+			igText("Possible moves: %d", CountMoves(game, data));
+			igSeparator();
 
-		if (igButton("Auto-move", (ImVec2){0, 0})) {
-			AutoMove(game, data);
-		}
+			igInputInt("Moves taken", &data->moves, 1, 10, 0);
 
-		igSameLine(0, 0);
-		if (igButton("Hint", (ImVec2){0, 0})) {
-			ShowHint(game, data);
-		}
+			igSeparator();
 
-		igSameLine(0, 0);
-		if (igButton("Process", (ImVec2){0, 0})) {
-			Gravity(game, data);
-			ProcessFields(game, data);
-		}
+			if (igButton("Auto-move", (ImVec2){0, 0})) {
+				AutoMove(game, data);
+			}
 
-		igSeparator();
-		igInputInt("Moves taken", &data->moves, 1, 10, 0);
+			igSameLine(0, 10);
+			if (igButton("Hint", (ImVec2){0, 0})) {
+				ShowHint(game, data);
+			}
 
-		igSeparator();
+			igSameLine(0, 10);
+			if (igButton("Process", (ImVec2){0, 0})) {
+				Gravity(game, data);
+				ProcessFields(game, data);
+			}
 
-		if (igCollapsingHeader("Goals", 0)) {
-			igCheckbox("Infinite", &data->infinite);
-			if (!data->infinite) {
-				char* current = "...";
+			if (igButton("Win", (ImVec2){0, 0})) {
+				FinishLevel(game, data);
+			}
 
-#define CheckGoalComboItem(t) \
-	if (data->goals[i].type == GOAL_TYPE_##t) { current = STRINGIFY(t); }
-
-#define AddGoalComboItem(t)                                                        \
-	if (igSelectable(#t, data->goals[i].type == GOAL_TYPE_##t, 0, (ImVec2){0, 0})) { \
-		data->goals[i].type = GOAL_TYPE_##t;                                           \
-	}
-
-				igSeparator();
-				int i = 0;
-				FOREACH_GOAL(CheckGoalComboItem)
-				if (igBeginCombo("Goal 1", current, 0)) {
-					FOREACH_GOAL(AddGoalComboItem)
-					igEndCombo();
-				}
-				igInputInt("Value 1", &data->goals[i].value, 1, 10, 0);
-
-				igSeparator();
-				i = 1;
-				FOREACH_GOAL(CheckGoalComboItem)
-				if (igBeginCombo("Goal 2", current, 0)) {
-					FOREACH_GOAL(AddGoalComboItem)
-					igEndCombo();
-				}
-				igInputInt("Value 2", &data->goals[i].value, 1, 10, 0);
-
-				igSeparator();
-				i = 2;
-				FOREACH_GOAL(CheckGoalComboItem)
-				if (igBeginCombo("Goal 3", current, 0)) {
-					FOREACH_GOAL(AddGoalComboItem)
-					igEndCombo();
-				}
-				igInputInt("Value 3", &data->goals[i].value, 1, 10, 0);
-
-				igSeparator();
-				igInputInt("Moves", &data->moves_goal, 1, 10, 0);
+			igSameLine(0, 10);
+			if (igButton("Lose", (ImVec2){0, 0})) {
+				FailLevel(game, data);
 			}
 		}
-
 		if (igCollapsingHeader("Board", 0)) {
 			for (int j = 0; j < ROWS; j++) {
 				igColumns(COLS, "fields", true);
@@ -334,6 +298,150 @@ void DrawDebugInterface(struct Game* game, struct GamestateResources* data) {
 				igSeparator();
 			}
 			igColumns(1, NULL, false);
+		}
+
+		if (igCollapsingHeader("Configuration", 0)) {
+			if (igButton("Clear fields", (ImVec2){0, 0})) {
+				for (int i = 0; i < COLS; i++) {
+					for (int j = 0; j < ROWS; j++) {
+						if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+							data->fields[i][j].type = FIELD_TYPE_EMPTY;
+						}
+					}
+				}
+			}
+
+			igSameLine(0, 10);
+			if (igButton("Reset board", (ImVec2){0, 0})) {
+				for (int i = 0; i < COLS; i++) {
+					for (int j = 0; j < ROWS; j++) {
+						data->fields[i][j].type = FIELD_TYPE_EMPTY;
+					}
+				}
+			}
+
+			igSameLine(0, 10);
+			if (igButton("Regenerate", (ImVec2){0, 0})) {
+				for (int i = 0; i < COLS; i++) {
+					for (int j = 0; j < ROWS; j++) {
+						if (data->fields[i][j].type != FIELD_TYPE_DISABLED) {
+							data->fields[i][j].type = FIELD_TYPE_EMPTY;
+						}
+					}
+				}
+				data->goal_lock = true;
+				do {
+					DoRemoval(game, data);
+					Gravity(game, data);
+				} while (MarkMatching(game, data));
+				StopAnimations(game, data);
+			}
+
+#define AddFieldConfigItem(t)                                                       \
+	if (FIELD_TYPE_##t <= FIELD_TYPE_COLLECTIBLE) {                                   \
+		igCheckbox(#t "##field_type_config", &data->level.field_types[FIELD_TYPE_##t]); \
+	}
+
+			FOREACH_FIELD(AddFieldConfigItem)
+
+			igSeparator();
+
+			if (data->level.field_types[FIELD_TYPE_ANIMAL]) {
+#define AddAnimalConfigItem(t) \
+	igCheckbox(#t "##animal_type_config", &data->level.animals[ANIMAL_TYPE_##t]);
+
+				FOREACH_ANIMAL(AddAnimalConfigItem)
+
+				igSeparator();
+			}
+
+			if (data->level.field_types[FIELD_TYPE_COLLECTIBLE]) {
+#define AddCollectibleConfigItem(t) \
+	igCheckbox(#t "##collectible_type_config", &data->level.collectibles[COLLECTIBLE_TYPE_##t]);
+
+				FOREACH_COLLECTIBLE(AddCollectibleConfigItem)
+			}
+
+			igSeparator();
+
+			igCheckbox("Supers", &data->level.supers);
+			igCheckbox("Sleeping", &data->level.sleeping);
+
+			igSeparator();
+
+			igCheckbox("Infinite", &data->infinite);
+
+			if (!data->infinite) {
+				igInputInt("Moves", &data->moves_goal, 1, 10, 0);
+
+				if (igCollapsingHeader("Goals", ImGuiTreeNodeFlags_DefaultOpen)) {
+					char* current = "...";
+
+#define CheckGoalComboItem(t) \
+	if (data->goals[i].type == GOAL_TYPE_##t) { current = STRINGIFY(t); }
+
+#define AddGoalComboItem(t)                                                        \
+	if (igSelectable(#t, data->goals[i].type == GOAL_TYPE_##t, 0, (ImVec2){0, 0})) { \
+		data->goals[i].type = GOAL_TYPE_##t;                                           \
+	}
+
+					igSeparator();
+					int i = 0;
+					FOREACH_GOAL(CheckGoalComboItem)
+					if (igBeginCombo("Goal 1", current, 0)) {
+						FOREACH_GOAL(AddGoalComboItem)
+						igEndCombo();
+					}
+					igInputInt("Value 1", &data->goals[i].value, 1, 10, 0);
+
+					igSeparator();
+					i = 1;
+					FOREACH_GOAL(CheckGoalComboItem)
+					if (igBeginCombo("Goal 2", current, 0)) {
+						FOREACH_GOAL(AddGoalComboItem)
+						igEndCombo();
+					}
+					igInputInt("Value 2", &data->goals[i].value, 1, 10, 0);
+
+					igSeparator();
+					i = 2;
+					FOREACH_GOAL(CheckGoalComboItem)
+					if (igBeginCombo("Goal 3", current, 0)) {
+						FOREACH_GOAL(AddGoalComboItem)
+						igEndCombo();
+					}
+					igInputInt("Value 3", &data->goals[i].value, 1, 10, 0);
+				}
+			}
+
+			if (igCollapsingHeader("Requirements", ImGuiTreeNodeFlags_DefaultOpen)) {
+#define AddGoalRequirement(t)                                             \
+	if (GOAL_TYPE_##t > GOAL_TYPE_SCORE) {                                  \
+		igInputInt(#t "##req", &data->requirements[GOAL_TYPE_##t], 1, 10, 0); \
+	}
+
+				FOREACH_GOAL(AddGoalRequirement)
+			}
+		}
+
+		if (igCollapsingHeader("Levels", 0)) {
+			igInputInt("Level ID", &game->data->level, 1, 10, 0);
+			if (igButton(LevelExists(game, game->data->level) ? "Save level" : "Create level", (ImVec2){0, 0})) {
+				data->level.id = game->data->level;
+				CopyLevel(game, data);
+				StoreLevel(game, data);
+			}
+			igSameLine(0, 10);
+			if (LevelExists(game, game->data->level)) {
+				if (igButton("Load level", (ImVec2){0, 0})) {
+					LoadLevel(game, data, game->data->level);
+					ApplyLevel(game, data);
+				}
+				igSameLine(0, 10);
+				if (igButton("Start level", (ImVec2){0, 0})) {
+					StartLevel(game, data);
+				}
+			}
 		}
 
 		igEnd();
