@@ -97,7 +97,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	}
 	al_draw_bitmap(data->frame, 44, -20, 0);
 	PopTransform(game);
-	al_draw_text(data->font, al_map_rgb(255, 255, 255), game->viewport.width / 2.0, 160, ALLEGRO_ALIGN_CENTER, "SETTINGS");
+	al_draw_text(data->font, al_map_rgb(255, 255, 255), game->viewport.width / 2.0, 155, ALLEGRO_ALIGN_CENTER, "SETTINGS");
 }
 
 void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, ALLEGRO_EVENT* ev) {
