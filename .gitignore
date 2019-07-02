@@ -23,3 +23,5 @@ cmake-build-*
 imgui.ini
 .assetcache
 .meta
+flatpak/repo-flatpak/
+flatpak/build-dir/
