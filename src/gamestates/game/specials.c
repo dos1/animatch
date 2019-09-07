@@ -82,7 +82,7 @@ static TM_ACTION(DoSpawnParticles) {
 	SpawnParticles(game, data, field->id, *count);
 	AddScore(game, data, 10);
 	free(count);
-	return true;
+	return TM_END;
 }
 
 static void LaunchSpecial(struct Game* game, struct GamestateResources* data, struct FieldID id) {
@@ -136,7 +136,7 @@ TM_ACTION(AnimateSpecial) {
 	TM_RunningOnly;
 	struct Field* field = TM_Arg(0);
 	field->animation.launching = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, LAUNCHING_TIME);
-	return true;
+	return TM_END;
 }
 
 void HandleSpecialed(struct Game* game, struct GamestateResources* data, struct Field* field) {

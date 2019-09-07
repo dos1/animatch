@@ -531,7 +531,7 @@ void Swap(struct Game* game, struct GamestateResources* data, struct FieldID one
 static TM_ACTION(TriggerProcessing) {
 	TM_RunningOnly;
 	ProcessFields(game, data);
-	return true;
+	return TM_END;
 }
 
 static TM_ACTION(AnimateSwapping) {
@@ -545,7 +545,7 @@ static TM_ACTION(AnimateSwapping) {
 			one->animation.swapee = two->id;
 			two->animation.swapping = Tween(game, 0.0, 1.0, TWEEN_STYLE_SINE_IN_OUT, *timeout);
 			two->animation.swapee = one->id;
-			return false;
+			return TM_REPEAT;
 		}
 		case TM_ACTIONSTATE_RUNNING: {
 			double* timeout = TM_GetArg(action->arguments, 2);
@@ -553,9 +553,9 @@ static TM_ACTION(AnimateSwapping) {
 			*timeout -= action->delta;
 			if (*timeout < 0) {
 				action->delta -= t;
-				return true;
+				return TM_END;
 			}
-			return false;
+			return TM_REPEAT;
 		}
 		case TM_ACTIONSTATE_STOP: {
 			struct Field* one = TM_GetArg(action->arguments, 0);
@@ -563,12 +563,12 @@ static TM_ACTION(AnimateSwapping) {
 			Swap(game, data, one->id, two->id);
 			one->animation.swapping = StaticTween(game, 0.0);
 			two->animation.swapping = StaticTween(game, 0.0);
-			return true;
+			return TM_END;
 		}
 		case TM_ACTIONSTATE_DESTROY:
 			free(TM_GetArg(action->arguments, 2));
 		default:
-			return true;
+			return TM_END;
 	}
 }
 
@@ -600,7 +600,7 @@ static TM_ACTION(AfterMatching) {
 	DoRemoval(game, data);
 	Gravity(game, data);
 	ProcessFields(game, data);
-	return true;
+	return TM_END;
 }
 
 TM_ACTION(DispatchAnimations) {
@@ -608,5 +608,5 @@ TM_ACTION(DispatchAnimations) {
 	PerformActions(game, data);
 	TM_AddDelay(data->timeline, MATCHING_TIME + MATCHING_DELAY_TIME);
 	TM_AddAction(data->timeline, AfterMatching, NULL);
-	return true;
+	return TM_END;
 }
