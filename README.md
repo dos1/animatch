@@ -96,7 +96,7 @@ Since libsuperderpy doesn't have a stable ABI yet, it's recommended to compile w
 
 Allegro doesn't have native Wayland backend - it does have SDL2 one though, which in turn can use Wayland. However, it needs to be enabled at compile time. Therefore, when targetting Wayland-based platforms, it's recommended to use `-DLIBSUPERDERPY_EMBEDDED_ALLEGRO=ON -DALLEGRO_SDL=ON` options (unless Allegro compiled with SDL2 backend is already provided by the platform).
 
-When using Allegro's SDL2 backend for its Wayland support, it's recommended to use SDL2 2.0.10 or newer.
+When using Allegro's SDL2 backend for its Wayland support, it's recommended to use SDL2 2.0.10 or newer. Also, remember that SDL2 still defaults to X11 backend, so make sure the `SDL_VIDEODRIVER=wayland` environment variable is set.
 
 With `LIBSUPERDERPY_EMBEDDED_ALLEGRO` enabled, make sure to provide all dependencies required by Allegro. On Debian-based systems that will be:
 
