@@ -9,9 +9,7 @@ The game was made for [Purism, SPC](https://puri.sm/) by [Holy Pangolin](https:/
 As Animatch uses git submodules, make sure to initialize them before trying to compile:
 
 ```
-git clone https://gitlab.com/HolyPangolin/animatch
-cd animatch
-git submodule update --init --recursive
+git clone https://gitlab.com/HolyPangolin/animatch --recursive
 ```
 
 ## Compiling
@@ -105,7 +103,7 @@ With `LIBSUPERDERPY_EMBEDDED_ALLEGRO` enabled, make sure to provide all dependen
 ```
 sudo apt install build-essential cmake ninja-build git pkg-config libogg-dev libfreetype6-dev libphysfs-dev libvorbis-dev libopus-dev libtheora-dev libflac-dev libopenal-dev libwebp-dev libpng-dev libjpeg-dev libdumb1-dev libopusfile-dev
 
-sudo apt install libsdl-2.0-dev # when using SDL backend
+sudo apt install libsdl2-dev # when using SDL backend
 sudo apt install libx11-dev libxcursor-dev libxrandr-dev libxi-dev libpulse-dev libasound2-dev libxpm-dev libice-dev libsm-dev libxext-dev libxinerama-dev # when using X11 backend
 sudo apt install libgl1-mesa-dev libglu1-mesa-dev # for OpenGL on X11
 sudo apt install libgles2-mesa-dev # for OpenGL ES on X11
