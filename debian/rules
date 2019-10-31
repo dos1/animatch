@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --builddirectory=_build
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DLIBSUPERDERPY_STATIC=ON -DLIBSUPERDERPY_EMBEDDED_ALLEGRO=ON -DALLEGRO_SDL=ON

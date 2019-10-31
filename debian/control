@@ -1,0 +1,33 @@
+Source: animatch
+Section: games
+Priority: optional
+Maintainer: Sebastian Krzyszkowiak <dos@dosowisko.net>
+Build-Depends:
+ debhelper (>= 11),
+ cmake,
+ git,
+ pkg-config,
+ libogg-dev,
+ libfreetype6-dev,
+ libphysfs-dev,
+ libvorbis-dev,
+ libopus-dev,
+ libtheora-dev,
+ libflac-dev,
+ libopenal-dev,
+ libwebp-dev,
+ libpng-dev,
+ libjpeg-dev,
+ libdumb1-dev,
+ libopusfile-dev,
+ libsdl2-dev
+Standards-Version: 4.2.1
+Homepage: https://gitlab.com/HolyPangolin/animatch
+
+Package: animatch
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends}
+Description: A match-three game with cute animals.
+ Animatch is a match-three game with cute animals. 
