@@ -25,17 +25,18 @@ struct GamestateResources {
 	// This struct is for every resource allocated and used by your gamestate.
 	// It gets created on load and then gets passed around to all other function calls.
 	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2, *leaf1b, *leaf2b, *infinitybmp, *back_onbmp, *back_offbmp;
-	ALLEGRO_FONT* font;
+	ALLEGRO_FONT *font, *font2;
 	bool infinity_hover, back_hover;
 	struct Character *beetle, *ui, *snail, *infinity, *back;
 
 	int levels;
 	int highlight;
 	bool scrolling;
+	bool about;
 
 	int snail_offset[621];
 
-	struct ScrollingViewport menu;
+	struct ScrollingViewport menu, credits;
 };
 
 int Gamestate_ProgressCount = 16; // number of loading steps as reported by Gamestate_Load; 0 when missing
@@ -43,7 +44,7 @@ int Gamestate_ProgressCount = 16; // number of loading steps as reported by Game
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
 	AnimateCharacter(game, data->beetle, delta, 1.0);
-	AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->menu.speed))), 1.0);
+	AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->about ? data->credits.speed : data->menu.speed))), 1.0);
 
 	if (data->infinity_hover) {
 		data->infinity->tint = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
@@ -67,6 +68,7 @@ void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double 
 
 void Gamestate_Tick(struct Game* game, struct GamestateResources* data) {
 	UpdateScrollingViewport(game, &data->menu);
+	UpdateScrollingViewport(game, &data->credits);
 }
 
 void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
@@ -82,38 +84,55 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_draw_bitmap(data->logo, 54, 35, 0);
 
-	SetScrollingViewportAsTarget(game, &data->menu);
+	DrawCharacter(game, data->infinity);
+	DrawCharacter(game, data->back);
 
-	for (int i = 1; i <= data->levels; i++) {
-		int ii = i - 1;
-		if (i > game->data->unlocked_levels) {
-			al_draw_tinted_bitmap(((ii / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (ii % 3), 25 + 175 * floor(ii / 3.0), 0);
-			al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i);
-		} else {
-			ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
-			if (data->highlight == i) {
-				color = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
+	if (!data->about) {
+		SetScrollingViewportAsTarget(game, &data->menu);
+
+		for (int i = 1; i <= data->levels; i++) {
+			int ii = i - 1;
+			if (i > game->data->unlocked_levels) {
+				al_draw_tinted_bitmap(((ii / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (ii % 3), 25 + 175 * floor(ii / 3.0), 0);
+				al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i);
+			} else {
+				ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
+				if (data->highlight == i) {
+					color = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
+				}
+				ALLEGRO_BITMAP* bitmap = ((ii / 3) % 2) ? data->leaf1 : data->leaf2;
+				al_draw_tinted_rotated_bitmap(bitmap, color,
+					al_get_bitmap_width(bitmap) / 2.0, al_get_bitmap_height(bitmap) / 2.0,
+					50 + 150 * (ii % 3) + al_get_bitmap_width(bitmap) / 2.0, 25 + 175 * floor(ii / 3.0) + al_get_bitmap_height(bitmap) / 2.0,
+					game->data->last_unlocked_level == i ? (sin(game->time * 4.0) / 16.0) : 0, 0);
+				al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i);
 			}
-			ALLEGRO_BITMAP* bitmap = ((ii / 3) % 2) ? data->leaf1 : data->leaf2;
-			al_draw_tinted_rotated_bitmap(bitmap, color,
-				al_get_bitmap_width(bitmap) / 2.0, al_get_bitmap_height(bitmap) / 2.0,
-				50 + 150 * (ii % 3) + al_get_bitmap_width(bitmap) / 2.0, 25 + 175 * floor(ii / 3.0) + al_get_bitmap_height(bitmap) / 2.0,
-				game->data->last_unlocked_level == i ? (sin(game->time * 4.0) / 16.0) : 0, 0);
-			al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i);
 		}
-	}
 
-	SetScrollingViewportAsTarget(game, NULL);
+		SetScrollingViewportAsTarget(game, NULL);
+	} else {
+		DrawVerticalGradientRect(0, game->viewport.height * 0.6, game->viewport.width, game->viewport.height * 0.4, al_map_rgba(0, 0, 0, 0), al_map_rgba(0, 0, 0, 222));
+		SetScrollingViewportAsTarget(game, &data->credits);
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "Animatch by Holy Pangolin:");
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 50, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "- Agata Nawrot");
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 100, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "- Sebastian Krzyszkowiak");
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 180, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "Copyright 2018-2019 Purism, SPC");
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 260, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "This game is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.");
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 700, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.");
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 1200, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.");
+
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 1500, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "The game build may also contain following third-party software: Allegro, SDL2, libsuperderpy, zlib, libpng, bzip2, dumb, libjpeg-turbo, libogg, libvorbis, libtheora, flac, opus, opusfile, libwebp, physfs, freetype, harfbuzz");
+
+		SetScrollingViewportAsTarget(game, NULL);
+	}
 
 	al_draw_bitmap(data->frame, 30, 315, 0);
 
-	float pos = Clamp(0.12, 0.88, 0.12 + 0.76 * data->menu.pos / (float)(data->menu.content - data->menu.h));
+	struct ScrollingViewport* viewport = data->about ? &data->credits : &data->menu;
+	float pos = Clamp(0.12, 0.88, 0.12 + 0.76 * viewport->pos / (float)(viewport->content - viewport->h));
 	int off = ((int)(620 * pos) / 8) * 8;
-	SetCharacterPosition(game, data->snail, data->snail_offset[off] - 14 + data->menu.x + data->menu.w, data->menu.y + data->menu.h * pos, ALLEGRO_PI / 2.0);
+	SetCharacterPosition(game, data->snail, data->snail_offset[off] - 14 + viewport->x + viewport->w, viewport->y + viewport->h * pos, ALLEGRO_PI / 2.0);
 	DrawCharacter(game, data->snail);
-
-	DrawCharacter(game, data->infinity);
-	DrawCharacter(game, data->back);
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
 	DrawCharacter(game, data->beetle);
@@ -198,19 +217,27 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			ChangeCurrentGamestate(game, "settings");
 			return;
 		}
-		if (IsOnCharacter(game, data->infinity, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
-			data->infinity_hover = true;
+		if (IsOnUIElement(game, data->ui, UI_ELEMENT_ABOUT, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
+			data->about = !data->about;
+			data->credits.pos = 0;
+			return;
 		}
-		if (IsOnCharacter(game, data->back, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
-			data->back_hover = true;
+		if (!data->about) {
+			if (IsOnCharacter(game, data->infinity, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+				data->infinity_hover = true;
+			}
+			if (IsOnCharacter(game, data->back, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+				data->back_hover = true;
+			}
 		}
 	}
 
 	if (data->scrolling) {
-		float pos = ((game->data->mouseY * game->viewport.height) - data->menu.y - 80) / (float)(data->menu.h - 140);
+		struct ScrollingViewport* viewport = data->about ? &data->credits : &data->menu;
+		float pos = ((game->data->mouseY * game->viewport.height) - viewport->y - 80) / (float)(viewport->h - 140);
 		pos = Clamp(0.0, 1.0, pos);
-		data->menu.pos = pos * (data->menu.content - data->menu.h);
-		data->menu.speed = 0.0;
+		viewport->pos = pos * (viewport->content - viewport->h);
+		viewport->speed = 0.0;
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_END) || (ev->type == ALLEGRO_EVENT_TOUCH_CANCEL) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)) {
@@ -223,21 +250,23 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 				ChangeCurrentGamestate(game, "game");
 			}
 		}
-		if (data->infinity_hover) {
-			game->data->level = 0;
-			StartTransition(game, 0.5, 0.5);
-			ChangeCurrentGamestate(game, "game");
-		}
-		if (game->data->in_progress && data->back_hover) {
-			game->data->level = -1;
-			StartTransition(game, 0.5, 0.5);
-			ChangeCurrentGamestate(game, "game");
+		if (!data->about) {
+			if (data->infinity_hover) {
+				game->data->level = 0;
+				StartTransition(game, 0.5, 0.5);
+				ChangeCurrentGamestate(game, "game");
+			}
+			if (game->data->in_progress && data->back_hover) {
+				game->data->level = -1;
+				StartTransition(game, 0.5, 0.5);
+				ChangeCurrentGamestate(game, "game");
+			}
 		}
 		data->back_hover = false;
 		data->infinity_hover = false;
 	}
 
-	ProcessScrollingViewportEvent(game, ev, &data->menu);
+	ProcessScrollingViewportEvent(game, ev, data->about ? &data->credits : &data->menu);
 	data->highlight = WhichLevel(game, data);
 }
 
@@ -304,6 +333,7 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	SetCharacterPosition(game, data->back, game->viewport.width - al_get_bitmap_width(data->infinitybmp) - al_get_bitmap_width(data->back_onbmp) / 2.0 - 40, game->viewport.height - al_get_bitmap_height(data->back_onbmp) / 2.0 - 40, 0);
 
 	data->font = al_load_font(GetDataFilePath(game, "fonts/Brizel.ttf"), 88, 0);
+	data->font2 = al_load_font(GetDataFilePath(game, "fonts/Caroni.ttf"), 42, 0);
 	progress(game);
 
 	data->ui = CreateCharacter(game, "ui");
@@ -363,6 +393,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
 	SetScrollingViewportPosition(game, &data->menu, 90, 412, 536, 621, ceil(data->levels / 3.0) * 175 + 25);
+	SetScrollingViewportPosition(game, &data->credits, 90, 412, 536, 621, 1950);
 
 	data->highlight = -1;
 
