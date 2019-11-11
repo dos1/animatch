@@ -110,7 +110,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 }
 
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
-	if (!game->data->config.less_movement) {
+	if (game->data->config.animated_transitions) {
 		EnableCompositor(game, Compositor);
 		game->data->transition.progress = 1.0;
 		game->data->transition.gamestate = GetGamestate(game, NULL);
