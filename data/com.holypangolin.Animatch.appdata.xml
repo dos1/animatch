@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2018 Sebastian Krzyszkowiak <dos@dosowisko.net> -->
+<!-- Copyright 2018-2019 Purism, SPC -->
 <component type="desktop-application">
   <id>com.holypangolin.Animatch</id>
   <metadata_license>FSFAP</metadata_license>
@@ -9,7 +9,7 @@
 
   <description>
     <p>
-      Animatch is a cute match-3 game.
+      Animatch is a match-three game with cute animals.
     </p>
   </description>
 
