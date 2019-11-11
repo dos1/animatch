@@ -43,8 +43,10 @@ int Gamestate_ProgressCount = 16; // number of loading steps as reported by Game
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
-	AnimateCharacter(game, data->beetle, delta, 1.0);
-	AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->about ? data->credits.speed : data->menu.speed))), 1.0);
+	if (!game->data->config.less_movement) {
+		AnimateCharacter(game, data->beetle, delta, 1.0);
+		AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->about ? data->credits.speed : data->menu.speed))), 1.0);
+	}
 
 	if (data->infinity_hover) {
 		data->infinity->tint = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
