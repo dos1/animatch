@@ -127,6 +127,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 1500, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "The game build may also contain following third-party software: Allegro, SDL2, libsuperderpy, zlib, libpng, bzip2, dumb, libjpeg-turbo, libogg, libvorbis, libtheora, flac, opus, opusfile, libwebp, physfs, freetype, harfbuzz");
 
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 1940, data->credits.w - 80, ALLEGRO_ALIGN_CENTER, "Version " LIBSUPERDERPY_GAME_VERSION "-" LIBSUPERDERPY_GAME_GIT_REV);
+
 		SetScrollingViewportAsTarget(game, NULL);
 	}
 
@@ -418,7 +420,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
 	SetCharacterPosition(game, data->frog, 192, 96, -0.05);
 	SetScrollingViewportPosition(game, &data->menu, 90, 412, 536, 621, ceil(data->levels / 3.0) * 175 + 25);
-	SetScrollingViewportPosition(game, &data->credits, 90, 412, 536, 621, 1950);
+	SetScrollingViewportPosition(game, &data->credits, 90, 412, 536, 621, 2015);
 
 	data->highlight = -1;
 
