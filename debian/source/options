@@ -1,0 +1,5 @@
+tar-ignore = "utils/libs"
+tar-ignore = "utils/output"
+tar-ignore = "build*"
+tar-ignore = ".assetcache"
+tar-ignore = ".git"

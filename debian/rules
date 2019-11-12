@@ -3,7 +3,12 @@
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 %:
-	dh $@ --builddirectory=_build
+	dh $@ --builddirectory=build-deb
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DLIBSUPERDERPY_STATIC=ON -DLIBSUPERDERPY_EMBEDDED_ALLEGRO=ON -DALLEGRO_SDL=ON
+	dh_auto_configure -- -DBUILD_SHARED_LIBS=OFF -DLIBSUPERDERPY_EMBEDDED_ALLEGRO=ON -DALLEGRO_SDL=ON -DBIN_DIR=games -DSHARE_DIR=share/games
+
+override_dh_install:
+	dh_install
+	rm debian/animatch/usr/share/games/animatch/data/fonts/DejaVuSansMono.ttf
+	ln -s /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf debian/animatch/usr/share/games/animatch/data/fonts/DejaVuSansMono.ttf

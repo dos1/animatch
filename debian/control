@@ -1,7 +1,7 @@
 Source: animatch
 Section: games
 Priority: optional
-Maintainer: Sebastian Krzyszkowiak <dos@dosowisko.net>
+Maintainer: Sebastian Krzyszkowiak <sebastian.krzyszkowiak@puri.sm>
 Build-Depends:
  debhelper (>= 11),
  cmake,
@@ -28,6 +28,7 @@ Package: animatch
 Architecture: any
 Depends:
  ${misc:Depends},
- ${shlibs:Depends}
-Description: A match-three game with cute animals.
+ ${shlibs:Depends},
+ fonts-dejavu-core
+Description: Match-three game with cute animals.
  Animatch is a match-three game with cute animals. 
