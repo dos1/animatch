@@ -27,7 +27,7 @@ struct GamestateResources {
 	ALLEGRO_BITMAP *bg, *logo, *frame, *framebg, *leaf, *leaf1, *leaf2, *leaf1b, *leaf2b, *infinitybmp, *back_onbmp, *back_offbmp;
 	ALLEGRO_FONT *font, *font2;
 	bool infinity_hover, back_hover;
-	struct Character *beetle, *ui, *snail, *infinity, *back;
+	struct Character *beetle, *ui, *snail, *infinity, *back, *frog;
 
 	int levels;
 	int highlight;
@@ -39,12 +39,15 @@ struct GamestateResources {
 	struct ScrollingViewport menu, credits;
 };
 
-int Gamestate_ProgressCount = 16; // number of loading steps as reported by Gamestate_Load; 0 when missing
+int Gamestate_ProgressCount = 26; // number of loading steps as reported by Gamestate_Load; 0 when missing
 
 void Gamestate_Logic(struct Game* game, struct GamestateResources* data, double delta) {
 	// Here you should do all your game logic as if <delta> seconds have passed.
-	AnimateCharacter(game, data->beetle, delta, 1.0);
-	AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->about ? data->credits.speed : data->menu.speed))), 1.0);
+	if (!game->data->config.less_movement) {
+		AnimateCharacter(game, data->beetle, delta, 1.0);
+		AnimateCharacter(game, data->snail, data->scrolling ? delta : (delta * sqrt(fabs(data->about ? data->credits.speed : data->menu.speed))), 1.0);
+		AnimateCharacter(game, data->frog, delta, 1.0);
+	}
 
 	if (data->infinity_hover) {
 		data->infinity->tint = al_map_rgba_f(1.5, 1.5, 1.5, 1.0);
@@ -82,7 +85,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_draw_bitmap(data->framebg, 90, 412, 0);
 	}
 
-	al_draw_bitmap(data->logo, 54, 35, 0);
+	al_draw_bitmap(data->logo, 54, 81, 0);
+	DrawCharacter(game, data->frog);
 
 	DrawCharacter(game, data->infinity);
 	DrawCharacter(game, data->back);
@@ -122,6 +126,8 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 1200, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.");
 
 		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 40 + 1500, data->credits.w - 80, ALLEGRO_ALIGN_LEFT, "The game build may also contain following third-party software: Allegro, SDL2, libsuperderpy, zlib, libpng, bzip2, dumb, libjpeg-turbo, libogg, libvorbis, libtheora, flac, opus, opusfile, libwebp, physfs, freetype, harfbuzz");
+
+		DrawWrappedTextWithShadow(data->font2, al_map_rgb(255, 255, 255), 40, 1940, data->credits.w - 80, ALLEGRO_ALIGN_CENTER, "Version " LIBSUPERDERPY_GAME_VERSION "-" LIBSUPERDERPY_GAME_GIT_REV);
 
 		SetScrollingViewportAsTarget(game, NULL);
 	}
@@ -207,6 +213,11 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 
 		if (IsOnCharacter(game, data->snail, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
 			data->scrolling = true;
+		}
+		if (IsOnCharacter(game, data->frog, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
+			if (!game->data->config.less_movement) {
+				SelectSpritesheet(game, data->frog, "logo_tonque");
+			}
 		}
 		if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
 			ToggleAudio(game);
@@ -340,11 +351,13 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	RegisterSpritesheet(game, data->ui, "ui");
 	LoadSpritesheets(game, data->ui, progress);
 	SelectSpritesheet(game, data->ui, "ui");
+	progress(game);
 
 	data->beetle = CreateCharacter(game, "beetle");
 	RegisterSpritesheet(game, data->beetle, "beetle");
 	LoadSpritesheets(game, data->beetle, progress);
 	SelectSpritesheet(game, data->beetle, "beetle");
+	progress(game);
 
 	data->snail = CreateCharacter(game, "snail");
 	RegisterSpritesheet(game, data->snail, "scroll");
@@ -352,6 +365,18 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	SelectSpritesheet(game, data->snail, "scroll");
 	data->snail->scaleX = 0.5;
 	data->snail->scaleY = 0.5;
+	progress(game);
+
+	data->frog = CreateCharacter(game, "logo");
+	RegisterSpritesheet(game, data->frog, "logo_wave");
+	RegisterSpritesheet(game, data->frog, "logo_blink");
+	RegisterSpritesheet(game, data->frog, "logo_blink2");
+	RegisterSpritesheet(game, data->frog, "logo_blink3");
+	RegisterSpritesheet(game, data->frog, "logo_eyeroll");
+	RegisterSpritesheet(game, data->frog, "logo_tonque");
+	LoadSpritesheets(game, data->frog, progress);
+	SelectSpritesheet(game, data->frog, game->data->config.less_movement ? "logo_blink" : "logo_wave");
+	progress(game);
 
 	data->menu.pos = 0;
 	return data;
@@ -375,6 +400,7 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	DestroyCharacter(game, data->snail);
 	DestroyCharacter(game, data->infinity);
 	DestroyCharacter(game, data->back);
+	DestroyCharacter(game, data->frog);
 	al_destroy_bitmap(data->infinitybmp);
 	al_destroy_bitmap(data->back_onbmp);
 	al_destroy_bitmap(data->back_offbmp);
@@ -392,8 +418,9 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 
 	SetCharacterPosition(game, data->beetle, 0, 1194, 0);
 	SetCharacterPosition(game, data->ui, 0, 0, 0);
+	SetCharacterPosition(game, data->frog, 192, 96, -0.05);
 	SetScrollingViewportPosition(game, &data->menu, 90, 412, 536, 621, ceil(data->levels / 3.0) * 175 + 25);
-	SetScrollingViewportPosition(game, &data->credits, 90, 412, 536, 621, 1950);
+	SetScrollingViewportPosition(game, &data->credits, 90, 412, 536, 621, 2015);
 
 	data->highlight = -1;
 
