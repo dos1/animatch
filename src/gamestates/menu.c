@@ -145,10 +145,6 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : (game->config.music ? UI_ELEMENT_NOTE : UI_ELEMENT_FX));
 	DrawUIElement(game, data->ui, UI_ELEMENT_SETTINGS);
 	DrawUIElement(game, data->ui, UI_ELEMENT_ABOUT);
-
-	if (al_get_display_flags(game->display) & ALLEGRO_FULLSCREEN_WINDOW) {
-		DrawTextWithShadow(data->font, al_map_rgb(255, 255, 255), game->viewport.width - 50, 20, ALLEGRO_ALIGN_CENTER, "x");
-	}
 }
 
 static int WhichLevel(struct Game* game, struct GamestateResources* data) {
@@ -204,13 +200,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 	}
 
 	if ((ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) || (ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)) {
-		if (al_get_display_flags(game->display) & ALLEGRO_FULLSCREEN_WINDOW) {
-			// exit button
-			if (game->data->mouseX > 0.85 && game->data->mouseY < 0.1) {
-				UnloadAllGamestates(game);
-			}
-		}
-
 		if (IsOnCharacter(game, data->snail, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height, true)) {
 			data->scrolling = true;
 		}
