@@ -63,7 +63,7 @@ void PostLogic(struct Game* game, double delta) {
 
 void DrawBuildInfo(struct Game* game) {
 	SUPPRESS_WARNING("-Wdeprecated-declarations")
-	if (game->config.debug.enabled || game->_priv.showconsole) {
+	if (game->config.debug.enabled || game->show_console) {
 		int x, y, w, h;
 		al_get_clipping_rectangle(&x, &y, &w, &h);
 		al_hold_bitmap_drawing(true);
