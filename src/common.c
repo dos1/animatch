@@ -23,7 +23,12 @@
 void Compositor(struct Game* game) {
 	struct Gamestate* tmp = GetNextGamestate(game, NULL);
 	if (game->data->transition.progress) {
-		al_set_target_bitmap(GetGamestateFramebuffer(game, game->data->transition.gamestate));
+		al_set_target_bitmap(game->data->transition.bmp);
+
+		ALLEGRO_TRANSFORM transform;
+		al_identity_transform(&transform);
+		al_scale_transform(&transform, al_get_bitmap_width(game->data->transition.bmp) / (double)game->viewport.width, al_get_bitmap_height(game->data->transition.bmp) / (double)game->viewport.height);
+		al_use_transform(&transform);
 
 		al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
 
@@ -47,7 +52,7 @@ void Compositor(struct Game* game) {
 		tmp = GetNextGamestate(game, tmp);
 	}
 	if (game->data->transition.progress) {
-		al_draw_bitmap(GetGamestateFramebuffer(game, game->data->transition.gamestate), game->clip_rect.x, game->clip_rect.y, 0);
+		al_draw_bitmap(game->data->transition.bmp, game->clip_rect.x, game->clip_rect.y, 0);
 	}
 }
 
@@ -134,7 +139,10 @@ bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 void StartTransition(struct Game* game, float x, float y) {
 	if (game->data->config.animated_transitions) {
 		game->data->transition.progress = 1.0;
-		game->data->transition.gamestate = GetCurrentGamestate(game);
+		if (game->data->transition.bmp) {
+			al_destroy_bitmap(game->data->transition.bmp);
+		}
+		game->data->transition.bmp = al_clone_bitmap(GetGamestateFramebuffer(game, GetCurrentGamestate(game)));
 		game->data->transition.x = x;
 		game->data->transition.y = y;
 		EnableCompositor(game, Compositor);
@@ -228,5 +236,8 @@ struct CommonResources* CreateGameData(struct Game* game) {
 void DestroyGameData(struct Game* game) {
 	DestroyShader(game, game->data->kawese_shader);
 	al_destroy_bitmap(game->data->silhouette);
+	if (game->data->transition.bmp) {
+		al_destroy_bitmap(game->data->transition.bmp);
+	}
 	free(game->data);
 }

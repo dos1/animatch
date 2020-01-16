@@ -110,16 +110,21 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 }
 
 void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
+	DisableCompositor(game);
+}
+
+void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
 	if (game->data->config.animated_transitions) {
 		EnableCompositor(game, Compositor);
 		game->data->transition.progress = 1.0;
-		game->data->transition.gamestate = GetGamestate(game, NULL);
+		if (game->data->transition.bmp) {
+			al_destroy_bitmap(game->data->transition.bmp);
+		}
+		game->data->transition.bmp = al_clone_bitmap(GetGamestateFramebuffer(game, GetGamestate(game, NULL)));
 		game->data->transition.x = 0.5;
 		game->data->transition.y = 0.5;
 	}
 }
-
-void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {}
 
 void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
 	data->bg_lowres = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);

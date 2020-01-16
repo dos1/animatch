@@ -58,7 +58,7 @@ struct CommonResources {
 
 	struct {
 		float progress;
-		struct Gamestate* gamestate;
+		ALLEGRO_BITMAP *bmp;
 		float x, y;
 	} transition;
 
