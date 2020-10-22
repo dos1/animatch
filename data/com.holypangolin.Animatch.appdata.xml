@@ -19,6 +19,11 @@
 
   <update_contact>dos_AT_dosowisko.net</update_contact>
 
+  <custom>
+    <value key="Purism::form_factor">workstation</value>
+    <value key="Purism::form_factor">mobile</value>
+  </custom>
+
   <provides>
     <binary>animatch</binary>
   </provides>

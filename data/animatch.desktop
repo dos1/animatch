@@ -7,3 +7,5 @@ Comment=A cute match-3 game
 Icon=animatch
 Terminal=false
 Categories=Game;ArcadeGame;
+# Translators: Do NOT translate or transliterate this text (these are enum types)!
+X-Purism-FormFactor=Workstation;Mobile;
