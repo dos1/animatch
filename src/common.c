@@ -138,14 +138,17 @@ bool IsOnUIElement(struct Game* game, struct Character* ui, enum UI_ELEMENT elem
 
 void StartTransition(struct Game* game, float x, float y) {
 	if (game->data->config.animated_transitions) {
+		EnableCompositor(game, Compositor);
 		game->data->transition.progress = 1.0;
 		if (game->data->transition.bmp) {
 			al_destroy_bitmap(game->data->transition.bmp);
 		}
+		int flags = al_get_new_bitmap_flags();
+		al_add_new_bitmap_flag(ALLEGRO_NO_PRESERVE_TEXTURE);
 		game->data->transition.bmp = al_clone_bitmap(GetGamestateFramebuffer(game, GetCurrentGamestate(game)));
+		al_set_new_bitmap_flags(flags);
 		game->data->transition.x = x;
 		game->data->transition.y = y;
-		EnableCompositor(game, Compositor);
 	}
 }
 

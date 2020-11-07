@@ -114,16 +114,7 @@ void Gamestate_Start(struct Game* game, struct GamestateResources* data) {
 }
 
 void Gamestate_Stop(struct Game* game, struct GamestateResources* data) {
-	if (game->data->config.animated_transitions) {
-		EnableCompositor(game, Compositor);
-		game->data->transition.progress = 1.0;
-		if (game->data->transition.bmp) {
-			al_destroy_bitmap(game->data->transition.bmp);
-		}
-		game->data->transition.bmp = al_clone_bitmap(GetGamestateFramebuffer(game, GetGamestate(game, NULL)));
-		game->data->transition.x = 0.5;
-		game->data->transition.y = 0.5;
-	}
+	StartTransition(game, 0.5, 0.5);
 }
 
 void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
