@@ -621,8 +621,6 @@ void* Gamestate_Load(struct Game* game, void (*progress)(struct Game*)) {
 	data->field_bgs[3] = al_load_bitmap(GetDataFilePath(game, "kwadrat4.webp"));
 	progress(game);
 
-	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
-	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->lowres_scene_blur = al_create_bitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 	progress(game);
@@ -698,8 +696,6 @@ void Gamestate_Unload(struct Game* game, struct GamestateResources* data) {
 	al_destroy_bitmap(data->field_bgs_bmp);
 	al_destroy_bitmap(data->bg);
 	al_destroy_bitmap(data->leaf);
-	al_destroy_bitmap(data->scene);
-	al_destroy_bitmap(data->lowres_scene);
 	al_destroy_bitmap(data->lowres_scene_blur);
 	al_destroy_bitmap(data->board);
 	al_destroy_font(data->font);
@@ -766,7 +762,5 @@ void Gamestate_Resume(struct Game* game, struct GamestateResources* data) {
 void Gamestate_Reload(struct Game* game, struct GamestateResources* data) {
 	// Called when the display gets lost and not preserved bitmaps need to be recreated.
 	// Unless you want to support mobile platforms, you should be able to ignore it.
-	data->scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
-	data->lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
 	data->board = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
 }

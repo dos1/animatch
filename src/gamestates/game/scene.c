@@ -50,18 +50,21 @@ void DrawScene(struct Game* game, struct GamestateResources* data) {
 }
 
 void UpdateBlur(struct Game* game, struct GamestateResources* data) {
-	al_set_target_bitmap(data->scene);
+	ALLEGRO_BITMAP* scene = CreateNotPreservedBitmap(game->viewport.width, game->viewport.height);
+	ALLEGRO_BITMAP* lowres_scene = CreateNotPreservedBitmap(game->viewport.width / BLUR_DIVIDER, game->viewport.height / BLUR_DIVIDER);
+
+	al_set_target_bitmap(scene);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	DrawScene(game, data);
 
-	float size[2] = {al_get_bitmap_width(data->lowres_scene), al_get_bitmap_height(data->lowres_scene)};
+	float size[2] = {al_get_bitmap_width(lowres_scene), al_get_bitmap_height(lowres_scene)};
 
 	al_set_target_bitmap(data->lowres_scene_blur);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
-	al_draw_scaled_bitmap(data->scene, 0, 0, al_get_bitmap_width(data->scene), al_get_bitmap_height(data->scene),
+	al_draw_scaled_bitmap(scene, 0, 0, al_get_bitmap_width(scene), al_get_bitmap_height(scene),
 		0, 0, al_get_bitmap_width(data->lowres_scene_blur), al_get_bitmap_height(data->lowres_scene_blur), 0);
 
-	al_set_target_bitmap(data->lowres_scene);
+	al_set_target_bitmap(lowres_scene);
 	ClearToColor(game, al_map_rgb(0, 0, 0));
 	al_use_shader(game->data->kawese_shader);
 	al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -75,6 +78,9 @@ void UpdateBlur(struct Game* game, struct GamestateResources* data) {
 	al_use_shader(game->data->kawese_shader);
 	al_set_shader_float_vector("size", 2, size, 1);
 	al_set_shader_float("kernel", 0);
-	al_draw_bitmap(data->lowres_scene, 0, 0, 0);
+	al_draw_bitmap(lowres_scene, 0, 0, 0);
 	al_use_shader(NULL);
+
+	al_destroy_bitmap(scene);
+	al_destroy_bitmap(lowres_scene);
 }
