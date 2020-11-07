@@ -6,7 +6,6 @@ uniform sampler2D al_tex;
 uniform bool enabled;
 varying vec2 varying_texcoord;
 varying vec4 varying_color;
-varying vec4 varying_origpos;
 
 void main() {
 	vec4 color = texture2D(al_tex, varying_texcoord);

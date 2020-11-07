@@ -7,7 +7,6 @@ uniform vec2 size;
 uniform float kernel;
 varying vec2 varying_texcoord;
 varying vec4 varying_color;
-varying vec4 varying_origpos;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Developed by Masaki Kawase, Bunkasha Games

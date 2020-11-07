@@ -4,10 +4,8 @@ precision mediump float;
 
 uniform sampler2D al_tex;
 uniform sampler2D tex_bg;
-uniform vec2 size;
 varying vec2 varying_texcoord;
 varying vec4 varying_color;
-varying vec4 varying_origpos;
 
 void main() {
 	vec4 board = texture2D(al_tex, varying_texcoord);
