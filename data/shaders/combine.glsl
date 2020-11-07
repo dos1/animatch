@@ -4,12 +4,13 @@ precision mediump float;
 
 uniform sampler2D al_tex;
 uniform sampler2D tex_bg;
+uniform vec2 coord_limit;
 varying vec2 varying_texcoord;
 varying vec4 varying_color;
 
 void main() {
 	vec4 board = texture2D(al_tex, varying_texcoord);
-	vec4 bg = texture2D(tex_bg, varying_texcoord);
+	vec4 bg = texture2D(tex_bg, varying_texcoord * coord_limit);
 	vec4 combined = mix(bg, board, board.a);
 	combined /= combined.a;
 	combined.a = (board.a > 0.5) ? 1.0 : board.a;
