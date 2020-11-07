@@ -199,7 +199,7 @@ void DrawField(struct Game* game, struct GamestateResources* data, struct FieldI
 	}
 
 	if (IsDrawable(field->type)) {
-		al_set_shader_bool("enabled", IsSleeping(field));
+		al_set_shader_float("saturation", IsSleeping(field) ? 0.333 : 1.0);
 		field->drawable->angle = sin(GetTweenValue(&field->animation.shaking) * 3 * ALLEGRO_PI) / 6.0 + sin(GetTweenValue(&field->animation.hinting) * 5 * ALLEGRO_PI) / 6.0 + sin(GetTweenPosition(&field->animation.collecting) * 2 * ALLEGRO_PI) / 12.0 + sin(GetTweenValue(&field->animation.launching) * 5 * ALLEGRO_PI) / 6.0;
 		field->drawable->scaleX = 1.0 + sin(GetTweenValue(&field->animation.hinting) * ALLEGRO_PI) / 3.0 + sin(GetTweenValue(&field->animation.launching) * ALLEGRO_PI) / 3.0;
 		field->drawable->scaleY = field->drawable->scaleX;
