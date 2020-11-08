@@ -142,7 +142,6 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 	al_draw_bitmap(data->leaf, -32, 1083, 0);
 	DrawCharacter(game, data->beetle);
-	DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : (game->config.music ? UI_ELEMENT_NOTE : UI_ELEMENT_FX));
 	DrawUIElement(game, data->ui, UI_ELEMENT_SETTINGS);
 	DrawUIElement(game, data->ui, UI_ELEMENT_ABOUT);
 }
@@ -207,10 +206,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			if (!game->data->config.less_movement) {
 				SelectSpritesheet(game, data->frog, "logo_tonque");
 			}
-		}
-		if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
-			ToggleAudio(game);
-			return;
 		}
 		if (IsOnUIElement(game, data->ui, UI_ELEMENT_SETTINGS, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
 			StartTransition(game, 0.5, 0.5);

@@ -331,7 +331,6 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 
 		al_draw_bitmap(data->leaf, -32, 1083, 0);
 
-		DrawUIElement(game, data->ui, game->config.mute ? UI_ELEMENT_NOSOUND : (game->config.music ? UI_ELEMENT_NOTE : UI_ELEMENT_FX));
 		DrawUIElement(game, data->ui, UI_ELEMENT_HINT);
 		DrawUIElement(game, data->ui, UI_ELEMENT_HOME);
 
@@ -432,11 +431,6 @@ void Gamestate_ProcessEvent(struct Game* game, struct GamestateResources* data, 
 			return;
 		}
 		if (data->menu) {
-			if (IsOnUIElement(game, data->ui, UI_ELEMENT_NOTE, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
-				ToggleAudio(game);
-				return;
-			}
-
 			if (IsOnUIElement(game, data->ui, UI_ELEMENT_HINT, game->data->mouseX * game->viewport.width, game->data->mouseY * game->viewport.height)) {
 				data->menu = false;
 				ShowHint(game, data);
