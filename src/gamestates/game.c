@@ -206,10 +206,12 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	al_get_opengl_texture_size(data->lowres_scene_blur, &tex_width, &tex_height);
 	float coord_limit[2] = {al_get_bitmap_width(data->lowres_scene_blur) / (double)tex_width, al_get_bitmap_height(data->lowres_scene_blur) / (double)tex_height};
 
+	SetClippingRectangle(0, offsetY, game->viewport.width, game->viewport.height - offsetY * 2);
 	al_use_shader(data->combine_shader);
 	al_set_shader_sampler("tex_bg", data->lowres_scene_blur, 1);
 	al_set_shader_float_vector("coord_limit", 2, coord_limit, 1);
 	al_draw_bitmap(data->board, 0, 0, 0);
+	ResetClippingRectangle();
 	al_use_shader(NULL);
 
 	if (show_nests) {
