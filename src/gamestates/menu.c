@@ -98,7 +98,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 			int ii = i - 1;
 			if (i > game->data->unlocked_levels) {
 				al_draw_tinted_bitmap(((ii / 3) % 2) ? data->leaf1b : data->leaf2b, al_map_rgba_f(0.4, 0.4, 0.4, 0.4), 50 + 150 * (ii % 3), 25 + 175 * floor(ii / 3.0), 0);
-				al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i);
+				al_draw_textf(data->font, al_map_rgba_f(0.0, 0.0, 0.0, 0.4), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0) - 9, ALLEGRO_ALIGN_CENTER, "%d", i);
 			} else {
 				ALLEGRO_COLOR color = al_map_rgb(255, 255, 255);
 				if (data->highlight == i) {
@@ -109,7 +109,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 					al_get_bitmap_width(bitmap) / 2.0, al_get_bitmap_height(bitmap) / 2.0,
 					50 + 150 * (ii % 3) + al_get_bitmap_width(bitmap) / 2.0, 25 + 175 * floor(ii / 3.0) + al_get_bitmap_height(bitmap) / 2.0,
 					game->data->last_unlocked_level == i ? (sin(game->time * 4.0) / 16.0) : 0, 0);
-				al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0), ALLEGRO_ALIGN_CENTER, "%d", i);
+				al_draw_textf(data->font, al_map_rgb(0, 0, 0), 50 + 150 * (ii % 3) + 150 / 2.0 + (((ii / 3) % 2) ? 7 : 0), 25 + 175 * floor(ii / 3.0) + 150 * 0.3 + (((ii / 3) % 2) ? -10 : 0) - 9, ALLEGRO_ALIGN_CENTER, "%d", i);
 			}
 		}
 

@@ -236,17 +236,17 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	DrawUIElement(game, data->ui, UI_ELEMENT_SCORE);
 	al_hold_bitmap_drawing(false);
 
-	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 53, ALLEGRO_ALIGN_CENTER, "MOVES");
+	al_draw_text(data->font, al_map_rgb(64, 72, 5), 622, 56, ALLEGRO_ALIGN_CENTER, "MOVES");
 	int moves = data->moves_goal - data->moves;
 	if (data->infinite) {
 		moves = data->moves;
 	}
-	al_draw_textf(abs(moves) >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 96 : 84, ALLEGRO_ALIGN_CENTER, "%d", moves);
-	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 160, ALLEGRO_ALIGN_CENTER, "LEVEL");
+	al_draw_textf(abs(moves) >= 100 ? data->font_num_medium : data->font_num_big, al_map_rgb(49, 84, 2), 620, moves >= 100 ? 87 : 75, ALLEGRO_ALIGN_CENTER, "%d", moves);
+	al_draw_text(data->font, al_map_rgb(55, 28, 20), 118, 163, ALLEGRO_ALIGN_CENTER, "LEVEL");
 	if (data->infinite) {
-		al_draw_text(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "∞");
+		al_draw_text(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 195, ALLEGRO_ALIGN_CENTER, "∞");
 	} else {
-		al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 200, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
+		al_draw_textf(data->font_num_medium, al_map_rgb(255, 255, 194), 118, 195, ALLEGRO_ALIGN_CENTER, "%d", data->level.id);
 	}
 
 	SetCharacterPosition(game, data->snail, 476, 178, 0);
@@ -257,7 +257,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 	DrawCharacter(game, data->beetle);
 
 	if (data->infinite) {
-		al_draw_text(data->font, al_map_rgb(64, 72, 5), 322 + 70, 48, ALLEGRO_ALIGN_CENTER, "SCORE");
+		al_draw_text(data->font, al_map_rgb(64, 72, 5), 322 + 70, 51, ALLEGRO_ALIGN_CENTER, "SCORE");
 
 		ALLEGRO_TRANSFORM transform, orig = *al_get_current_transform();
 		al_identity_transform(&transform);
@@ -265,7 +265,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 		al_translate_transform(&transform, 322 + 70, 35 + 105 / 2.0 + 30);
 		al_compose_transform(&transform, &orig);
 		al_use_transform(&transform);
-		al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 0, -30, ALLEGRO_ALIGN_CENTER, "%d", data->score);
+		al_draw_textf(data->font_num_big, al_map_rgb(49, 84, 2), 0, -39, ALLEGRO_ALIGN_CENTER, "%d", data->score);
 		al_use_transform(&orig);
 	} else {
 		int goal = 0, goals = 0;
@@ -303,7 +303,7 @@ void Gamestate_Draw(struct Game* game, struct GamestateResources* data) {
 					DrawCharacter(game, archetype);
 				}
 				al_draw_filled_circle(x + 15, y + 25, 20, al_map_rgb(57, 54, 48));
-				al_draw_textf(data->font_num_small, al_map_rgb(255, 255, 255), x + 15, y + 8, ALLEGRO_ALIGN_CENTER, "%d", data->goals[i].value > 0 ? data->goals[i].value : 0);
+				al_draw_textf(data->font_num_small, al_map_rgb(255, 255, 255), x + 15, y + 4, ALLEGRO_ALIGN_CENTER, "%d", data->goals[i].value > 0 ? data->goals[i].value : 0);
 				goal++;
 			}
 		}
