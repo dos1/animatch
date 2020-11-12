@@ -38,7 +38,7 @@
       {
         "type": "archive",
         "url": "https://dosowisko.net/libsuperderpy/deps/allegro-5.2.6.0-p1.tar.gz",
-        "sha512": "e44a3b95156807edb4ab230c1b4d811ae3cd12a55943ca02a98fdcf9e0469589f836a885fd027438e9d678a6f28cf1fd38e87e42cc414d63c3210d350d61e06e"
+        "sha512": "682f5b0df80ee820b19217f0d898460b8061c5b8148204175fa94dc27d10210a8175466e87302812dc33d342b844ae8fcb03901a6371ef537b530ea7b8433499"
       }
     ]
   },
