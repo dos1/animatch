@@ -1,7 +1,7 @@
 {
 "app-id": "com.holypangolin.Animatch",
 "runtime": "org.freedesktop.Platform",
-"runtime-version": "18.08",
+"runtime-version": "19.08",
 "sdk": "org.freedesktop.Sdk",
 "command": "animatch",
 "rename-icon": "animatch",
@@ -37,7 +37,7 @@
     "sources": [
       {
         "type": "archive",
-        "url": "https://dosowisko.net/libsuperderpy/deps/allegro-5.2.5.0-p2.tar.gz",
+        "url": "https://dosowisko.net/libsuperderpy/deps/allegro-5.2.6.0-p1.tar.gz",
         "sha512": "e44a3b95156807edb4ab230c1b4d811ae3cd12a55943ca02a98fdcf9e0469589f836a885fd027438e9d678a6f28cf1fd38e87e42cc414d63c3210d350d61e06e"
       }
     ]
